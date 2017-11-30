@@ -1,2 +1,2 @@
 # DtCraft
-High-performance Cluster Computing
+A High-performance Cluster Computing Engine
