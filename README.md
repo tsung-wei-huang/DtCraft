@@ -4,3 +4,5 @@
 
 DtCraft is a high-performance cluster computing engine that helps programmers write simple, easy, and effective parallel code at scale. The kernel runs on every machine and provides transparent concurrency controls through an open API for workload description and resource management. In a nutshell, you focus on high-level developments, and DtCraft takes the pain of DevOps away from you!
 
+## How to use it
+Please visit the official <a href="http://dtcraft.web.engr.illinois.edu/">website</a>.
