@@ -1,0 +1,43 @@
+<div class="col-md-9" ng-controller="ClusterController" style="color:black;">
+
+	<table m-table title="Master" class="table table-striped table-bordered table-condensed">
+    <caption>Master</caption>
+		<thead>
+			<tr>
+				<th>Host</th>
+				<th>Agents</th>
+				<th>Graphs</th>
+			</tr>
+		</thead>
+		<tbody>
+      <tr ng-if="master">
+				<td>{{master.host}}</td>
+				<td>{{master.num_agents}}</td>
+				<td>{{master.num_graphs}}</td>
+			</tr>
+		</tbody>
+	</table>
+
+	<table m-table title="Agents" class="table table-striped table-bordered table-condensed">
+    <caption>Agents</caption>
+		<thead>
+			<tr>
+				<th>Host</th>
+				<th>CPUs</th>
+				<th>Memory</th>
+        <th>Disk</th>
+        <th>Tasks</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr ng-repeat="agent in agents">
+				<td>{{agent.host}}</td>
+				<td>{{agent.resource.num_cpus}} ({{agent.resource.num_cpus - agent.released.num_cpus}} used)</td>
+				<td>{{agent.resource.memory_limit_in_bytes | ByteFormatter}} ({{agent.resource.memory_limit_in_bytes - agent.released.memory_limit_in_bytes | ByteFormatter}} used)</td>
+				<td>{{agent.resource.space_limit_in_bytes | ByteFormatter}} ({{agent.resource.space_limit_in_bytes - agent.released.space_limit_in_bytes | ByteFormatter}} used)</td>
+        <td>{{agent.num_tasks}}</td>
+			</tr>
+		</tbody>
+	</table>
+
+</div>

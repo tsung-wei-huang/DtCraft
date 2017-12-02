@@ -1,0 +1,50 @@
+
+<!DOCTYPE html>
+<html lang="en" ng-app="dtcraft">
+  <head>
+    <meta charset="utf-8">
+    <title>DtCraft</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/dtcraft.min.css">
+  </head>
+
+
+  <body>
+		<nav class="navbar navbar-default" style="line-height:30px">
+			<div class="container-fluid">
+				<div class="navbar-header">
+          <a class="navbar-brand" href="#">
+          <span><img src="/logo.png" style='height:25px; margin-top:-5px' alt="Oops"></span>
+          DtCraft
+          </a>
+				</div>
+          <ul class="nav nav-pills">
+            <li class="nav-item"><a href="#">
+                <span class="glyphicon glyphicon-home"></span>
+                Home
+            </a></li>
+            <li class="nav-item"><a href="#cluster">
+                <span class="glyphicon glyphicon-cloud"></span>
+               Cluster
+            </a></li>
+          </ul>
+			</div>
+		</nav>
+
+    <div ng-view style="padding-left: 200px"></div>
+
+    <script src="/js/jquery-3.2.1.min.js"></script>
+    <script src="/js/angular-1.2.3.min.js"></script>
+    <script src="/js/angular-route-1.2.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/underscore-1.4.3.min.js"></script>
+
+    <script src="/js/controller.js"></script>    
+
+  </body>
+</html>
+
+
