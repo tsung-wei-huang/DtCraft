@@ -1,0 +1,82 @@
+# BASH special variables : 
+# $1, $2, $3, ... : are the positional parameters.
+# "$@"            : is an array-like construct of all positional parameters, {$1, $2, $3 ...}.
+# "$*"            : is the IFS expansion of all positional parameters, $1 $2 $3 ....
+# $#              : is the number of positional parameters.
+# $-              : current actions set for the shell.
+# $$              : pid of the current shell (not subshell).
+# $_              : most recent parameter (or the abs path of the target to start the current 
+#                   shell immediately after startup).
+# $IFS            : is the (input) field separator.
+# $?              : is the most recent foreground pipeline exit status.
+# $!              : is the PID of the most recent background target.
+# $0              : is the name of the shell or shell script.
+
+---------------------------------------------------------------------------------------------------
+# Difference between double/single bracket, parentheses, curly braces
+
+- A single bracket ([) usually actually calls a program named [; man test or man [ for more info. 
+
+  $ VARIABLE=abcdef
+  $ if [ $VARIABLE == abcdef ] ; then echo yes ; else echo no ; fi
+    yes
+
+- The double bracket ([[) does the same thing (basically) as a single bracket, but is a bash builtin.
+
+  $ VARIABLE=abcdef
+  $ if [[ $VARIABLE == 123456 ]] ; then echo yes ; else echo no ; fi
+    no
+
+- Parentheses (()) are used to create a subshell. For example:
+
+  $ pwd
+  /home/user 
+  $ (cd /tmp; pwd)
+  /tmp
+  $ pwd
+  /home/user
+
+As you can see, the subshell allowed you to perform operations without affecting the environment 
+of the current shell.
+
+- Braces ({}) are used to unambiguously identify variables. Example:
+
+    $ VARIABLE=abcdef
+    $ echo Variable: $VARIABLE
+    Variable: abcdef
+    $ echo Variable: $VARIABLE123456
+    Variable:
+    $ echo Variable: ${VARIABLE}123456
+    Variable: abcdef123456
+- Braces are also used to execute a sequence of commands in the current shell context, e.g.
+
+    $ { date; top -b -n1 | head ; } >logfile 
+    # 'date' and 'top' output are concatenated, 
+    # could be useful sometimes to hunt for a top loader )
+
+    $ { date; make 2>&1; date; } | tee logfile
+    # now we can calculate the duration of a build from the logfile
+
+There is a subtle syntactic difference with ( ), though (see bash reference) ; 
+essentially, a semicolon ; after the last command within braces is a must, and the braces {, } 
+must be surrounded by spaces.
+
+---------------------------------------------------------------------------------------------------
+# Split a string into an 1D array by space
+
+Assume str="a * b"
+
+- Bad solution: arr=($str)
+
+When $str is expanded, the value undergoes both word-splitting (which is what allows the array 
+to have multiple elements) and pathname expansion. Your array will now have a as its first 
+element, b as its last element, but one or more elements in between, depending on how many files 
+in the current working directly * matches. A better solution is to use the read command.
+
+- Good solution:: read -a arr <<< $str
+
+read takes its input from standard input. Whereas read < file.txt would take its standard 
+input from the file named file.txt, read <<< text reads directly from the given string. It's a 
+short-cut for a one-line here document.
+
+

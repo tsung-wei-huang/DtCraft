@@ -1,0 +1,90 @@
+/*     background-color: #ADD8E6;  */
+.sidenav {
+    height: 100%; /* 100% Full-height */
+    width: 120px; /* 0 width - change this with JavaScript */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Stay on top */
+    top: 52px;
+    left: 0;
+    background-color: #f5f5f5;
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 10px; /* Place content 60px from the top */
+    transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+}
+
+/*     padding: 8px 8px 8px 32px; top, right, bottom, left */
+/* The navigation menu links */
+.sidenav a {
+    padding: 8px 0px 0px 0px;
+    text-decoration: none;
+    font-size: 20px;
+    color: #000000;
+    display: block;
+    transition: 0.3s
+}
+
+/* When you mouse over the navigation links, change their color */
+/* color: #F08080; */
+/* box-shadow: 10px 10px 5px #888888; */
+.sidenav a:hover, .offcanvas a:focus{
+    color: #DC143C;
+    display: block;
+    font-weight: bold;
+    box-shadow: 5px 5px 5px #000000;
+}
+
+
+
+
+/* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+#main {
+    transition: margin-left .5s;
+    padding: 20px;
+}
+
+/* Below controls the list items 
+   If you add color inside ul, all lists are colored.
+*/
+ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+li {
+    float: left;
+}
+
+/*
+    border-top-right-radius:15px;
+    border-bottom-right-radius:15px;
+    border-top-left-radius:15px;
+    border-bottom-left-radius:15px;
+
+*/
+li a {
+    display: block;
+    color: white;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    background-color: #777;
+    margin-right: 2px;
+}
+
+li a:hover {
+    background-color: #111;
+    color: red;
+}
+
+li {
+    border-left: 0px solid #fff;
+}
+
+
+.active {
+    background-color: #4CAF50;
+}
+
+
