@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,7 +14,6 @@
 #ifndef DTC_KERNEL_MASTER_HPP_
 #define DTC_KERNEL_MASTER_HPP_
 
-#include <dtc/kernel/scheduler.hpp>
 #include <dtc/kernel/manager.hpp>
 
 namespace dtc {
@@ -46,27 +45,31 @@ class Master : public KernelBase {
   };
 
 
-  // ---- Actor definitions.
+  // ---- Channel definitions.
 
-  // Agent actor.
-  struct Agent : ActorBase {
+  // Agent channel.
+  struct Agent {
     
     const key_type key;
-    
+
     std::optional<pb::Resource> resource; 
     std::optional<pb::Resource> released;
 
     struct TaskMeta {
       const pb::Topology topology;
+      TaskMeta(pb::Topology&& tpg) : topology {std::move(tpg)} {}
     };
 
     std::unordered_map<TaskID, TaskMeta> taskmeta;
 
+    std::shared_ptr<InputStream> istream;
+    std::shared_ptr<OutputStream> ostream;
+
     Agent(key_type k) : key {k} {}
   };
-  
-  // Graph actor.
-  struct Graph : ActorBase {
+
+  // Graph channel.
+  struct Graph {
     
     const key_type key;
 
@@ -75,40 +78,47 @@ class Master : public KernelBase {
 
     struct TaskMeta {
       const key_type agent;
+      TaskMeta(key_type k) : agent {k} {}
     };
 
     std::unordered_map<TaskID, TaskMeta> taskmeta;
 
+    std::shared_ptr<InputStream> istream;
+    std::shared_ptr<OutputStream> ostream;
+
     Graph(key_type k) : key {k} {}
   };
 
-  // Webui actor.
-  struct WebUI : ActorBase {
+  // Webui channel.
+  struct WebUI {
 
     const key_type key;
+
+    std::shared_ptr<InputStream> istream;
+    std::shared_ptr<OutputStream> ostream;
 
     WebUI(key_type k) : key {k} {}
   };
 
-    bool _enqueue(const Graph&);
-    bool _deploy(Graph&);
+    bool _enqueue(Graph&);
     bool _remove_agent(key_type);
-    bool _remove_graph(key_type, bool);
+    bool _remove_graph(key_type);
     bool _remove_webui(key_type);
 
-    size_t _num_agents() const;
-    size_t _num_graphs() const;
     size_t _dequeue();
 
     void _on_resource(key_type, pb::Resource&);
     void _on_topology(key_type, pb::Topology&);
     void _on_taskinfo(key_type, pb::TaskInfo&);
 
-    key_type _insert_graph(std::shared_ptr<Socket>&);
-    key_type _insert_agent(std::shared_ptr<Socket>&);
-    key_type _insert_webui(std::shared_ptr<Socket>&);
-    
+    key_type _insert_graph(std::shared_ptr<Socket>);
+    key_type _insert_agent(std::shared_ptr<Socket>);
+    key_type _insert_webui(std::shared_ptr<Socket>);
+
     ClusterInfo _cluster_info() const;
+
+    bool _try_enqueue(Graph&);
+    bool _try_dequeue(Graph&);
 
   public:
 
@@ -120,14 +130,13 @@ class Master : public KernelBase {
     std::future<void> on_taskinfo(key_type, pb::TaskInfo&&);
 
     std::future<bool> remove_agent(key_type);
-    std::future<bool> remove_graph(key_type, bool);
+    std::future<bool> remove_graph(key_type);
     std::future<bool> remove_webui(key_type);
 
-    std::future<key_type> insert_agent(std::shared_ptr<Socket>&&);
-    std::future<key_type> insert_graph(std::shared_ptr<Socket>&&);
-    std::future<key_type> insert_webui(std::shared_ptr<Socket>&&);
+    std::future<key_type> insert_agent(std::shared_ptr<Socket>);
+    std::future<key_type> insert_graph(std::shared_ptr<Socket>);
+    std::future<key_type> insert_webui(std::shared_ptr<Socket>);
 
-    void webui(std::shared_ptr<Socket>&&);
     HttpResponse make_response(const HttpRequest&);
     std::string agent_to_json(std::string_view);
 
@@ -150,6 +159,7 @@ class Master : public KernelBase {
 };  // End of namespace dtc. --------------------------------------------------------------
 
 #endif
+
 
 
 

@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -16,98 +16,6 @@
 namespace dtc {
 
 //-------------------------------------------------------------------------------------------------
-// Vertex
-//-------------------------------------------------------------------------------------------------
-
-// Constructor
-Vertex::Vertex(key_type k) : key {k} {
-}
-
-//// Function: ostream
-//std::shared_ptr<OutputStream> Vertex::ostream(key_type k) const {
-//  if(auto itr = _ostreams.find(k); itr == _ostreams.end()) return nullptr;
-//  else return itr->second->_ostream.lock();
-//}
-
-// Function: istream
-//std::shared_ptr<InputStream> Vertex::istream(key_type k) const {
-//  if(auto itr = _streams.find(k); itr == _streams.end()) return nullptr;
-//  else return itr->second->_istream.lock();
-//}
-
-// Operator
-Vertex& Vertex::operator()() {
-  std::call_once(_once_flag, [&] () { _on(*this); });
-  return *this;
-}
-
-// Function: ostream
-//std::shared_ptr<OutputStream> Vertex::ostream(const StreamBuilder& s) const {
-//  if(auto itr = _streams.find(s.key); itr == _streams.end()) return nullptr;
-//  else return itr->second->ostream();
-//}
-//
-//// Function: istream
-//std::shared_ptr<InputStream> Vertex::istream(const StreamBuilder& s) const {
-//  if(auto itr = _streams.find(s.key); itr == _streams.end()) return nullptr;
-//  else return itr->second->istream();
-//}
-
-//-------------------------------------------------------------------------------------------------
-// Stream
-//-------------------------------------------------------------------------------------------------
-
-// Constructor
-Stream::Stream(key_type k, Vertex* t, Vertex* h) :
-  key {k}, _tail {t}, _head {h} {
-}
-
-// Function: ostream
-//std::shared_ptr<OutputStream> Stream::ostream() {
-//  return _ostream.lock();
-//}
-//
-//// Function: istream
-//std::shared_ptr<InputStream> Stream::istream() {
-//  return _istream.lock();
-//}
-
-// Function: is_intra_stream
-//bool Stream::is_intra_stream() const {
-//  return _tail && _head;
-//}
-//
-//// Function: is_inter_stream
-//bool Stream::is_inter_stream() const {
-//  return (_tail && !_head) || (!_tail && _head);
-//}
-
-// Function: is_inter_stream    
-bool Stream::is_inter_stream(std::ios_base::openmode m) {
-  switch(m) {
-    case std::ios_base::out:
-      return _tail && !_head;
-    break;
-
-    case std::ios_base::in:
-      return !_tail && _head;
-    break;
-
-    default:
-      return false;
-    break;
-  }
-}
-
-Stream::Signal Stream::operator()(Vertex& v, InputStream& is) {
-  return _on_istream(v(), is);
-}
-
-Stream::Signal Stream::operator()(Vertex& v, OutputStream& os) {
-  return _on_ostream(v(), os);
-}
-
-//-------------------------------------------------------------------------------------------------
 // VertexBuilder
 //-------------------------------------------------------------------------------------------------
 
@@ -116,13 +24,74 @@ VertexBuilder::VertexBuilder(Graph* g, key_type k) :
   _graph {g}, key {k} {
 }
 
+VertexBuilder::VertexBuilder(const VertexBuilder& rhs) :
+  _graph {rhs._graph}, key {rhs.key} {
+}
+
+// Function: tag
+VertexBuilder& VertexBuilder::tag(std::string s) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, s=std::move(s)] (pb::Topology* tpg) mutable {
+      // Local/distributed mode
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        G->_vertices.at(key)._tag = std::move(s);
+      }
+    }
+  );
+  return *this;
+}
+
+// Function: program
+VertexBuilder& VertexBuilder::program(std::string cmd) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, cmd=std::move(cmd)] (pb::Topology* tpg) mutable {
+      // Local/distributed mode
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        G->_vertices.at(key)._runtime.program(std::move(cmd));
+      }
+    }
+  );
+  return *this;
+}
+
 //-------------------------------------------------------------------------------------------------
 // StreamBuilder
 //-------------------------------------------------------------------------------------------------
 
 // Constructor
-StreamBuilder::StreamBuilder(Graph* g, key_type k) :
-  _graph {g}, key {k} {
+StreamBuilder::StreamBuilder(Graph* g, key_type k, std::optional<key_type> t, std::optional<key_type> h) :
+  _graph {g}, key {k}, tail {t}, head {h} {
+}
+
+// Copy constructor
+StreamBuilder::StreamBuilder(const StreamBuilder& rhs) : 
+  _graph {rhs._graph}, key {rhs.key}, tail {rhs.tail}, head {rhs.head} {
+}
+
+// Function: critical
+StreamBuilder& StreamBuilder::critical(bool flag) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, flag] (pb::Topology* tpg) {
+      // Local/distributed mode
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_stream(key))) {
+        G->_streams.at(key)._critical = flag;
+      }
+    }
+  ); 
+  return *this;
+}
+
+// Function: tag
+StreamBuilder& StreamBuilder::tag(std::string s) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, s=std::move(s)] (pb::Topology* tpg) mutable {
+      // Local/distributed mode
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_stream(key))) {
+        G->_streams.at(key)._tag = std::move(s);
+      }
+    }
+  ); 
+  return *this;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -134,12 +103,17 @@ ContainerBuilder::ContainerBuilder(Graph* g, key_type k) :
   _graph {g}, key {k} {
 }
 
+// Copy constructor
+ContainerBuilder::ContainerBuilder(const ContainerBuilder& rhs) : 
+  _graph {rhs._graph}, key {rhs.key} {
+}
+
 // Function: add
 ContainerBuilder& ContainerBuilder::add(key_type v) {
   _graph->_tasks.emplace_back(
     [v=v, c=key] (pb::Topology* tpg) {
       // Insert the vertex to the container.
-      if(tpg && tpg->id == -1) {
+      if(tpg && tpg->topology == -1) {
         tpg->vertices.at(v).container = c;
       }
     }
@@ -148,11 +122,11 @@ ContainerBuilder& ContainerBuilder::add(key_type v) {
 }
 
 // Function: memory_limit_in_bytes
-ContainerBuilder& ContainerBuilder::memory_limit_in_bytes(uintmax_t l) {
+ContainerBuilder& ContainerBuilder::memory(uintmax_t l) {
   _graph->_tasks.emplace_back(
     [l, c=key] (pb::Topology* tpg) {
       // We only initiate the resource container for submit mode.
-      if(tpg && tpg->id == -1) {
+      if(tpg && tpg->topology == -1) {
         tpg->containers.at(c).resource.memory_limit_in_bytes = l;
       }
     }
@@ -160,12 +134,25 @@ ContainerBuilder& ContainerBuilder::memory_limit_in_bytes(uintmax_t l) {
   return *this;
 }
 
+// Function: space
+ContainerBuilder& ContainerBuilder::space(uintmax_t l) {
+  _graph->_tasks.emplace_back(
+    [l, c=key] (pb::Topology* tpg) {
+      // We only initiate the resource container for submit mode.
+      if(tpg && tpg->topology == -1) {
+        tpg->containers.at(c).resource.space_limit_in_bytes = l;
+      }
+    }
+  );
+  return *this;
+}
+
 // Function: num_cpus
-ContainerBuilder& ContainerBuilder::num_cpus(uintmax_t n) {
+ContainerBuilder& ContainerBuilder::cpu(uintmax_t n) {
   _graph->_tasks.emplace_back(
     [n, c=key] (pb::Topology* tpg) {
       // We only initiate the resource container for submit mode.
-      if(tpg && tpg->id == -1) {
+      if(tpg && tpg->topology == -1) {
         tpg->containers.at(c).resource.num_cpus = n;
       }
     }
@@ -173,14 +160,64 @@ ContainerBuilder& ContainerBuilder::num_cpus(uintmax_t n) {
   return *this;
 }
 
-// Function: rootfs
-ContainerBuilder& ContainerBuilder::rootfs(const std::filesystem::path& path) {
+// Function: host
+ContainerBuilder& ContainerBuilder::host(std::string host) {
   _graph->_tasks.emplace_back(
-    [path, c=key] (pb::Topology* tpg) {
-      // We only initiate the resource container for submit mode.
-      if(tpg && tpg->id == -1) {
-        tpg->containers.at(c).configs["rootfs"] = path;
+    [host=std::move(host), c=key] (pb::Topology* tpg) {
+      if(tpg && tpg->topology == -1) {
+        tpg->containers.at(c).configs["host"] = host;
       }
+    }
+  );
+  return *this;
+}
+
+// Function: preferred_host
+ContainerBuilder& ContainerBuilder::preferred_host(std::string host) {
+  _graph->_tasks.emplace_back(
+    [host=std::move(host), c=key] (pb::Topology* tpg) {
+      if(tpg && tpg->topology == -1) {
+        tpg->containers.at(c).configs["preferred_host"] += (host + ' ');
+      }
+    }
+  );
+  return *this;
+}
+
+//// Function: rootfs
+//ContainerBuilder& ContainerBuilder::rootfs(const std::filesystem::path& path) {
+//  _graph->_tasks.emplace_back(
+//    [path, c=key] (pb::Topology* tpg) {
+//      // We only initiate the resource container for submit mode.
+//      if(tpg && tpg->topology == -1) {
+//        tpg->containers.at(c).configs["rootfs"] = path;
+//      }
+//    }
+//  );
+//  return *this;
+//}
+
+//-------------------------------------------------------------------------------------------------
+// ProberBuilder
+//-------------------------------------------------------------------------------------------------
+
+// Constructor
+ProberBuilder::ProberBuilder(Graph* g, key_type v) : _graph{g}, vertex{v} {
+}
+
+// Copy constructor
+ProberBuilder::ProberBuilder(const ProberBuilder& rhs) : _graph{rhs._graph}, vertex{rhs.vertex} {
+}
+
+// Function: on
+ProberBuilder& ProberBuilder::tag(std::string t) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=vertex, t=std::move(t)] (pb::Topology* tpg) mutable {
+      // Case 1: vertex needs to be initialized (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        G->_probers.at(key)._tag = std::move(t);
+      }
+      // Case 2: no need to handle submit mode.
     }
   );
   return *this;
@@ -198,12 +235,12 @@ VertexBuilder Graph::vertex() {
   _tasks.emplace_back(
     [G=this, k] (pb::Topology* tpg) {
       // Case 1: vertex needs to be initiated (local/distributed mode)
-      if(tpg == nullptr || (tpg->id != -1 && tpg->has_vertex(k))) {
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(k))) {
         //LOGI("creating a vertex: ", k);
         G->_vertices.try_emplace(k, k);
       }
       // Case 2: topology needs to be modified (submit mode)
-      else if(tpg->id == -1) {
+      else if(tpg->topology == -1) {
         tpg->vertices.try_emplace(k, k);
       }
     }
@@ -212,46 +249,91 @@ VertexBuilder Graph::vertex() {
   return VertexBuilder(this, k);
 }
 
-// Function: stream
-StreamBuilder Graph::stream(key_type tail, key_type head) {
-  
-  auto k = _generate_key();
-  
+// Function: _emplace_stream
+void Graph::_emplace_stream(key_type key, key_type tail, key_type head) {
   _tasks.emplace_back(
-    [G=this, k, t=tail, h=head] (pb::Topology* tpg) {
+    [G=this, k=key, t=tail, h=head] (pb::Topology* tpg) {
       // Case 1: vertex needs to be initiated (local/distributed mode)
-      if(tpg == nullptr || (tpg->id != -1 && tpg->has_stream(k))) {
-        auto tptr = G->_vertices.find(t) == G->_vertices.end() ? nullptr : &(G->_vertices.at(t));
-        auto hptr = G->_vertices.find(h) == G->_vertices.end() ? nullptr : &(G->_vertices.at(h));
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_stream(k))) {
+        auto tptr = G->_vertex(t);
+        auto hptr = G->_vertex(h);
         auto sitr = G->_streams.try_emplace(k, k, tptr, hptr).first;
         if(tptr) tptr->_ostreams[k] = &(sitr->second);
         if(hptr) hptr->_istreams[k] = &(sitr->second);
       }
       // Case 2: topology needs to be modified (submit mode)
-      else if(tpg->id == -1) {
+      else if(tpg->topology == -1) {
         tpg->streams.try_emplace(k, k, t, h);
       }
     }
-  ); 
-  
-  return StreamBuilder(this, k);
+  );
+}
+
+// Function: stream
+StreamBuilder Graph::stream(PlaceHolder& s, key_type head) {
+	if(!s.tail || s.head) {
+    DTC_THROW("Failed to create stream to ", head, " through placeholder");
+  }
+  auto k = _generate_key();
+  _emplace_stream(k, *s.tail, head);
+  s._keys.push_back(k);
+  return StreamBuilder(this, k, *s.tail, head);
+}
+
+// Function: stream
+StreamBuilder Graph::stream(key_type tail, PlaceHolder& s) {
+  if(s.tail || !s.head) {
+    DTC_THROW("Failed to create stream from ", tail, " through placeholder");
+  }
+  auto k = _generate_key();
+  _emplace_stream(k, tail, *s.head);
+  s._keys.push_back(k);
+  return StreamBuilder(this, k, tail, *s.head);
+}
+
+// Function: stream
+StreamBuilder Graph::stream(key_type tail, key_type head) {
+  auto k = _generate_key();
+  _emplace_stream(k, tail, head);
+  return StreamBuilder(this, k, tail, head);
 }
 
 // Function: container
 ContainerBuilder Graph::container() {
-  
   auto k = _generate_key();
-
   _tasks.emplace_back(
     [k] (pb::Topology* tpg) {
       // We only initiate the resource container for submit mode
-      if(tpg && tpg->id == -1) {
+      if(tpg && tpg->topology == -1) {
         tpg->containers.try_emplace(k, k);
       }
     }
   );
-
   return ContainerBuilder(this, k);
+}
+
+// Function: _vertex
+Vertex* Graph::_vertex(key_type key) {
+  if(auto itr = _vertices.find(key); itr != _vertices.end()) {
+    return &(itr->second);
+  }
+  else return nullptr;
+}
+
+// Function: _stream
+Stream* Graph::_stream(key_type key) {
+  if(auto itr = _streams.find(key); itr != _streams.end()) {
+    return &(itr->second);
+  }
+  else return nullptr;
+}
+
+// Function: _prober
+Prober* Graph::_prober(key_type key) {
+  if(auto itr = _probers.find(key); itr != _probers.end()) {
+    return &(itr->second);
+  }
+  else return nullptr;
 }
 
 // Function: generate_key
@@ -259,6 +341,26 @@ ContainerBuilder Graph::container() {
 key_type Graph::_generate_key() const {
   static key_type k(0);
   return k++;
+}
+
+// Function: prober
+ProberBuilder Graph::prober(key_type vkey) {
+
+  _tasks.emplace_back(
+    [G=this, vkey] (pb::Topology* tpg) {
+      // Case 1: vertex needs to be initiated (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(vkey))) {
+        //LOGI("creating a vertex: ", k);
+        if(auto ptr = G->_vertex(vkey); ptr == nullptr) {
+          DTC_THROW("Failed to create a prober on ", vkey);
+        }
+        else G->_probers.try_emplace(vkey, vkey, ptr);
+      }
+      // Case 2: topology needs to be modified (submit mode)
+    }
+  ); 
+  
+  return ProberBuilder(this, vkey);
 }
 
 // Procedure: _make
@@ -291,28 +393,39 @@ pb::Topology Graph::_topologize() {
   // Initialize the topology
   pb::Topology tpg;
 
-  // Store the file path for this topology.
-  tpg.file = Policy::get().SUBMIT_FILE();
-
-  // Parse the argv to this topology.
-  const static std::regex ws_re("\\s+|\\n+|\\t+"); 
-  auto argv = Policy::get().SUBMIT_ARGV();
-	tpg.argv.insert(
-		std::end(tpg.argv),
-    std::sregex_token_iterator(argv.begin(), argv.end(), ws_re, -1),
-    std::sregex_token_iterator()
-  );
-
   // Store the environment variables for this topology.
-	tpg.envp = environment_variables();
+	tpg.runtime = environment_variables();
 
   // Initialize the topology from the graph.
   _make(&tpg);
 
   // --------------------
-  // Post senity check  |
+  // Sanity check       |
   // --------------------
 
+  // Create a default container for unsigned vertices.
+  auto itr = std::find_if(
+    tpg.vertices.begin(), tpg.vertices.end(),
+    [] (const auto& tpg) {
+      return tpg.second.container == -1;
+    }
+  );
+
+  if(itr != tpg.vertices.end()) {
+    std::ostringstream oss;
+    oss << "Add vertices";
+    auto ckey = _generate_key();
+    tpg.containers.try_emplace(ckey, ckey);
+    for(auto& [k, v] : tpg.vertices) {
+      if(v.container == -1) {
+        v.container = ckey;
+        oss << ' ' << k;
+      }
+    }
+    oss << " to container " << ckey;
+    LOGI(oss.str());
+  }
+  
   // Container must have resource assigned.
   for(auto& c : tpg.containers) {
     // CPU field.
@@ -321,29 +434,11 @@ pb::Topology Graph::_topologize() {
     }
     // Memory field
     if(c.second.resource.memory_limit_in_bytes == 0) {
-      c.second.resource.memory_limit_in_bytes = 24_MB;
+      c.second.resource.memory_limit_in_bytes = 128_MB;
     }
     // Disk field
     if(c.second.resource.space_limit_in_bytes == 0) {
       c.second.resource.space_limit_in_bytes = 1_GB;
-    }
-  }
-
-  // Create a default container for unsigned vertices.
-  auto cnt = std::count_if(
-    tpg.vertices.begin(), tpg.vertices.end(), 
-    [] (const auto& v) { 
-      return v.second.container == -1; 
-    }
-  );
-
-  if(cnt > 0) {
-    auto ckey = _generate_key();
-    tpg.containers.try_emplace(ckey, ckey);
-    for(auto& v : tpg.vertices) {
-      if(v.second.container == -1) {
-        v.second.container = ckey;
-      }
     }
   }
 

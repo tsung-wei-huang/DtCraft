@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,103 +14,20 @@
 #ifndef DTC_KERNEL_GRAPH_HPP_
 #define DTC_KERNEL_GRAPH_HPP_
 
-#include <dtc/ipc/ipc.hpp>
+#include <dtc/kernel/vertex.hpp>
+#include <dtc/kernel/stream.hpp>
 #include <dtc/protobuf/topology.hpp>
-#include <dtc/kernel/container.hpp>
 
 namespace dtc {
 
 // Forward declaration.
-class Vertex;
-class Stream;
 class ContainerBuilder;
 class VertexBuilder;
 class StreamBuilder;
+class ProberBuilder;
 class Graph;
 
-//-------------------------------------------------------------------------------------------------
-
-// Class: Stream
-class Stream final {
-
-  friend class Vertex;
-  friend class Graph;
-  friend class Executor;
-  friend class StreamBuilder;
-
-  template <typename T> friend class Adjacency;
-
-  public:
-
-  enum Signal {
-    CLOSE,
-    DEFAULT,
-  };
-
-    const key_type key {-1};
-    
-    Stream(key_type, Vertex*, Vertex*);
-
-    bool is_inter_stream(std::ios_base::openmode);
-
-  private:
-    
-    std::weak_ptr<OutputStream> _ostream;
-    std::weak_ptr<InputStream> _istream;
-    
-    Vertex* _tail {nullptr};
-    Vertex* _head {nullptr};
-
-    std::function<Signal(Vertex&, OutputStream&)> _on_ostream {[](auto&&, auto&&){return DEFAULT;}};
-    std::function<Signal(Vertex&, InputStream&)>  _on_istream {[](auto&&, auto&&){return DEFAULT;}};
-
-    Signal operator () (Vertex&, InputStream&);
-    Signal operator () (Vertex&, OutputStream&);
-};
-
-//-------------------------------------------------------------------------------------------------
-  
-// Class: Vertex
-class Vertex {
-  
-  friend class Stream;
-  friend class Graph;
-  friend class Executor;
-  friend class VertexBuilder;
-
-  public:
-    
-    const key_type key {-1};
-
-    std::any any;
-
-    Vertex(key_type);
-    
-    inline auto ostream(key_type) const;
-
-  private:
-
-    std::once_flag _once_flag;
-
-    std::function<void(Vertex&)> _on {[](auto&&){}};
-    
-    std::unordered_map<key_type, Stream*> _istreams;
-    std::unordered_map<key_type, Stream*> _ostreams;
-
-    Vertex& operator()();
-};
-    
-auto Vertex::ostream(key_type key) const {
-  return [key, ptr=_ostreams.at(key)->_ostream.lock()] (auto&&... args) {
-    if(ptr == nullptr) {
-      THROW("ostream ", key, " is closed");
-    }
-    return (*ptr)(std::forward<decltype(args)>(args)...);
-  };
-}
-
-
-//-------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
 
 // Class: Graph
 // The main class that definis the API for user to initiate a graph.
@@ -120,6 +37,7 @@ class Graph {
   friend class ContainerBuilder;
   friend class VertexBuilder;
   friend class StreamBuilder;
+  friend class ProberBuilder;
 
   private:
 
@@ -127,6 +45,7 @@ class Graph {
 
     std::unordered_map<key_type, Vertex> _vertices;
     std::unordered_map<key_type, Stream> _streams;
+    std::unordered_map<key_type, Prober> _probers;
     
     std::deque<std::function<void(pb::Topology*)>> _tasks;
 
@@ -142,42 +61,31 @@ class Graph {
     
     VertexBuilder vertex();
     StreamBuilder stream(key_type, key_type);
+		StreamBuilder stream(PlaceHolder&, key_type);
+    StreamBuilder stream(key_type, PlaceHolder&);
     ContainerBuilder container();
+    ProberBuilder prober(key_type);
+
+    template <template<typename...> class C, typename... ArgsT>
+    auto insert(ArgsT&&...);
 
   private:
     
+    void _emplace_stream(key_type, key_type, key_type);
     void _make(pb::Topology*);
 
-    template <typename C>
-    void _on(key_type, C&&);
-    
+    Vertex* _vertex(key_type);
+    Stream* _stream(key_type);
+    Prober* _prober(key_type);
+
     key_type _generate_key() const;
 
     pb::Topology _topologize();
 };
 
-// Procedure: _on
-// Assign the callback to a stream or a vertex.
-template <typename C>
-void Graph::_on(key_type key, C&& c) {
-  _tasks.emplace_back(
-    [G=this, key=key, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
-      if(!tpg || (tpg->id != -1 && (tpg->has_stream(key) || tpg->has_vertex(key)))) {
-        if constexpr(std::is_invocable_v<C, Vertex&>) {
-          G->_vertices.at(key)._on = std::move(c);
-        }
-        else if constexpr(std::is_invocable_v<C, Vertex&, OutputStream&>){
-          G->_streams.at(key)._on_ostream = std::move(c);
-        }
-        else if constexpr(std::is_invocable_v<C, Vertex&, InputStream&>){
-          G->_streams.at(key)._on_istream = std::move(c);
-        }
-        else {
-          static_assert(dependent_false<C>::value);
-        }
-      }
-    }
-  );
+template <template<typename...> class C, typename... ArgsT>
+auto Graph::insert(ArgsT&&... args) {
+  return C(this, std::forward<ArgsT>(args)...);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -189,11 +97,12 @@ class VertexBuilder {
 
   private:
 
-    Graph* _graph {nullptr};
+    Graph* const _graph {nullptr};
 
   public:
 
     VertexBuilder(Graph*, key_type);
+    VertexBuilder(const VertexBuilder&);
     
     const key_type key {-1};
 
@@ -201,12 +110,23 @@ class VertexBuilder {
     
     template <typename C>
     VertexBuilder& on(C&&);
+
+    VertexBuilder& tag(std::string);
+    VertexBuilder& program(std::string);
 };
 
 // Function: on
 template <typename C>
 VertexBuilder& VertexBuilder::on(C&& c) {
-  _graph->_on(key, std::forward<C>(c));
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
+      // Case 1: vertex needs to be initialized (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        G->_vertices.at(key)._on = std::move(c);
+      }
+      // Case 2: no need to handle submit mode.
+    }
+  );
   return *this;
 }
 
@@ -224,24 +144,44 @@ class StreamBuilder {
 
   private:
 
-    Graph* _graph {nullptr};
+    Graph* const _graph {nullptr};
 
   public:
 
-    StreamBuilder(Graph*, key_type);
+    StreamBuilder(Graph*, key_type, std::optional<key_type>, std::optional<key_type>);
+    StreamBuilder(const StreamBuilder&);
 
     const key_type key;
+    const std::optional<key_type> tail;
+    const std::optional<key_type> head;
 
     inline operator key_type() const;
 
     template <typename C>
     StreamBuilder& on(C&&);
+
+    StreamBuilder& critical(bool);
+    StreamBuilder& tag(std::string);
 };
 
 // Function: on
 template <typename C>
 StreamBuilder& StreamBuilder::on(C&& c) {
-  _graph->_on(key, std::forward<C>(c));
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=key, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
+      // Case 1: stream needs to be initialized (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_stream(key))) {
+        if constexpr(std::is_invocable_v<C, Vertex&, InputStream&>) {
+          G->_streams.at(key)._on_istream = std::move(c);
+        }
+        else if constexpr(std::is_invocable_v<C, Vertex&, OutputStream&>) {
+          G->_streams.at(key)._on_ostream = std::move(c);
+        }
+        else static_assert(dependent_false_v<C>, "Unsupported stream callback");
+      }
+      // Case 2: no need to handle the submit mode.
+    }
+  );
   return *this;
 }
 
@@ -259,20 +199,24 @@ class ContainerBuilder {
 
   private:
     
-    Graph* _graph {nullptr};
+    Graph* const _graph {nullptr};
 
   public:
     
     ContainerBuilder(Graph*, key_type);
+    ContainerBuilder(const ContainerBuilder&);
 
     const key_type key;
 
     inline operator key_type() const;
 
     ContainerBuilder& add(key_type);
-    ContainerBuilder& num_cpus(uintmax_t);
-    ContainerBuilder& memory_limit_in_bytes(uintmax_t);
-    ContainerBuilder& rootfs(const std::filesystem::path&);
+    ContainerBuilder& cpu(uintmax_t);
+    ContainerBuilder& memory(uintmax_t);
+    ContainerBuilder& space(uintmax_t);
+    ContainerBuilder& host(std::string);
+    ContainerBuilder& preferred_host(std::string);
+    ContainerBuilder& preferred_hosts(auto&&... hosts);
 };
 
 // Implicit coversion.
@@ -280,10 +224,78 @@ inline ContainerBuilder::operator key_type() const {
   return key;
 }
 
+// Function: preferred_hosts
+ContainerBuilder& ContainerBuilder::preferred_hosts(auto&&... hosts) {
+  (preferred_host(hosts), ...);
+  return *this;
+}
+
+//-------------------------------------------------------------------------------------------------
+
+// Class: ProberBuilder
+class ProberBuilder {
+
+  friend class Graph;
+
+  private:
+
+    Graph* const _graph;
+
+  public:
+
+    ProberBuilder(Graph*, key_type);
+    ProberBuilder(const ProberBuilder&);
+
+    const key_type vertex {-1};
+
+    template <typename C>
+    ProberBuilder& on(C&&);
+
+    template <typename D>
+    ProberBuilder& duration(D&&);
+
+    ProberBuilder& tag(std::string);
+};
+
+// Function: on
+template <typename C>
+ProberBuilder& ProberBuilder::on(C&& c) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=vertex, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
+      // Case 1: vertex needs to be initialized (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        assert(G->_probers.find(key) != G->_probers.end());
+        G->_probers.at(key)._on = std::move(c);
+      }
+      // Case 2: no need to handle submit mode.
+    }
+  );
+  return *this;
+}
+
+// Function: duration
+template <typename D>
+ProberBuilder& ProberBuilder::duration(D&& d) {
+  _graph->_tasks.emplace_back(
+    [G=_graph, key=vertex, d=std::forward<D>(d)] (pb::Topology* tpg) mutable {
+      // Case 1: vertex needs to be initialized (local/distributed mode)
+      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+        assert(G->_probers.find(key) != G->_probers.end());
+        G->_probers.at(key)._duration = std::move(d);
+      }
+      // Case 2: no need to handle submit mode.
+    }
+  ); 
+  return *this;
+}
+
 };  // End of namespace dtc::graph. -------------------------------------------------------
 
 
 #endif
+
+
+
 
 
 

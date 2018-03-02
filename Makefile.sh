@@ -1,3 +1,11 @@
+#!/bin/bash
+
+# Predefined variables.
+#echo "# Predefine variables."
+#echo "EIGEN_HOME=3rd-party/eigen-eigen-5a0156e40feb"
+#echo "EIGEN_INC=-I\$(EIGEN_HOME)"
+#echo ""
+
 # Automake options.
 echo "# Automake options."
 echo "AUTOMAKE_OPTIONS = foreign"
@@ -22,6 +30,7 @@ echo "CXXFLAGS = @CXXFLAGS@"
 echo "LIBS = @LIBS@"
 echo "TEST_LIBS = @TEST_LIBS@"
 echo "DEFS = @DEFS@"
+echo "CPU_COUNT = @CPU_COUNT@"
 echo ""
 
 # Initialize variables here so we can use += operator everywhere else.
@@ -64,15 +73,16 @@ echo "CXXFLAGS += -Wall"
 echo "CXXFLAGS += \$(PTHREAD_CFLAGS)"
 echo ""
 
-# CPPFLAGS
-echo "# Preprocessor directive"
-echo "CPPFLAGS += \$(BOOST_CPPFLAGS)"
-echo ""
+## DtCraft 3rd-party eigen include flag
+#echo "# DtCraft 3rd-party eigen include flag"
+#echo "CXXFLAGS += \$(EIGEN_INC)"
+#echo ""
 
 # DtCraft package include.
 echo "# DtCraft Package include"
 echo "CPPFLAGS += -Iinclude"
-for f in `find include -name *.hpp`
+#for f in `find include -name *.hpp`
+for f in `find include -type f`
 do
   echo "nobase_pkginclude_HEADERS += $f"
 done
@@ -116,6 +126,27 @@ do
   echo ""
 done
 
+#### App binaries.
+echo "#### App ####"
+echo ""
+
+for app in app/*/
+do
+  filename=$(basename "$app")
+  echo "# Application $app$filename"
+  prefix=`echo "$app$filename" | tr / _`
+  echo "noinst_PROGRAMS += $app$filename"
+  #echo "${prefix}_CPPFLAGS = \$(CPPFLAGS) -I$app"
+  echo "${prefix}_LDADD ="
+  echo "${prefix}_LDADD += lib/libDtCraft.la"
+  echo "${prefix}_SOURCES ="
+  for f in `find $app -name *.cpp -o -name *.hpp`
+  do
+    echo "${prefix}_SOURCES += $f"
+  done
+
+  echo ""
+done
 
 #### Testing binaries.
 echo "#### Unittest ####"
@@ -129,7 +160,7 @@ do
   echo "unittest_${filename}_LDADD     = lib/libDtCraft.la"
   echo "unittest_${filename}_LDADD    += \$(TEST_LIBS)"
   echo "unittest_${filename}_SOURCES   = ${f}"
-  echo -en "#!/bin/bash\n\ntimeout 1m ./unittest/${filename} -d yes" > unittest/${filename}.sh
+  echo -en "#!/bin/bash\n\ntimeout 5m ./unittest/${filename} -d yes" > unittest/${filename}.sh
   chmod 755 unittest/${filename}.sh
   #echo "TESTS += unittest/${filename}"
   echo "TESTS += unittest/${filename}.sh"
@@ -143,6 +174,8 @@ echo "EXTRA_DIST += Makefile.sh"
 echo "EXTRA_DIST += conf"
 echo "EXTRA_DIST += sbin"
 echo "EXTRA_DIST += webui"
+echo "EXTRA_DIST += benchmark"
+#echo "EXTRA_DIST += 3rd-party"
 echo ""
 
 # Regression target.
@@ -293,6 +326,10 @@ echo ""
 
 echo "echo_BOOST_CPPFLAGS:"
 echo "	@echo \$(BOOST_CPPFLAGS)"
+echo ""
+
+echo "echo_CPU_COUNT:"
+echo "	@echo \$(CPU_COUNT)"
 echo ""
 
 

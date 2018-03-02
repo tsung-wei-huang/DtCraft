@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -16,19 +16,27 @@
 namespace dtc {
 
 // Constructor
-OutputStreamBuffer::OutputStreamBuffer(const std::shared_ptr<Device>& device) noexcept :
+OutputStreamBuffer::OutputStreamBuffer(Device* device) :
   _device {device} {
 }
 
 // Destructor
 OutputStreamBuffer::~OutputStreamBuffer() {
 
-  try {
-    _flush();
-  } 
-  catch(...) {
-    LOGW("Flush failed on osbuf destructor");
-  }
+  //try {
+  //  _flush();
+  //} 
+  //catch(...) {
+  //  //LOGW("Failed to flush data: ", s.code().message());
+  //}
+  
+  //if(_flush(); _out_avail() > 0) {
+  //  LOGW("Failed to flush the ostream buffer (", strerror(errno), ")");
+  //}
+
+  //if(_out_avail() > 0) {
+  //  LOGW("Failed to flush data (remain ", _out_avail(), " bytes)");
+  //}
   
   if(!_is_local_data()) {
     std::free(_data);
@@ -37,7 +45,7 @@ OutputStreamBuffer::~OutputStreamBuffer() {
 
 // Function: flush
 std::streamsize OutputStreamBuffer::flush() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _flush();
 }
 
@@ -63,7 +71,7 @@ bool OutputStreamBuffer::_is_local_data() const noexcept {
 // Function: out_avail
 // Return the amount of data in the buffer. The call is thread-safe.
 std::streamsize OutputStreamBuffer::out_avail() const {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _out_avail();
 }
 
@@ -74,7 +82,7 @@ std::streamsize OutputStreamBuffer::_out_avail() const noexcept {
 
 // Function: copy
 std::streamsize OutputStreamBuffer::copy(void* data, std::streamsize count) const {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _copy(data, count);
 }
 
@@ -88,7 +96,7 @@ std::streamsize OutputStreamBuffer::_copy(void* data, std::streamsize count) con
 // Function: write
 // Add data into the buffer. The call is thread-safe.
 std::streamsize OutputStreamBuffer::write(const void* s, std::streamsize count) {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _write(s, count);
 }
 
@@ -156,21 +164,21 @@ std::streamsize OutputStreamBuffer::_sync() {
 
 // Function: sync
 std::streamsize OutputStreamBuffer::sync() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _sync();
 }
 
 //-------------------------------------------------------------------------------------------------
 
 // Constructor.
-InputStreamBuffer::InputStreamBuffer(const std::shared_ptr<Device>& device) noexcept : 
+InputStreamBuffer::InputStreamBuffer(Device* device) noexcept : 
   _device {device} {
 }
 
 // Constructor.
 InputStreamBuffer::InputStreamBuffer(const OutputStreamBuffer& osbuf) {
 
-  std::lock_guard lock(osbuf._mutex);
+  std::scoped_lock lock(osbuf._mutex);
 
   auto count = osbuf._pptr - osbuf._pbase;
   
@@ -193,7 +201,7 @@ InputStreamBuffer::InputStreamBuffer(const OutputStreamBuffer& osbuf) {
 // Constructor.
 InputStreamBuffer::InputStreamBuffer(OutputStreamBuffer&& osbuf) {
   
-  std::lock_guard lock(osbuf._mutex);
+  std::scoped_lock lock(osbuf._mutex);
 
   auto count = osbuf._pptr - osbuf._pbase;
   
@@ -232,7 +240,7 @@ bool InputStreamBuffer::_is_local_data() const noexcept {
 // Function: in_avail
 // Return the amount of data in the buffer. The call is thread-safe.
 std::streamsize InputStreamBuffer::in_avail() const {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _in_avail();
 }
 
@@ -243,7 +251,7 @@ std::streamsize InputStreamBuffer::_in_avail() const noexcept {
 
 // Function: copy
 std::streamsize InputStreamBuffer::copy(void* data, std::streamsize count) const {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _copy(data, count);
 }
 
@@ -256,7 +264,7 @@ std::streamsize InputStreamBuffer::_copy(void* data, std::streamsize count) cons
 
 // Function: sync
 std::streamsize InputStreamBuffer::sync() {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _sync();
 }
 
@@ -311,7 +319,7 @@ std::streamsize InputStreamBuffer::_sync() {
 // Function: read
 // Get "count" data from the buffer into user space.
 std::streamsize InputStreamBuffer::read(void* s, std::streamsize count) {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _read(s, count);
 }
 
@@ -328,7 +336,7 @@ std::streamsize InputStreamBuffer::_read(void* s, std::streamsize count) {
 
 // Function: drop
 std::streamsize InputStreamBuffer::drop(std::streamsize count) {
-  std::lock_guard lock(_mutex);
+  std::scoped_lock lock(_mutex);
   return _drop(count);
 }
 

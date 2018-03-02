@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -11,12 +11,11 @@
  *                                                                            *
  ******************************************************************************/
 
-
 #ifndef DTC_WEBUI_WEBUI_HPP_
 #define DTC_WEBUI_WEBUI_HPP_
 
 #include <dtc/headerdef.hpp>
-#include <dtc/utility.hpp>
+#include <dtc/utility/utility.hpp>
 
 namespace dtc {
   

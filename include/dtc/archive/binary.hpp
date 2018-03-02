@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -43,9 +43,6 @@ class BinaryOutputArchiver {
   private:
 
     OutputStreamBuffer& _osbuf;
-
-    template <typename T, typename... R>
-    std::streamsize _archive(T&& t, R&&... r);
     
     template <typename T>
     std::streamsize _archive(T&& t);
@@ -58,16 +55,10 @@ inline BinaryOutputArchiver::BinaryOutputArchiver(OutputStreamBuffer& ostream) :
 // Operator: main archiver function
 template <typename... T>
 std::streamsize BinaryOutputArchiver::operator()(T&&... t) {
-  std::lock_guard lock(_osbuf._mutex);
-  return _archive(std::forward<T>(t)...);
+  std::scoped_lock lock(_osbuf._mutex);
+  return (_archive(std::forward<T>(t)) + ... );
 }
     
-// Function: _archive
-template <typename T, typename... R>
-std::streamsize BinaryOutputArchiver::_archive(T&& t, R&&... r) {
-  return _archive(std::forward<T>(t)) + _archive(std::forward<R>(r)...);
-}
-
 // Function: _archive
 template <typename T>
 std::streamsize BinaryOutputArchiver::_archive(T&& t) {
@@ -143,7 +134,7 @@ std::streamsize BinaryOutputArchiver::_archive(T&& t) {
   }
   else if constexpr(is_std_unique_ptr_v<U>) {
     if(t == nullptr) return _archive(uint8_t(0));
-    return _archive(uint8_t(1), *t);
+    return _archive(uint8_t(1)) + _archive(*t);
   }
   else if constexpr(is_std_error_code_v<U>) {
     return _archive(ErrorCodeItem(t));
@@ -154,6 +145,32 @@ std::streamsize BinaryOutputArchiver::_archive(T&& t) {
   else if constexpr(is_std_time_point_v<U>) {
     return _archive(t.time_since_epoch());
   }
+  else if constexpr(is_std_optional_v<U>) {
+    if(bool flag = t.has_value(); flag) {
+      return _archive(flag) + _archive(*t);
+    }
+    else {
+      return _archive(flag);
+    }
+  }
+  else if constexpr(is_std_tuple_v<U>) {
+    return std::apply(
+      [this] (auto&&... args) {
+        return (_archive(std::forward<decltype(args)>(args)) + ... + 0); 
+      },
+      std::forward<T>(t)
+    );
+  }
+  else if constexpr(is_eigen_matrix_v<U>) {
+    std::streamsize sz {0};
+    auto rows = t.rows();
+    auto cols = t.cols();
+    sz += _osbuf._write(&rows, sizeof(rows));
+    sz += _osbuf._write(&cols, sizeof(cols));
+    sz += _osbuf._write(t.data(), t.size() * sizeof(typename U::Scalar));
+    return sz;
+  }
+  // Fall back to user-defined archive method.
   else {
     return t.archive(*this);
   }
@@ -181,10 +198,6 @@ class BinaryInputArchiver {
 
     InputStreamBuffer& _isbuf;
     
-    // Function: _archive
-    template <typename T, typename... R>
-    std::streamsize _archive(T&&, R&&...);
-    
     template <typename T>
     std::streamsize _archive(T&&);
     
@@ -205,14 +218,9 @@ inline BinaryInputArchiver::BinaryInputArchiver(InputStreamBuffer& istream) : _i
 // Operator ()
 template <typename... T>
 std::streamsize BinaryInputArchiver::operator()(T&&... args) {
-  std::lock_guard lock(_isbuf._mutex);
-  return _archive(std::forward<T>(args)...);
-}
-
-// Function: _archive
-template <typename T, typename... R>
-std::streamsize BinaryInputArchiver::_archive(T&& t, R&&... r) {
-  return _archive(std::forward<T>(t)) + _archive(std::forward<R>(r)...);
+  std::scoped_lock lock(_isbuf._mutex);
+  //return _archive(std::forward<T>(args)...);
+  return (_archive(std::forward<T>(args)) + ...);
 }
 
 // Function: _archive
@@ -383,6 +391,38 @@ std::streamsize BinaryInputArchiver::_archive(T&& t) {
     t = U{elapsed};
     return s;
   }
+  else if constexpr(is_std_optional_v<U>) {
+    bool has_value;
+    auto s = _archive(has_value);
+    if(has_value) {
+      if(!t) {
+        t = typename U::value_type();
+      }
+      s += _archive(*t);
+    }
+    else {
+      t.reset(); 
+    }
+    return s;
+  }
+  else if constexpr(is_std_tuple_v<U>) {
+    return std::apply(
+      [this] (auto&&... args) {
+        return (_archive(std::forward<decltype(args)>(args)) + ... + 0); 
+      },
+      std::forward<T>(t)
+    );
+  }
+  else if constexpr(is_eigen_matrix_v<U>) {
+    std::streamsize sz {0};
+    auto rows = t.rows();
+    auto cols = t.cols();
+    sz += _isbuf._read(&rows, sizeof(rows));
+    sz += _isbuf._read(&cols, sizeof(cols));
+    t.resize(rows, cols);
+    sz += _isbuf._read(t.data(), t.size() * sizeof(typename U::Scalar));
+    return sz;
+  }
   else {
     return t.archive(*this);
   }
@@ -437,7 +477,7 @@ inline BinaryOutputPackager::BinaryOutputPackager(OutputStreamBuffer& os) : ar(o
 template <typename... T>
 std::streamsize BinaryOutputPackager::operator()(T&&... items) {
   std::streamsize sz;
-  std::lock_guard lock(ar._osbuf._mutex);
+  std::scoped_lock lock(ar._osbuf._mutex);
   sz = ar(sz, std::forward<T>(items)...);
   if(sz != -1) {
     *reinterpret_cast<std::streamsize*>(ar._osbuf._pptr - sz) = sz;
@@ -461,6 +501,13 @@ class BinaryInputPackager {
 
     template <typename... T>
     std::streamsize operator()(T&&...);
+
+    operator bool () const {
+      std::scoped_lock lock(ar._isbuf._mutex);
+      std::streamsize sz = ar._isbuf._in_avail();
+      return (sz >= static_cast<std::streamsize>(sizeof(std::streamsize)) && 
+              sz >= *reinterpret_cast<std::streamsize*>(ar._isbuf._gptr));
+    }
 };
 
 // Constructor.
@@ -469,10 +516,10 @@ inline BinaryInputPackager::BinaryInputPackager(InputStreamBuffer& is) : ar{is} 
 // Operator ()
 template <typename... T>
 std::streamsize BinaryInputPackager::operator()(T&&... items) {
-  std::lock_guard lock(ar._isbuf._mutex);
-  std::streamsize sz = ar._isbuf.in_avail();
-  if(sz >= static_cast<decltype(sz)>(sizeof(std::streamsize)) && 
-     sz >= *reinterpret_cast<decltype(sz)*>(ar._isbuf._gptr)) {
+  std::scoped_lock lock(ar._isbuf._mutex);
+  std::streamsize sz = ar._isbuf._in_avail();
+  if(sz >= static_cast<std::streamsize>(sizeof(std::streamsize)) && 
+     sz >= *reinterpret_cast<std::streamsize*>(ar._isbuf._gptr)) {
     return ar(sz, std::forward<T>(items)...);
   }
   return -1;

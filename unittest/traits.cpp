@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -423,6 +423,179 @@ TEST_CASE("TraitsTest.STD.ErrorCode") {
   static_assert(!dtc::is_std_error_code_v<std::unique_ptr<int>>);
   static_assert(!dtc::is_std_error_code_v<std::shared_ptr<int>>);
 }
+
+// Test case: Traits.STD.Duration
+TEST_CASE("TraitsTest.STD.Duration") {
+  static_assert(dtc::is_std_duration_v<std::chrono::seconds>);
+  static_assert(dtc::is_std_duration_v<std::chrono::nanoseconds>);
+  static_assert(dtc::is_std_duration_v<std::chrono::milliseconds>);
+  static_assert(dtc::is_std_duration_v<std::chrono::minutes>);
+  static_assert(dtc::is_std_duration_v<std::chrono::hours>);
+  
+  static_assert(!dtc::is_std_duration_v<int>);
+  static_assert(!dtc::is_std_duration_v<std::basic_string<char>>);
+  static_assert(!dtc::is_std_duration_v<std::array<int, 1024>>);
+  static_assert(!dtc::is_std_duration_v<std::vector<int>>);
+  static_assert(!dtc::is_std_duration_v<std::deque<int>>);
+  static_assert(!dtc::is_std_duration_v<std::list<int>>);
+  static_assert(!dtc::is_std_duration_v<std::map<int, int>>);
+  static_assert(!dtc::is_std_duration_v<std::unordered_map<int, int>>);
+  static_assert(!dtc::is_std_duration_v<std::set<int>>);
+  static_assert(!dtc::is_std_duration_v<std::unordered_set<int>>);
+  static_assert(!dtc::is_std_duration_v<std::variant<int, float>>);
+  static_assert(!dtc::is_std_duration_v<std::forward_list<int>>);
+  static_assert(!dtc::is_std_duration_v<std::unique_ptr<int>>);
+  static_assert(!dtc::is_std_duration_v<std::shared_ptr<int>>);
+}
+
+// Test case: Traits.STD.Optional
+TEST_CASE("TraitsTest.STD.Optional") {
+  static_assert(dtc::is_std_optional_v<std::optional<int>>);
+  static_assert(dtc::is_std_optional_v<std::optional<std::optional<int>>>);
+  
+  static_assert(!dtc::is_std_optional_v<int>);
+  static_assert(!dtc::is_std_optional_v<std::basic_string<char>>);
+  static_assert(!dtc::is_std_optional_v<std::array<int, 1024>>);
+  static_assert(!dtc::is_std_optional_v<std::vector<int>>);
+  static_assert(!dtc::is_std_optional_v<std::deque<int>>);
+  static_assert(!dtc::is_std_optional_v<std::list<int>>);
+  static_assert(!dtc::is_std_optional_v<std::map<int, int>>);
+  static_assert(!dtc::is_std_optional_v<std::unordered_map<int, int>>);
+  static_assert(!dtc::is_std_optional_v<std::set<int>>);
+  static_assert(!dtc::is_std_optional_v<std::unordered_set<int>>);
+  static_assert(!dtc::is_std_optional_v<std::variant<int, float>>);
+  static_assert(!dtc::is_std_optional_v<std::forward_list<int>>);
+  static_assert(!dtc::is_std_optional_v<std::unique_ptr<int>>);
+  static_assert(!dtc::is_std_optional_v<std::shared_ptr<int>>);
+  static_assert(!dtc::is_std_optional_v<std::tuple<std::optional<int>, int>>);
+}
+
+// Test case: Traits.STD.tuple
+TEST_CASE("TraitsTest.STD.tuple") {
+  static_assert(dtc::is_std_tuple_v<std::tuple<>>);
+  static_assert(dtc::is_std_tuple_v<std::tuple<int>>);
+  static_assert(dtc::is_std_tuple_v<std::tuple<std::tuple<int>>>);
+  
+  static_assert(!dtc::is_std_tuple_v<int>);
+  static_assert(!dtc::is_std_tuple_v<std::basic_string<char>>);
+  static_assert(!dtc::is_std_tuple_v<std::array<int, 1024>>);
+  static_assert(!dtc::is_std_tuple_v<std::vector<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::deque<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::list<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::map<int, int>>);
+  static_assert(!dtc::is_std_tuple_v<std::unordered_map<int, int>>);
+  static_assert(!dtc::is_std_tuple_v<std::set<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::unordered_set<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::variant<int, float>>);
+  static_assert(!dtc::is_std_tuple_v<std::forward_list<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::unique_ptr<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::shared_ptr<int>>);
+  static_assert(!dtc::is_std_tuple_v<std::optional<std::tuple<int, int>>>);
+}
+
+// ---- Eigen traits ------------------------------------------------------------------------------
+
+// Test case:: TraitsTest.Eigen.Matrix
+TEST_CASE("TraitsTest.Eigen.Matrix") {
+  
+  static_assert(dtc::is_eigen_matrix_v<Eigen::MatrixXi>);
+  static_assert(dtc::is_eigen_matrix_v<Eigen::MatrixXd>);
+  static_assert(dtc::is_eigen_matrix_v<Eigen::MatrixXf>);
+  static_assert(dtc::is_eigen_matrix_v<Eigen::VectorXi>);
+  static_assert(dtc::is_eigen_matrix_v<Eigen::VectorXf>);
+  static_assert(dtc::is_eigen_matrix_v<Eigen::VectorXd>);
+
+  static_assert(!dtc::is_eigen_matrix_v<int>);
+  static_assert(!dtc::is_eigen_matrix_v<std::basic_string<char>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::array<int, 1024>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::vector<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::deque<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::list<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::map<int, int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::unordered_map<int, int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::set<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::unordered_set<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::variant<int, float>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::forward_list<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::unique_ptr<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::shared_ptr<int>>);
+  static_assert(!dtc::is_eigen_matrix_v<std::optional<int>>);
+}
+
+// ---- Closure traits ----------------------------------------------------------------------------
+
+// Test case: TraitsTest.Lambda
+TEST_CASE("TraitsTest.Lambda") {
+
+  auto l1 = [] (int, double&, const std::string&) { };
+
+  static_assert(dtc::closure_traits<decltype(l1)>::arity::value == 3);
+  static_assert(dtc::closure_traits<decltype(l1)>::is_const::value);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l1)>::result_type, void>);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<0>, int>);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<1>, double&>);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<2>, const std::string&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l1)>::result_type, int>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<0>, int&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<1>, double>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l1)>::arg<2>, std::string&>);
+
+  auto l2 = [] (std::vector<std::string>, std::any&) mutable { 
+    std::unordered_map<int, int> map = {{1, 2}, {2, 3}, {3, 4}, {4,5}};
+    return map;
+  };
+  
+  static_assert(dtc::closure_traits<decltype(l2)>::arity::value == 2);
+  static_assert(!dtc::closure_traits<decltype(l2)>::is_const::value);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l2)>::result_type, std::unordered_map<int, int>>);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l2)>::arg<0>, std::vector<std::string>>);
+  static_assert(std::is_same_v<dtc::closure_traits<decltype(l2)>::arg<1>, std::any&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l2)>::result_type, int>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l2)>::arg<0>, std::vector<std::string>&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<decltype(l2)>::arg<1>, double>);
+
+}
+
+// Test case: TraitsTest.Function
+TEST_CASE("TraitsTest.Function") {
+
+  using F1 = std::function<void(int, double&, const std::string&)>;
+
+  static_assert(dtc::closure_traits<F1>::arity::value == 3);
+  static_assert(dtc::closure_traits<F1>::is_const::value);
+  static_assert(std::is_same_v<dtc::closure_traits<F1>::result_type, void>);
+  static_assert(std::is_same_v<dtc::closure_traits<F1>::arg<0>, int>);
+  static_assert(std::is_same_v<dtc::closure_traits<F1>::arg<1>, double&>);
+  static_assert(std::is_same_v<dtc::closure_traits<F1>::arg<2>, const std::string&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F1>::result_type, int>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F1>::arg<0>, int&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F1>::arg<1>, double>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F1>::arg<2>, std::string&>);
+
+  using F2 = std::function<std::unordered_map<int, int>(std::vector<std::string>, std::any&)>;
+
+  static_assert(dtc::closure_traits<F2>::arity::value == 2);
+  static_assert(dtc::closure_traits<F2>::is_const::value);
+  static_assert(std::is_same_v<dtc::closure_traits<F2>::result_type, std::unordered_map<int, int>>);
+  static_assert(std::is_same_v<dtc::closure_traits<F2>::arg<0>, std::vector<std::string>>);
+  static_assert(std::is_same_v<dtc::closure_traits<F2>::arg<1>, std::any&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F2>::result_type, int>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F2>::arg<0>, std::vector<std::string>&>);
+  static_assert(!std::is_same_v<dtc::closure_traits<F2>::arg<1>, double>);
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

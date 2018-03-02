@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -103,7 +103,7 @@ Resource& Resource::operator += (const Resource& rhs) {
 Resource& Resource::operator -= (const Resource& rhs) {
 
   if(!(*this >= rhs)) {
-    THROW("Resource substraction encountered underflow");
+    DTC_THROW("Resource substraction encountered underflow");
   }
   
   num_cpus -= rhs.num_cpus;

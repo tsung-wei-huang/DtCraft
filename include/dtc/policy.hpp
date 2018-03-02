@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -15,12 +15,10 @@
 #define DTC_POLICY_HPP_
 
 #include <dtc/headerdef.hpp>
-#include <dtc/utility.hpp>
+#include <dtc/utility/utility.hpp>
 
-namespace dtc {
+/*namespace dtc {
 
-// Class: Policy
-// Policy of running various programs in dtc (e.g., timeout values).
 class Policy final : public EnableSingletonFromThis<Policy> {
 
   friend EnableSingletonFromThis<Policy>;
@@ -57,8 +55,6 @@ class Policy final : public EnableSingletonFromThis<Policy> {
     inline void STDOUT_LISTENER_PORT(std::string_view);
     inline void STDERR_LISTENER_PORT(std::string_view);
 
-    inline const std::unordered_map<std::string, std::string>& FRONTIERS() const;
-    
     inline const std::filesystem::path& WEBUI_DIR() const;
     inline const std::filesystem::path& CGROUP_MOUNT() const;
     inline const std::filesystem::path& LOG_FILE() const;
@@ -95,8 +91,6 @@ class Policy final : public EnableSingletonFromThis<Policy> {
     unsigned _AGENT_NUM_THREADS {std::thread::hardware_concurrency()};
     unsigned _EXECUTOR_NUM_THREADS {std::thread::hardware_concurrency()};
     unsigned _MASTER_NUM_THREADS {std::thread::hardware_concurrency()};
-
-    std::unordered_map<std::string, std::string> _FRONTIERS;
 
     const std::filesystem::path _WEBUI_DIR {DTC_HOME "/webui"};
     const std::filesystem::path _CGROUP_MOUNT {"dtc"};
@@ -169,10 +163,6 @@ inline Policy::ExecutionMode Policy::EXECUTION_MODE() const {
 	return _EXECUTION_MODE;
 }
 
-inline const std::unordered_map<std::string, std::string>& Policy::FRONTIERS() const {
-	return _FRONTIERS;
-}
-
 inline const std::filesystem::path& Policy::WEBUI_DIR() const {
   return _WEBUI_DIR;
 }
@@ -217,15 +207,6 @@ inline unsigned Policy::EXECUTOR_NUM_THREADS() const {
   return _EXECUTOR_NUM_THREADS;
 }
     
-//inline leveldb::DB* Policy::iosdb() const {
-//  return _iosdb;
-//}
-//
-//inline std::string Policy::next_iosdb_kbase() const {
-//  static std::atomic<long long> counter {0};
-//  return std::to_string(++counter) + "-";
-//}
-
 inline void Policy::STDOUT_LISTENER_PORT(std::string_view str) {
   ::setenv("DTC_STDOUT_LISTENER_PORT", (_STDOUT_LISTENER_PORT = str).c_str(), 1);
 }
@@ -234,9 +215,248 @@ inline void Policy::STDERR_LISTENER_PORT(std::string_view str) {
   ::setenv("DTC_STDERR_LISTENER_PORT", (_STDERR_LISTENER_PORT = str).c_str(), 1);
 }
 
+};  // End of namespace dtc. ---------------------------------------------------------------------- 
+*/
 
-};  // End of namespace dtc. ----------------------------------------------------------------------
+namespace dtc {
+
+enum class ExecutionMode {
+  SUBMIT,
+  DISTRIBUTED,
+  LOCAL 
+};
+
+// Class: Runtime
+class Runtime {
+
+  public:
+
+    Runtime() = default;
+    Runtime(Runtime&&);
+    Runtime(const Runtime&);
+
+    ExecutionMode execution_mode() const;
+
+    std::unordered_map<key_type, std::string> vertex_hosts() const;
+    std::unordered_map<key_type, int> frontiers() const;
+    std::unordered_map<std::string, int> bridges() const;
+ 
+    std::unique_ptr<char[]> c_file() const;
+    std::unique_ptr<char*, std::function<void(char**)>> c_argv() const;
+    std::unique_ptr<char*, std::function<void(char**)>> c_envp() const;  
+    
+    Runtime& execution_mode(ExecutionMode);
+    Runtime& vertex_hosts(std::string);
+    Runtime& bridges(std::string);
+    Runtime& frontiers(std::string);
+    Runtime& submit_file(std::string);
+    Runtime& submit_argv(std::string);
+    Runtime& program(std::string);
+    Runtime& merge(std::unordered_map<std::string, std::string>&&);
+    Runtime& topology_fd(int);
+    Runtime& vertex_fd(int);
+    Runtime& stdout_fd(int);
+    Runtime& stderr_fd(int);
+    Runtime& remove_vertex_hosts();
+    Runtime& remove_topology_fd();
+    Runtime& remove_frontiers();
+
+    std::string master_host() const;
+    std::string this_host() const;
+    std::string submit_file() const;
+    std::string submit_argv() const;
+    std::string program() const;
+    std::string stdout_listener_port() const;
+    std::string stderr_listener_port() const;
+
+    Runtime& operator = (Runtime&&);
+    Runtime& operator = (const Runtime&);
+
+    Runtime& operator = (std::unordered_map<std::string, std::string>&&);
+    Runtime& operator = (const std::unordered_map<std::string, std::string>&);
+    
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
+
+  private:
+
+    std::unordered_map<std::string, std::string> _map;
+};
+
+// Function: archive
+template <typename ArchiverT>
+auto Runtime::archive(ArchiverT& ar) {
+  return ar(_map);
+}
+
+
+};  // End of namespace dtc. ---------------------------------------------------------------------- 
+
+
+namespace dtc::env {
+
+inline std::string this_host() {
+	if(auto str = std::getenv("DTC_THIS_HOST")) {
+    return str;
+	}
+  else return "127.0.0.1";
+}
+
+inline std::string master_host() {
+	if(auto str = std::getenv("DTC_MASTER_HOST")) {
+    return str;
+	}
+  else return "127.0.0.1";
+}
+
+inline std::string agent_listener_port() {
+  if(auto str = std::getenv("DTC_AGENT_LISTENER_PORT")){
+    return str;
+  }
+  else return "9909";
+}
+
+inline std::string graph_listener_port() {
+  if(auto str = std::getenv("DTC_GRAPH_LISTENER_PORT")){
+    return str;
+  }
+  else return "9910";
+}
+
+inline std::string stdout_listener_port() {
+  if(auto str = std::getenv("DTC_STDOUT_LISTENER_PORT")){
+    return str;
+  }
+  else return "0";
+}
+
+inline std::string stderr_listener_port() {
+  if(auto str = std::getenv("DTC_STDERR_LISTENER_PORT")){
+    return str;
+  }
+  else return "0";
+}
+
+inline std::string frontier_listener_port() {
+  if(auto str = std::getenv("DTC_FRONTIER_LISTENER_PORT")){
+    return str;
+  }
+  else return "9913";
+}
+
+inline std::string shell_listener_port() {
+  if(auto str = std::getenv("DTC_SHELL_LISTENER_PORT")){
+    return str;
+  }
+  else return "9911";
+}
+
+inline std::string webui_listener_port() {
+  if(auto str = std::getenv("DTC_WEBUI_LISTENER_PORT")){
+    return str;
+  }
+  else return "9912";
+}
+
+inline std::string submit_argv() {
+  if(auto str = std::getenv("DTC_SUBMIT_ARGV")) {
+    return str;
+  }
+  else return "";
+}
+
+inline std::string submit_file() {
+  if(auto str = std::getenv("DTC_SUBMIT_FILE")) {
+    return str;
+  }
+  else return "";
+}
+
+inline ExecutionMode execution_mode() {
+  if(std::string_view mode(std::getenv("DTC_EXECUTION_MODE")); !mode.empty()) {
+    if(mode == "local") {
+      return ExecutionMode::LOCAL;  
+    }
+    else if(mode == "submit") {
+      return ExecutionMode::SUBMIT;
+    }
+    else if(mode == "distributed") {
+      return ExecutionMode::DISTRIBUTED;
+    }
+    else throw std::runtime_error("Invalid execution mode");
+  }
+  else return ExecutionMode::LOCAL;
+}
+
+inline std::filesystem::path webui_dir() {
+  return DTC_HOME "/webui";
+}
+
+inline std::filesystem::path log_file() {
+  if(auto str = std::getenv("DTC_LOG_FILE")) {
+    return str;
+  }
+  else return "";
+}
+
+inline int topology_fd() {
+  if(auto str = std::getenv("DTC_TOPOLOGY_FD")) {
+    return std::stoi(str);
+  }
+  else return -1;
+}
+
+inline int stdout_fd() {
+  if(auto str = std::getenv("DTC_STDOUT_FD")) {
+    return std::stoi(str);
+  }
+  else return STDOUT_FILENO;
+}
+
+inline int stderr_fd() {
+  if(auto str = std::getenv("DTC_STDERR_FD")) {
+    return std::stoi(str);
+  }
+  else return STDERR_FILENO;
+}
+
+inline unsigned master_num_threads() {
+  if(auto str = std::getenv("DTC_MASTER_NUM_THREADS"); str) {
+    return std::stoul(str);
+  }
+  return std::thread::hardware_concurrency();
+}
+
+inline unsigned agent_num_threads() {
+  if(auto str = std::getenv("DTC_AGENT_NUM_THREADS"); str) {
+    return std::stoul(str);
+  }
+  return std::thread::hardware_concurrency();
+}
+
+inline unsigned executor_num_threads() {
+  if(auto str = std::getenv("DTC_EXECUTOR_NUM_THREADS"); str) {
+    return std::stoul(str);
+  }
+  return std::thread::hardware_concurrency();
+}
+
+inline void stdout_listener_port(std::string_view str) {
+  ::setenv("DTC_STDOUT_LISTENER_PORT", str.data(), 1);
+}
+
+inline void stderr_listener_port(std::string_view str) {
+  ::setenv("DTC_STDERR_LISTENER_PORT", str.data(), 1);
+}
+
+};  // End of namespace dtc::env ------------------------------------------------------------------
+
+
 
 #endif
+
+
+
+
 
 

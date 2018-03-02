@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -17,12 +17,7 @@ namespace dtc {
 
 // Function: num_cpus
 uintmax_t Statgrab::num_cpus() const {
-  if(auto N = ::sysconf(_SC_NPROCESSORS_ONLN); N == -1) {
-    return 0;
-  }
-  else {
-    return N;
-  }
+  return ::get_nprocs();
 }
 
 // Function: memory_limit_in_bytes

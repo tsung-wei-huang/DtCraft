@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -46,9 +46,11 @@ class Threadpool {
   };
 
   public:
+    
+    const std::thread::id owner { std::this_thread::get_id() };
 
     template <typename C>
-    std::future<std::result_of_t<C()>> push_back(C&&, const Signal = Signal::STANDARD);
+    auto async(C&&, const Signal = Signal::STANDARD);
     
     inline void shutdown();
     inline void spawn(unsigned);
@@ -56,11 +58,7 @@ class Threadpool {
     inline size_t num_tasks() const;
     inline size_t num_workers() const;
     
-    inline std::thread::id master_id() const;
-
   private:
-    
-    const std::thread::id _master_id { std::this_thread::get_id() };
 
     std::mutex _task_queue_mutex;
     std::condition_variable _worker_signal;
@@ -81,16 +79,14 @@ inline size_t Threadpool::num_workers() const {
   return _threads.size();
 }
 
-// Function: master_id
-// Return the thread id of the master (threadpool owner).
-inline std::thread::id Threadpool::master_id() const {
-  return _master_id;
-}
-
 // Procedure: spawn
 // The procedure spawns "n" threads monitoring the task queue and executing each task. After the
 // task is finished, the thread reacts to the returned signal.
 inline void Threadpool::spawn(unsigned N) {
+  
+  if(std::this_thread::get_id() != owner) {
+    throw std::runtime_error("Only the threadpool owner can spawn threads");
+  }
 
   for(size_t i=0; i<N; ++i) {
 
@@ -122,36 +118,49 @@ inline void Threadpool::spawn(unsigned N) {
   }
 }
 
-// Function: push_back
+// Function: async
 // Insert a callable task to the end of the queue. The input must be a callable object. A normal
 // callable object the task is associated with STANDARD task signal. Sicne each task stored in the 
 // task queue must be copy-constructible and copy-assignable, the input callable object is wrapped
 // into a strong movable object which replaces the copy constructor with move constructor.
 // Notice that the procedure is concurrent-safe.
 template<typename C>
-inline std::future<std::result_of_t<C()>> Threadpool::push_back(C&& c, const Signal sig) {
+auto Threadpool::async(C&& c, const Signal sig) {
 
   using R = std::result_of_t<C()>;
   
   std::promise<R> p;
   auto fu = p.get_future();
-
-  {
-    std::unique_lock<std::mutex> lock(_task_queue_mutex);
-    _task_queue.emplace_back(
-      [p=StrongMovable(std::move(p)), c=std::forward<C>(c), ret=sig] () mutable { 
-        if constexpr(std::is_same_v<void, R>) {
-          c();
-          p.get().set_value();
-        }
-        else {
-          p.get().set_value(c());
-        }
-        return ret;
-      }
-    );
+  
+  // No worker, do this immediately.
+  if(_threads.empty()) {
+    if constexpr(std::is_same_v<void, R>) {
+      c();
+      p.set_value();
+    }
+    else {
+      p.set_value(c());
+    }
   }
-  _worker_signal.notify_one();
+  // Schedule a thread to do this.
+  else {
+    {
+      std::unique_lock lock(_task_queue_mutex);
+      _task_queue.emplace_back(
+        [p=StrongMovable(std::move(p)), c=std::forward<C>(c), ret=sig] () mutable { 
+          if constexpr(std::is_same_v<void, R>) {
+            c();
+            p.get().set_value();
+          }
+          else {
+            p.get().set_value(c());
+          }
+          return ret;
+        }
+      );
+    }
+    _worker_signal.notify_one();
+  }
   return fu;
 
   //-----------------------------------------------------------------------------------------------
@@ -177,12 +186,12 @@ inline std::future<std::result_of_t<C()>> Threadpool::push_back(C&& c, const Sig
 // Remove a given number of workers. Notice that only the master can call this procedure.
 inline void Threadpool::shutdown() {
 
-  if(std::this_thread::get_id() != _master_id) {
-    throw std::runtime_error("Only master (threadpool owner) can shutdown service");
+  if(std::this_thread::get_id() != owner) {
+    throw std::runtime_error("Only the threadpool owner can shut down the service");
   }
 
   for(size_t i=0; i<_threads.size(); ++i) {
-    push_back([](){}, Signal::SHUTDOWN);
+    async([](){}, Signal::SHUTDOWN);
   }
   
   for(auto& t : _threads) {
@@ -192,8 +201,12 @@ inline void Threadpool::shutdown() {
   _threads.clear();
 }
 
-
 };  // End of namespace dtc. ----------------------------------------------------------------------
+
+
+namespace dtc::tpl {
+
+};  // End of namespace dtc::tpl. -----------------------------------------------------------------
 
 
 #endif

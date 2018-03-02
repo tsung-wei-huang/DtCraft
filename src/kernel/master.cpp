@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -24,7 +24,7 @@ size_t Master::num_agents() const {
 // Function: remove_agent
 // The public wrapper of the function to remove an egent.
 std::future<bool> Master::remove_agent(key_type key) {
-  return promise([M=this, key](){ return M->_remove_agent(key);});
+  return promise([this, key](){ return _remove_agent(key);});
 }
 
 // Function: _remove_agent
@@ -35,10 +35,9 @@ bool Master::_remove_agent(key_type key) {
   if(auto aitr = _agents.find(key); aitr != _agents.end()) {
     auto& A = aitr->second;
     for(auto& t : A.taskmeta) {
-      _remove_graph(t.second.topology.graph, false);
+      _remove_graph(t.second.topology.graph);
     }
-    _remove(std::move(A.istream));
-    _remove(std::move(A.ostream));
+    remove(std::move(A.istream), std::move(A.ostream));
     _agents.erase(aitr);
     LOGI("Agent ", key, " is removed from the master");
 
@@ -54,7 +53,7 @@ bool Master::_remove_agent(key_type key) {
 // The resource information is used for the scheduler to decide the deployment of the graph in 
 // iterms of topologies. When a topology is completed by a local executor, a taskinfo as well
 // as an updated taskinfo will be sent to the master.
-key_type Master::_insert_agent(std::shared_ptr<Socket>& socket) {
+key_type Master::_insert_agent(std::shared_ptr<Socket> socket) {
   
   assert(is_owner());
 
@@ -62,23 +61,21 @@ key_type Master::_insert_agent(std::shared_ptr<Socket>& socket) {
   static key_type generator {0};
   const key_type key = generator++;
 
-  _agents.try_emplace(
-    key,
-    _insert_actor<Agent>(socket, key)(
-      [M=this, key] (const std::error_code& errc) { M->remove_agent(key); },
-      [M=this, key] (pb::Resource& res) { M->on_resource(key, std::move(res)); },
-      [M=this, key] (pb::TaskInfo& info) { M->on_taskinfo(key, std::move(info)); }
-    )
-  );
+  auto& agent = _agents.try_emplace(key, key).first->second;
 
+  std::tie(agent.istream, agent.ostream) = insert_channel(std::move(socket))(
+    [this, key] (pb::BrokenIO& b) { remove_agent(key); },
+    [this, key] (pb::Resource& r) { on_resource(key, std::move(r)); },
+    [this, key] (pb::TaskInfo& i) { on_taskinfo(key, std::move(i)); }
+  );
+  
   return key;
 }
 
 // Function: insert_agent
-std::future<key_type> Master::insert_agent(std::shared_ptr<Socket>&& socket) {
-  return promise([&, socket=std::move(socket)] () mutable { return _insert_agent(socket); });
+std::future<key_type> Master::insert_agent(std::shared_ptr<Socket> socket) {
+  return promise([&, socket=std::move(socket)] () mutable { return _insert_agent(std::move(socket)); });
 }
-
 
 //-------------------------------------------------------------------------------------------------
 
@@ -89,7 +86,7 @@ size_t Master::num_graphs() const {
 }
 
 // Function: _remove_graph
-bool Master::_remove_graph(key_type key, bool report) {
+bool Master::_remove_graph(key_type key) {
 
   assert(is_owner());
 
@@ -105,12 +102,9 @@ bool Master::_remove_graph(key_type key, bool report) {
       }
     }
 
-    if(report) {
-      (*G.ostream)(pb::Protobuf{std::move(*G.solution)});
-    }
+    (*G.ostream)(pb::Protobuf{std::move(*G.solution)});
 
-    _remove(std::move(G.istream));
-    _remove(std::move(G.ostream));
+    remove(std::move(G.istream), std::move(G.ostream));
     _graphs.erase(gitr);
     LOGI("Graph ", key, " is removed from the master");
     return true;
@@ -120,8 +114,8 @@ bool Master::_remove_graph(key_type key, bool report) {
 }
 
 // Function: remove_graph
-std::future<bool> Master::remove_graph(key_type key, bool report) {
-  return promise([M=this, key, report] () mutable { return M->_remove_graph(key, report); });
+std::future<bool> Master::remove_graph(key_type key) {
+  return promise([this, key] () mutable { return _remove_graph(key); });
 }
 
 // Function: _insert_graph
@@ -130,99 +124,55 @@ std::future<bool> Master::remove_graph(key_type key, bool report) {
 // We assign a uuid of type key_type to each arrived graph. The uuid is also used for indexing
 // the graph through the dictionary that stores the mapping between uuid and the data structure
 // to store the graph.
-key_type Master::_insert_graph(std::shared_ptr<Socket>& socket) {
+key_type Master::_insert_graph(std::shared_ptr<Socket> socket) {
 
   // Create a pseudo uuid for the graph.
   static key_type generator {0};
   const key_type key = generator++;
 
-  _graphs.try_emplace(
-    key,
-    _insert_actor<Graph>(socket, key) (
-      [M=this, key] (const std::error_code& errc) { M->remove_graph(key, false); },
-      [M=this, key] (pb::Topology& tpg) { M->on_topology(key, std::move(tpg)); }
-    )  
+  auto& graph = _graphs.try_emplace(key, key).first->second;
+
+  std::tie(graph.istream, graph.ostream) = insert_channel(std::move(socket))(
+    [this, key] (pb::BrokenIO& b) { remove_graph(key); },
+    [this, key] (pb::Topology& t) { on_topology(key, std::move(t)); }
   );
 
   return key;
 }
 
 // Function: insert_graph
-std::future<key_type> Master::insert_graph(std::shared_ptr<Socket>&& socket) {
-  return promise([&, socket=std::move(socket)] () mutable { return _insert_graph(socket); });
+std::future<key_type> Master::insert_graph(std::shared_ptr<Socket> socket) {
+  return promise([&, socket=std::move(socket)] () mutable { return _insert_graph(std::move(socket)); });
 }
 
 //-------------------------------------------------------------------------------------------------
 
 // Constructor
-Master::Master() : KernelBase {Policy::get().MASTER_NUM_THREADS()} {
+Master::Master() : KernelBase {env::master_num_threads()} {
 
-  _insert_listener(Policy::get().AGENT_LISTENER_PORT())(
-    [M=this] (std::shared_ptr<Socket>&& skt) { M->insert_agent(std::move(skt)); }
+  insert_listener(env::agent_listener_port())(
+    [this] (std::shared_ptr<Socket> skt) { insert_agent(std::move(skt)); }
   );
 
-  _insert_listener(Policy::get().GRAPH_LISTENER_PORT())(
-    [M=this] (std::shared_ptr<Socket>&& skt) { M->insert_graph(std::move(skt)); }
+  insert_listener(env::graph_listener_port())(
+    [this] (std::shared_ptr<Socket> skt) { insert_graph(std::move(skt)); }
   );
   
-  _insert_listener(Policy::get().WEBUI_LISTENER_PORT())(
-    [M=this] (std::shared_ptr<Socket>&& skt) { M->insert_webui(std::move(skt)); }
+  insert_listener(env::webui_listener_port())(
+    [this] (std::shared_ptr<Socket> skt) { insert_webui(std::move(skt)); }
   );
   
   // Logging
   LOGI(
-    "Master @", Policy::get().THIS_HOST(), " ", 
-    "[agent:", Policy::get().AGENT_LISTENER_PORT(), 
-    "|graph:", Policy::get().GRAPH_LISTENER_PORT(), 
-    "|webui:", Policy::get().WEBUI_LISTENER_PORT(), "]"
+    "Master @", env::this_host(), " ", 
+    "[agent:",  env::agent_listener_port(), 
+    "|graph:",  env::graph_listener_port(), 
+    "|webui:",  env::webui_listener_port(), "]"
   );
 };
 
 // Destructor
 Master::~Master() {
-}
-
-// Function: _deploy
-bool Master::_deploy(Graph& G) {
-
-  assert(is_owner());
-  assert(G.taskmeta.size() == 0 && G.topology);
-
-  // Fetch resource bins from agents at this moment.
-  std::vector<Bin> bins;
-  for(auto& [K, A] : _agents) {
-    if(A.resource) {
-      bins.emplace_back(Bin{K, *A.released});
-    }
-  }
-  
-  // Invoke the scheduler. 
-  auto packing = best_fit_bin_packing(*G.topology, std::move(bins));
-
-  // Case 1: not able to deploy the graph at this moment.
-  if(packing.empty()) {
-    LOGI("Not able to deploy Graph ", G.key, " at this moment");
-    return false;
-  }
-  
-  // Case 2: Deploy topologies to corresponding agents based on the packing result.
-  for(auto& [agent, topology] : packing) {
-
-    const auto T = topology.task_id();
-    LOGI("Topology ", T, " is scheduled to agent @", _agents.at(agent).resource->host);
-    std::cout << topology << std::endl;
-
-    // Send the task to the agent and assign the task meta.
-    auto& A = _agents.at(agent);
-    (*A.released) -= topology.resource();
-    (*A.ostream)(pb::Protobuf(topology));
-    A.taskmeta.try_emplace(T, Agent::TaskMeta{std::move(topology)});
-
-    // Assign the meta data for the graph.
-    G.taskmeta.try_emplace(T, Graph::TaskMeta{agent});
-  }
-  
-  return true;
 }
 
 // Function: _on_taskinfo
@@ -234,7 +184,7 @@ void Master::_on_taskinfo(key_type key, pb::TaskInfo& info) {
   if(auto aitr = _agents.find(key); aitr != _agents.end()) {
     auto& A = aitr->second;
     if(auto titr = A.taskmeta.find(info.task_id); titr != A.taskmeta.end()) {
-      LOGI("Topology ", info.task_id, " is finished @", A.resource->host);
+      LOGI(info);
       *A.released += titr->second.topology.resource();
       A.taskmeta.erase(titr);
     }
@@ -246,10 +196,10 @@ void Master::_on_taskinfo(key_type key, pb::TaskInfo& info) {
     auto& G = gitr->second;
 
     G.taskmeta.erase(info.task_id);
-    (*G.solution).taskinfos.emplace_back(info);
+    G.solution->taskinfos.emplace_back(info);
 
     if(info.has_error() || G.taskmeta.size() == 0) {
-      _remove_graph(info.task_id.graph, true);
+      _remove_graph(info.task_id.graph);
     }
   }
 
@@ -261,9 +211,7 @@ void Master::_on_taskinfo(key_type key, pb::TaskInfo& info) {
 // The public wrapper of the update topology function.
 std::future<void> Master::on_taskinfo(key_type key, pb::TaskInfo&& info) {
   return promise(
-    [M=this, key, info=std::move(info)] () mutable { 
-      M->_on_taskinfo(key, info); 
-    }
+    [this, key, info=std::move(info)] () mutable { _on_taskinfo(key, info); }
   );
 }
 
@@ -274,9 +222,9 @@ void Master::_on_resource(key_type key, pb::Resource& res) {
   assert(is_owner());
 
   if(auto aitr = _agents.find(key); aitr != _agents.end()) {
-    aitr->second.resource = std::move(res);
-    aitr->second.released = aitr->second.resource;
-    LOGI("Agent ", key, " connected ", *(aitr->second.resource));
+    aitr->second.resource = res;
+    aitr->second.released = res;
+    LOGI("Agent ", key, " connected ", res);
   }
 
   _dequeue();
@@ -286,7 +234,7 @@ void Master::_on_resource(key_type key, pb::Resource& res) {
 // The public wrapper of the update resource function.
 std::future<void> Master::on_resource(key_type key, pb::Resource&& res) {
   return promise(
-    [M=this, key, res=std::move(res)] () mutable { M->_on_resource(key, res); }
+    [this, key, res=std::move(res)] () mutable { _on_resource(key, res); }
   );
 }
 
@@ -297,44 +245,47 @@ void Master::_on_topology(key_type key, pb::Topology& tpg) {
   assert(is_owner());
 
   if(auto gitr = _graphs.find(key); gitr != _graphs.end()) {
+
     tpg.graph = key;
+
     auto& G = gitr->second;
+
     G.topology = std::move(tpg);
     G.solution = pb::Solution {key};
-    LOGI("Graph ", G.key, " connected ", (*G.topology).to_string());
+
+    LOGI("Graph ", key, " connected ", (*G.topology).to_string());
     
     if(!_enqueue(G)) {
       LOGW("Graph ", key, " doesn't fit with available resources");
-      (*G.solution).errc = make_posix_error_code(EINVAL);
-      _remove_graph(key, true);
+      G.solution->what = "cluster does not have enough resources";
+      _remove_graph(key);
+      return;
     }
+  
+    // TODO deque
+    _dequeue();
   }
-    
-  // TODO deque
-  _dequeue();
+}
+
+// Function: on_topology
+// The public wrapper of the update topology function.
+std::future<void> Master::on_topology(key_type key, pb::Topology&& tpg) {
+  return promise(
+    [this, key, tpg=std::move(tpg)] () mutable { _on_topology(key, tpg); }
+  );
 }
 
 // Function: _enqueue
-bool Master::_enqueue(const Graph& G) {
+bool Master::_enqueue(Graph& G) {
 
   assert(is_owner());
 
-  std::vector<Bin> bins;
-   
-  // Fetch the maximum resource.
-  for(auto& [K, A] : _agents) {
-    if(A.resource) {
-      bins.emplace_back(Bin{K, *A.resource});
-    }
-  }
-  
-  // Graph cannot be scheduled with the maximum resources.
-  if(auto ret = best_fit_bin_packing(*G.topology, std::move(bins)); ret.empty()) {
+  if(!_try_enqueue(G)) {
     return false;
   }
   
-  LOGI("Enqueue Graph ", G.key, " into the queue");
   _queue.push(G.key);
+  LOGI("Enqueue graph ", G.key, " (queue size=", _queue.size(), ")");
 
   return true;
 }
@@ -344,31 +295,23 @@ size_t Master::_dequeue() {
   
   assert(is_owner());
   
-  size_t num_scheduled {0};
+  size_t num_dequeued {0};
 
   while(!_queue.empty()) {
     
     auto key = _queue.front();
 
     if(auto gitr = _graphs.find(key); gitr != _graphs.end()) {
-      if(!_deploy(gitr->second)) {
+      if(!_try_dequeue(gitr->second)) {
         break;
       }
     }
 
     _queue.pop();
-    ++num_scheduled;
+    ++num_dequeued;
   }
   
-  return num_scheduled;
-}
-
-// Function: on_topology
-// The public wrapper of the update topology function.
-std::future<void> Master::on_topology(key_type key, pb::Topology&& tpg) {
-  return promise(
-    [M=this, key, tpg=std::move(tpg)] () mutable { M->_on_topology(key, tpg); }
-  );
+  return num_dequeued;
 }
 
 // ---- Webui field -------------------------------------------------------------------------------
@@ -401,7 +344,7 @@ Master::ClusterInfo Master::_cluster_info() const {
 
   ClusterInfo c;
 
-  c.master = MasterInfo { Policy::get().THIS_HOST(), _agents.size(), _graphs.size()};
+  c.master = MasterInfo { env::this_host(), _agents.size(), _graphs.size()};
 
   for(const auto& [k, a] : _agents) {
     if(a.resource) {
@@ -438,7 +381,7 @@ size_t Master::num_webuis() const {
 }
 
 // Function: insert_webui
-key_type Master::_insert_webui(std::shared_ptr<Socket>& socket) {
+key_type Master::_insert_webui(std::shared_ptr<Socket> socket) {
   
   assert(is_owner());
 
@@ -446,36 +389,34 @@ key_type Master::_insert_webui(std::shared_ptr<Socket>& socket) {
   static key_type generator {0};
   const key_type key = generator++;
 
-  _webuis.try_emplace(
-    key,
-    _insert_actor<WebUI>(socket, key)(
-      [M=this, key] (const std::error_code& errc) { 
-        LOGI("received webui error ", errc);
-        M->remove_webui(key); 
-      },
-      [M=this, key, fd=socket->fd(), P=HttpRequestParser()] (InputStream& is) mutable {
-        auto B = P(is.isbuf.string_view());
-        P.on(
-          [M, fd](HttpRequest& req) {
-            try {
-              send_response(fd, M->make_response(req));
-            }
-            catch (const std::system_error& se) {
-              LOGE("Failed to send response! ", se.code());
-            }
+  auto& webui = _webuis.try_emplace(key, key).first->second;
+
+  std::tie(webui.istream, webui.ostream) = insert_channel(std::move(socket))(
+    [this, key] (pb::BrokenIO& b) -> void { 
+      remove_webui(key); 
+    },
+    [this, key, P=HttpRequestParser()] (InputStream& is) mutable -> void {
+      auto B = P(is.isbuf.string_view());
+      P.on(
+        [this, fd=is.device()->fd()](HttpRequest& req) {
+          try {
+            send_response(fd, make_response(req));
           }
-        );
-        is.isbuf.drop(B);
-      }
-    )
+          catch (const std::system_error& se) {
+            LOGE("Failed to send response! ", se.code());
+          }
+        }
+      );
+      is.isbuf.drop(B);
+    }
   );
 
   return key;
 }
 
 // Function: insert_webui
-std::future<key_type> Master::insert_webui(std::shared_ptr<Socket>&& socket) {
-  return promise([&, socket=std::move(socket)] () mutable { return _insert_webui(socket); });
+std::future<key_type> Master::insert_webui(std::shared_ptr<Socket> socket) {
+  return promise([&, socket=std::move(socket)] () mutable { return _insert_webui(std::move(socket)); });
 }
 
 // Function: _remove_webui
@@ -484,9 +425,8 @@ bool Master::_remove_webui(key_type key) {
   assert(is_owner());
 
   if(auto aitr = _webuis.find(key); aitr != _webuis.end()) {
-    auto& W = aitr->second;
-    _remove(std::move(W.istream));
-    _remove(std::move(W.ostream));
+    auto& webui = aitr->second;
+    remove(std::move(webui.istream), std::move(webui.ostream));
     _webuis.erase(aitr);
     LOGI("WebUI ", key, " is removed from the master");
     return true;
@@ -499,7 +439,7 @@ bool Master::_remove_webui(key_type key) {
 // Function: remove_webui
 // The public wrapper of the function to remove a webui
 std::future<bool> Master::remove_webui(key_type key) {
-  return promise([M=this, key](){ return M->_remove_webui(key);});
+  return promise([this, key](){ return _remove_webui(key);});
 }
 
 // Function:
@@ -530,7 +470,7 @@ HttpResponse Master::make_response(const HttpRequest& req) {
     break;
 
     case HttpBodyType::FILE: {
-      auto p = Policy::get().WEBUI_DIR();
+      auto p = env::webui_dir();
       //LOGI("FILE: URL_PATH is ", path);
       p /= (path == "/") ? "index.html" : path;
       //std::cout << "examining path " << p << std::endl;
@@ -552,6 +492,7 @@ HttpResponse Master::make_response(const HttpRequest& req) {
 
 
 };  // End of namespace dtc. ----------------------------------------------------------------------
+
 
 
 

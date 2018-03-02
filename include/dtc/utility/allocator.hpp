@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,6 +14,7 @@
 #ifndef DTC_UTILITY_ALLOCATOR_HPP_
 #define DTC_UTILITY_ALLOCATOR_HPP_
 
+#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>  

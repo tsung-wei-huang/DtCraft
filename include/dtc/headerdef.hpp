@@ -91,23 +91,24 @@ extern char** environ;
 #endif
 
 // 3rd-party include
-
+#include <dtc/Eigen/Core>
+#include <dtc/json/json.hpp>
 
 // Top header declaration.
 #include <dtc/macrodef.hpp>
 #include <dtc/traits.hpp>
 #include <dtc/config.hpp>
 #include <dtc/error.hpp>
-
-// Independent library.
-//#include <dtc/utility/logger.hpp>
+#include <dtc/exit.hpp>
 
 namespace dtc {
 
-using key_type  = std::int64_t;
+using key_type = int;
   
 using namespace std::chrono_literals;
 using namespace std::literals::string_literals;
+
+using json = nlohmann::json;  
 
 
 };  // End of namespace dtc. ----------------------------------------------------------------------

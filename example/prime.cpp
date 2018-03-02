@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -56,7 +56,7 @@ int main(int argc, char* argv[]) {
       v.any = Result();
       int stride = (range + num_slaves - 1)/num_slaves; // get the ceiling
       for(const auto& s : m2s) {
-        v.ostream(s)(stride);
+        (*v.ostream(s))(stride);
       }
     }
   );
@@ -75,10 +75,10 @@ int main(int argc, char* argv[]) {
               }
             }
           }
-          slave.ostream(other)(count); 
-          return dtc::Stream::CLOSE;
+          (*slave.ostream(other))(count); 
+          return dtc::Event::REMOVE;
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::DEFAULT;
       }
     );
   }
@@ -93,18 +93,18 @@ int main(int argc, char* argv[]) {
           if(++result.count == num_slaves) {
             std::cout << "# primes up to " << range << ": " << result.num_primes << '\n';
           }
-          return dtc::Stream::CLOSE;
+          return dtc::Event::REMOVE;
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::DEFAULT;
       }
     );
   }
 
 
-  G.container().add(master).num_cpus(1).memory_limit_in_bytes(1_MB);
-  G.container().add(slaves[0]).num_cpus(1).memory_limit_in_bytes(1_MB);
-  G.container().add(slaves[1]).num_cpus(1).memory_limit_in_bytes(1_MB);
-  G.container().add(slaves[2]).num_cpus(1).memory_limit_in_bytes(1_MB);
+  G.container().add(master).cpu(1).memory(1_MB);
+  G.container().add(slaves[0]).cpu(1).memory(1_MB);
+  G.container().add(slaves[1]).cpu(1).memory(1_MB);
+  G.container().add(slaves[2]).cpu(1).memory(1_MB);
 
   dtc::Executor(G).run(); 
 

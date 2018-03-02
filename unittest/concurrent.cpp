@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -13,12 +13,14 @@
 
 #define CATCH_CONFIG_MAIN 
 
-#include <cassert>
-#include <dtc/utility.hpp>
+#include <dtc/utility/utility.hpp>
 #include <dtc/unittest/catch.hpp>
 #include <dtc/concurrent/fifo.hpp>
 #include <dtc/concurrent/threadpool.hpp>
 #include <dtc/concurrent/mutex.hpp>
+#include <dtc/concurrent/synchronized.hpp>
+#include <dtc/concurrent/unique_guard.hpp>
+#include <dtc/concurrent/shared_guard.hpp>
 
 // ---- SpinLock ----------------------------------------------------------------------------------
 
@@ -142,7 +144,7 @@ TEST_CASE("ConcurrentFIFO.string") {
 
 // ---- ConcurrentQueue ---------------------------------------------------------------------------
 
-// Procedure: test_concurrent_queue
+/*// Procedure: test_concurrent_queue
 template <typename T>
 auto test_concurrent_queue(size_t num_producers, size_t num_consumers) {
 
@@ -174,6 +176,131 @@ auto test_concurrent_queue(size_t num_producers, size_t num_consumers) {
 // Test case: ConcurrentQueue
 TEST_CASE("ConcurrentQueue") {
 
+} */
+
+// ---- Lock -------------------------------------------------------------------------------------
+
+// Test case: UniqueGuard
+TEST_CASE("LockTest.UniqueGuard") {
+
+	for(int w=1; w<=4; ++w) {
+
+    dtc::UniqueGuard<int> a;
+
+		std::vector<std::thread> threads;
+
+    for(int i=0; i<w; ++i) {
+      threads.emplace_back(
+        [&a] () {
+          for(int j=0; j<65536; ++j) {
+            ++(*(a.get()));
+          }
+        }
+      );
+    }
+
+		for(auto& t : threads) t.join();
+
+    REQUIRE((*(a.get())) == 65536*w);
+  }
+}
+
+// Test case: UniqueSynchronized
+TEST_CASE("LockTest.UniqueSynchronized") {
+
+	for(int w=1; w<=4; ++w) {
+
+    dtc::Synchronized<int> a;
+
+		std::vector<std::thread> threads;
+
+    for(int i=0; i<w; ++i) {
+      threads.emplace_back(
+        [&a] () {
+          for(int j=0; j<65536; ++j) {
+            a( [] (int& a) { ++a; });
+          }
+        }
+      );
+    }
+
+		for(auto& t : threads) t.join();
+
+    a([w] (int&a) { REQUIRE(a == 65536*w); });
+  }
+}
+
+
+// Test case: SharedGuard
+TEST_CASE("LockTest.SharedGuard") {
+
+  for(int w=1; w<=2; ++w) {
+
+    dtc::SharedGuard<int> a(0);
+
+    std::vector<std::thread> threads;
+    
+    for(int i=0; i<w; ++i) {
+      
+      threads.emplace_back(
+        [&a, w] () {
+          int last_val = 0;
+          while(last_val != 32*w) {
+            auto s = a.share();
+            REQUIRE(last_val <= *s);
+            last_val = *s;
+          }
+        }
+      );
+      
+      threads.emplace_back(
+        [&a] () {
+          for(int j=0; j<32; ++j) {
+            ++(*(a.get()));
+          }
+        }
+      );
+    }
+    
+		for(auto& t : threads) t.join();
+      
+    REQUIRE((*(a.share())) == 32*w);
+    REQUIRE((*(a.get())) == 32*w);
+  }
+}
+
+// Test case: SharedSynchronized
+TEST_CASE("LockTest.SharedSynchronized") {
+  
+  for(int w=1; w<=2; ++w) {
+
+    dtc::Synchronized<int> a(0);
+
+    std::vector<std::thread> threads;
+    
+    for(int i=0; i<w; ++i) {
+      
+      threads.emplace_back([&a, w] () {
+        int last_val = 0;
+        while(last_val != 32*w) {
+          auto s = a([](const int&a){ return a;});
+          REQUIRE(last_val <= s);
+          last_val = s;
+        }
+      });
+      
+      threads.emplace_back([&a] () {
+        for(int j=0; j<32; ++j) {
+          a([](int& a) { ++a; });
+        }
+      });
+    }
+    
+		for(auto& t : threads) t.join();
+       
+    a([w] (int&a) { REQUIRE(a == 32*w); });
+    a([w] (const int&a) { REQUIRE(a == 32*w); });
+  }
 }
 
 // ---- Threadpool --------------------------------------------------------------------------------
@@ -185,7 +312,7 @@ TEST_CASE("ThreadpoolTest.SpwanShutdown") {
 
   REQUIRE(threadpool.num_workers() == 0);
   REQUIRE(threadpool.num_tasks() == 0);
-  REQUIRE(threadpool.master_id() == std::this_thread::get_id());
+  REQUIRE(threadpool.owner == std::this_thread::get_id());
 
   const auto W = std::max(1u, std::thread::hardware_concurrency());
 
@@ -201,24 +328,25 @@ TEST_CASE("ThreadpoolTest.SpwanShutdown") {
 // Test case: Task
 TEST_CASE("ThreadpoolTest.Task") {
 
-  dtc::Threadpool threadpool;
+  for(int w=0; w<=4; ++w) {
 
-  const auto W = std::max(1u, std::thread::hardware_concurrency());
+    dtc::Threadpool threadpool;
 
-  threadpool.spawn(W);
-  REQUIRE(threadpool.num_workers() == W);
+    threadpool.spawn(w);
+    REQUIRE(threadpool.num_workers() == w);
 
-  const auto N = 65536;
+    const auto N = 65536;
 
-  std::atomic<size_t> counter {0};
+    std::atomic<size_t> counter {0};
 
-  for(auto n=0; n<N; n++) {
-    threadpool.push_back([&] () { counter++; });
+    for(auto n=0; n<N; n++) {
+      threadpool.async([&] () { counter++; });
+    }
+
+    threadpool.shutdown();
+    REQUIRE(threadpool.num_workers() == 0);
+    REQUIRE(counter == N);
   }
-
-  threadpool.shutdown();
-  REQUIRE(threadpool.num_workers() == 0);
-  REQUIRE(counter == N);
 }
 
 

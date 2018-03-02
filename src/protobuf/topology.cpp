@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -37,8 +37,8 @@ Topology::Stream::Stream(key_type k, key_type t, key_type h) :
 //-------------------------------------------------------------------------------------------------
 
 // Constructor  
-Topology::Topology(key_type in_graph, key_type in_id) : 
-  graph {in_graph}, id {in_id} {
+Topology::Topology(key_type in_graph, key_type in_topology) : 
+  graph {in_graph}, topology {in_topology} {
 };
 
 // Function: resource
@@ -52,12 +52,6 @@ Resource Topology::resource() const {
   }
 
   return ret;
-}
-
-// Function: match
-bool Topology::match(const Frontier& ftr) const {
-  return ftr.graph == graph && ftr.topology == id;
-  //return ftr.graph == graph && has_inter_stream(ftr.stream, ftr.mode);
 }
 
 // Function: has_vertex
@@ -78,35 +72,27 @@ bool Topology::has_container(key_type key) const {
 // Function: has_intra_stream
 bool Topology::has_intra_stream(key_type key) const {
   if(auto itr = streams.find(key); itr != streams.end()) {
-    return itr->second.head_topology == itr->second.tail_topology;
+    return has_vertex(itr->second.tail) && has_vertex(itr->second.head);
   }
   return false;
 }
 
 // Function: has_inter_stream
 bool Topology::has_inter_stream(key_type key) const {
-  if(auto itr = streams.find(key); itr != streams.end()) {
-    return itr->second.head_topology != itr->second.tail_topology;
-  }
-  return false;
+  return has_inter_stream(key, std::ios_base::in) || has_inter_stream(key, std::ios_base::out);
 }
 
 // Function: has_inter_stream
 bool Topology::has_inter_stream(key_type key, std::ios_base::openmode m) const {
 
   if(auto itr = streams.find(key); itr != streams.end()) {
-
-    if(itr->second.head_topology == itr->second.tail_topology) {
-      return false;
-    }
-
     switch(m) {
       case std::ios_base::in:
-        return itr->second.head_topology == id;
+        return has_vertex(itr->second.head) && !has_vertex(itr->second.tail);
       break;
 
       case std::ios_base::out:
-        return itr->second.tail_topology == id;
+        return has_vertex(itr->second.tail) && !has_vertex(itr->second.head);
       break;
 
       default:
@@ -122,8 +108,7 @@ bool Topology::has_inter_stream(key_type key, std::ios_base::openmode m) const {
 size_t Topology::num_inter_streams() const {
   return std::count_if(
     streams.begin(), streams.end(), [&] (const auto& kvp) { 
-      //return has_inter_stream(kvp.first); 
-      return kvp.second.tail_topology != kvp.second.head_topology;
+      return has_inter_stream(kvp.first); 
     }
   );
 }
@@ -132,23 +117,67 @@ size_t Topology::num_inter_streams() const {
 size_t Topology::num_intra_streams() const {
   return std::count_if(
     streams.begin(), streams.end(), [&] (const auto& kvp) { 
-      //return has_intra_stream(kvp.first); 
-      return kvp.second.tail_topology == kvp.second.head_topology;
+      return has_intra_stream(kvp.first); 
     }
   );
 }
 
-//// Function: cgroup_mount
-//std::filesystem::path Topology::cgroup_mount() const {
-//  return Policy::get().CGROUP_MOUNT() / (std::to_string(graph) + '_' + std::to_string(id));
-//}
+// Function: max_container_key
+key_type Topology::max_container_key() const {
+  key_type mkey = std::numeric_limits<key_type>::min();
+  for(const auto& kvp : containers) {
+    mkey = std::max(mkey, kvp.first);
+  }
+  return mkey;
+}
+
+// Function: min_container_key
+key_type Topology::min_container_key() const {
+  key_type mkey = std::numeric_limits<key_type>::max();
+  for(const auto& kvp : containers) {
+    mkey = std::min(mkey, kvp.first);
+  }
+  return mkey;
+}
+
+// Function: extract
+// Extract a topology from container id 'topology'.
+Topology Topology::extract(key_type topology) const {
+
+  Topology tpg(graph, topology);
+    
+  tpg.runtime = runtime;
+	
+  // Copy the container.
+  tpg.containers[topology] = containers.at(topology);
+
+	// Copy those vertices belonging to this container.
+	for(const auto& kvp : vertices) {
+		if(kvp.second.container == topology) {
+      tpg.vertices.emplace(kvp);
+		}
+	}
+  
+  // Copy streams.
+  for(const auto& [skey, stream] : streams) {
+
+    const auto tc = vertices.at(stream.tail).container;
+    const auto hc = vertices.at(stream.head).container;
+
+    if(tc == topology || hc == topology) {
+      tpg.streams[skey] = stream;
+    }
+  }
+  
+  return tpg;
+}
 
 // Function: to_string
 std::string Topology::to_string(size_t verb) const {
   
   std::ostringstream oss;
 
-  oss << "@" << envp.at("DTC_THIS_HOST") << " "
+  oss << "@" << runtime.this_host() << " "
       << "[vertex:" << vertices.size() 
       << "|stream:" << streams.size()
       << "|container:" << containers.size() << "]";
@@ -161,21 +190,9 @@ std::ostream& operator<<(std::ostream& os , const Topology& rhs) {
 
   std::ostringstream oss;
   
-  oss << "[Topology " << rhs.id << "]\n";
+  oss << "[Topology " << rhs.topology << "]\n";
 
   oss << "UUID = " << rhs.graph << "\n";
-  oss << "file = " << rhs.file << "\n";
-
-  oss << "argv =";
-  for(const auto& s : rhs.argv) {
-    oss << " " << s;
-  }
-  oss << "\n";
-
-  //oss << "envp:\n";
-  //for(const auto& kvp : rhs.envp) {
-  //  oss << kvp.first << "=" << kvp.second << "\n";
-  //}
 
   oss << "# vertices = " << rhs.vertices.size() << "\n";
   for(const auto& v : rhs.vertices) {
@@ -183,11 +200,6 @@ std::ostream& operator<<(std::ostream& os , const Topology& rhs) {
   }
 
   oss << "# streams = " << rhs.streams.size() << "\n";
-  for(const auto& e : rhs.streams) {
-    oss << "stream " << e.second.key << " : " 
-        << e.second.tail << "@" << e.second.tail_host << " -> " 
-        << e.second.head << "@" << e.second.head_host << "\n";
-  }
   
   oss << "# containers = " << rhs.containers.size() << "\n";
   for(const auto& c : rhs.containers) {

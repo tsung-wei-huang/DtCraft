@@ -1,21 +1,8 @@
-#******************************************************************************
-#*                                                                            *
-#* Copyright (c) 2016, Tsung-Wei Huang and Martin D. F. Wong,                 *
-#* University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
-#*                                                                            *
-#* All Rights Reserved.                                                       *
-#*                                                                            *
-#* This program is free software. You can redistribute and/or modify          *
-#* it in accordance with the temms of the accompanying license agreement.     *
-#* See LICENSE in the top-level directory for details.                        *
-#*                                                                            *
-#******************************************************************************/
-
 # Force autoconf to be at least this version number:
 #AC_PREREQ([2.68])
 
 # AC_INIT([package], [version], [bug-report], [tarname], [url])
-AC_INIT([DtCraft], [0.2.1], [twh760812@gmail.com],
+AC_INIT([DtCraft], [0.2.2], [dtcraft.engine@gmail.com],
         [DtCraft], [http://dtcraft.web.engr.illinois.edu/])
 
 # Project-specific macros.
@@ -83,11 +70,11 @@ AS_CASE($ax_cv_cxx_compiler_vendor,
     AX_COMPARE_VERSION(
       [$ax_cv_cxx_compiler_version], 
       [ge], 
-      [7.0],
-      [is_ge_gxx_7_0=yes], 
-      [is_ge_gxx_7_0=no]
+      [7.2],
+      [is_ge_gxx_7_2=yes], 
+      [is_ge_gxx_7_2=no]
     )
-    if [[ $is_ge_gxx_7_0 != "yes" ]]; then
+    if [[ $is_ge_gxx_7_2 != "yes" ]]; then
       AC_MSG_ERROR(
         [GCC 7 (with c++17) or higher required (found $ax_cv_cxx_compiler_version)]
       )
@@ -96,6 +83,10 @@ AS_CASE($ax_cv_cxx_compiler_vendor,
     AC_MSG_ERROR([$ax_cv_cxx_compiler_vendor is an unsupported compiler])
   ]
 )
+
+# Check the cpu count
+AX_COUNT_CPUS([],[CPU_COUNT=1])
+AC_SUBST(CPU_COUNT)
 
 
 # Library, header check, so we can easily #include them:

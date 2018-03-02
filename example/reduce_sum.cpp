@@ -1,23 +1,16 @@
-/******************************************************************************
- *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
- * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
- *                                                                            *
- * All Rights Reserved.                                                       *
- *                                                                            *
- * This program is free software. You can redistribute and/or modify          *
- * it in accordance with the terms of the accompanying license agreement.     *
- * See LICENSE in the top-level directory for details.                        *
- *                                                                            *
- ******************************************************************************/
+// Program: reduce_sum
+// Creator: Tsung-Wei Huang
+// Date   : 2017/12/01
+// 
+// This program demonstrates how to create a MapReduce workload.
 
 #include <dtc/dtc.hpp>
 
-struct Result {
+struct Storage {
   std::atomic<int> value {0};
   std::atomic<int> count {0};
-  Result() = default;
-  Result(const Result& rhs) : value {rhs.value.load()}, count {rhs.count.load()} { }
+  Storage() = default;
+  Storage(const Storage& rhs) : value {rhs.value.load()}, count {rhs.count.load()} { }
 };
 
 int main(int argc, char* argv[]) {
@@ -43,52 +36,49 @@ int main(int argc, char* argv[]) {
   }
 
   // Master send the data to slaves.
-  master.on(
-    [&] (dtc::Vertex& v) {
-      v.any = Result();
-      std::vector<int> send(1024, 1);
-      for(const auto& s : m2s) {
-        v.ostream(s)(send);
-      }
+  master.on([&] (dtc::Vertex& v) {
+    v.any = Storage();
+    std::vector<int> send(1024, 1);
+    for(const auto& s : m2s) {
+      (*v.ostream(s))(send);
     }
-  );
+  });
 
   // Stream: master to slave
   for(int i=0; i<num_slaves; ++i) {
-    m2s[i].on(
-      [other=s2m[i]] (dtc::Vertex& slave, dtc::InputStream& is) {
-        if(std::vector<int> recv; is(recv) != -1)  {
-          slave.ostream(other)(std::accumulate(recv.begin(), recv.end(), 0)); 
-          return dtc::Stream::CLOSE;
-        }
-        return dtc::Stream::DEFAULT;
+    m2s[i].on([other=s2m[i]] (dtc::Vertex& slave, dtc::InputStream& is) {
+      if(std::vector<int> recv; is(recv) != -1)  {
+        (*slave.ostream(other))(std::accumulate(recv.begin(), recv.end(), 0)); 
+        return dtc::Event::REMOVE;
       }
-    );
+      return dtc::Event::DEFAULT;
+    });
   }
 
   // Stream: slave to master
   for(int i=0; i<num_slaves; ++i) {
-    s2m[i].on(
-      [] (dtc::Vertex& master, dtc::InputStream& is) {
-        if(int value = 0; is(value) != -1) {
-          auto& result = std::any_cast<Result&>(master.any);
-          result.value += value;
-          if(++result.count == num_slaves) {
-            std::cout << "reduce sum: " << result.value << '\n';
-          }
-          return dtc::Stream::CLOSE;
+    s2m[i].on([] (dtc::Vertex& master, dtc::InputStream& is) {
+      if(int value = 0; is(value) != -1) {
+        auto& result = std::any_cast<Storage&>(master.any);
+        result.value += value;
+        if(++result.count == num_slaves) {
+          std::cout << "reduce sum: " << result.value << '\n';
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::REMOVE;
       }
-    );
+      return dtc::Event::DEFAULT;
+    });
   }
 
-  G.container().add(master).num_cpus(1);
-  G.container().add(slaves[0]).num_cpus(1);
-  G.container().add(slaves[1]).num_cpus(1);
-  G.container().add(slaves[2]).num_cpus(1);
+  G.container().add(master).cpu(1);
+  G.container().add(slaves[0]).cpu(1);
+  G.container().add(slaves[1]).cpu(1);
+  G.container().add(slaves[2]).cpu(1);
 
   dtc::Executor(G).run();
 
   return 0;
 }
+
+
+

@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -15,50 +15,52 @@
 
 namespace dtc {
 
-// Function: _insert_stderr_listener
-std::shared_ptr<SocketListener> KernelBase::_insert_stderr_listener() {
+// Function: insert_stderr_listener
+std::shared_ptr<ReadEvent> KernelBase::insert_stderr_listener() {
 
   assert(is_owner());
 
-  auto L = _insert_listener(Policy::get().STDERR_LISTENER_PORT())(
-    [K=this] (std::shared_ptr<Socket>&& skt) {
-      K->insert<ReadEvent>(
-        skt->fd(),
-        [K, skt, buffer=std::array<char, BUFSIZ>()] (Event& e) mutable {
-          auto NR = ::read(skt->fd(), buffer.data(), BUFSIZ);
+  auto L = insert_listener(env::stderr_listener_port())(
+    [this] (std::shared_ptr<Socket>&& skt) {
+      insert<ReadEvent>(
+        std::move(skt),
+        [buffer=std::array<char, BUFSIZ>()] (Event& e) mutable {
+          auto NR = ::read(e.device()->fd(), buffer.data(), BUFSIZ);
           if(NR <= 0 || ::write(STDERR_FILENO, buffer.data(), NR) != NR) {
-            K->remove(e.shared_from_this());
+            return Event::REMOVE;
           }
+          return Event::DEFAULT;
         }
-      );
+      ).get();
     }
   );
 
-  Policy::get().STDERR_LISTENER_PORT(std::get<1>(L->get()->this_host()));
+  env::stderr_listener_port(std::get<1>(std::static_pointer_cast<Socket>(L->device())->this_host()));
 
   return L;
 }
 
-// Function: _insert_stdout_listener
-std::shared_ptr<SocketListener> KernelBase::_insert_stdout_listener() {
+// Function: insert_stdout_listener
+std::shared_ptr<ReadEvent> KernelBase::insert_stdout_listener() {
 
   assert(is_owner());
   
-  auto L = _insert_listener(Policy::get().STDOUT_LISTENER_PORT())(
-    [K=this] (std::shared_ptr<Socket>&& skt) {
-      K->insert<ReadEvent>(
-        skt->fd(),
-        [K, skt, buffer=std::array<char, BUFSIZ>()] (Event& e) mutable {
-          auto NR = ::read(skt->fd(), buffer.data(), BUFSIZ);
+  auto L = insert_listener(env::stdout_listener_port())(
+    [this] (std::shared_ptr<Socket>&& skt) {
+      insert<ReadEvent>(
+        std::move(skt),
+        [buffer=std::array<char, BUFSIZ>()] (Event& e) mutable {
+          auto NR = ::read(e.device()->fd(), buffer.data(), BUFSIZ);
           if(NR <= 0 || ::write(STDOUT_FILENO, buffer.data(), NR) != NR) {
-            K->remove(e.shared_from_this());
+            return Event::REMOVE;
           }
+          return Event::DEFAULT;
         }
-      );
+      ).get();
     }
   );
 
-  Policy::get().STDOUT_LISTENER_PORT(std::get<1>(L->get()->this_host()));
+  env::stdout_listener_port(std::get<1>(std::static_pointer_cast<Socket>(L->device())->this_host()));
 
   return L;
 }

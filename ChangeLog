@@ -1,1 +1,59 @@
-2017/12/01: First release of DtCraft-0.2.1
+## 2018/3/2: DtCraft-0.2.2 released
+
+#---- Summary ----#
+1. Added support for vertex program.
+2. Added cell interface.
+3. Added basic machine learning library.
+4. Bug fixes and performance improvements.
+5. Improved the report format.
+
+### Added
+- [configure.ac] Added dtcraft.engine@gmail.come and website.
+- [configure.ac] Added AX_CPU_COUNT macro.
+- [kernel/container.cpp] Added isolation for PID/SYS/TMP mounts.
+- [ipc/pipe.*] Added pipe support.
+- [unittest/ipc.cpp] Added pipe unittest.
+- [protobuf/brokenio.*] Added a new protobuf type, BrokenIO.
+- [concurrent/unique_guard.*] Added unique guard class and the corresponding unittest.
+- [concurrent/shared_guard.*] Added shared guard class and the corresponding unittest.
+- [event/reactor.*] Added synchronize and share methods as a reactor-specific lock.
+- [ipc/ipc.*] Added ScopedOpenOnExec to open a fd on exec and close it in an RAII fashion.
+- [utility/scoped_guard.*] Added ScopeGuard to use in error handling.
+- [math/*] Added basic math cells.
+- [utility/lexical_cast.hpp] Added lexical_cast library.
+- [kernel/vertex.*] Added vertex header and source.
+- [kernel/stream.*] Added stream header and source.
+- [cell/*] Added cell library.
+- [ml/*] Added basic ml library.
+- [3rd-party/eigen*] Added eigen library.
+- [dtc/static] Added folder to store static objects (logger).
+- [event/epoll.*] Added epoll to demux collections.
+- [ipc/notifier.*] Added notifier device.
+- [kernel/prober.*] Added prober interface.
+- [kernel/executor.*] Added support for vertex program.
+
+### Removed
+- [socket.cpp/socket.hpp] Removed support for raw socket fd creation.
+- [main/master.cpp] Removed the unshare of user namespace.
+- [main/agent.cpp] Removed the unshare of user namespace.
+- [kernel/container.cpp] Removed the ID mapping to drop the capability after exec.
+- [unittest/ipc.cpp] Removed the shm unittest.
+- [event/demux.*] Removed DemuxIX.
+
+### Changed
+- [makefile.sh] Changed the unittest timeout to 5 minutes.
+- [unittest/archive.cpp] Limited the cpu count in test_atomicity.
+- [kernel/executor.cpp] Switched shm to domain socket.
+- [kernel/agent.cpp] Removed mapped syntax in _deploy.
+- [kernel/manager.cpp] Replaced error_code with BrokenIO.
+- [protobuf/solution] Modified the format of solution.
+- [event/reactor.*] Made reactor runnable on single thread.
+- [kernel/manager.*] Replaced actor naming with channel.
+- [policy.*] Moved frontier to topology runtime.
+- [protobuc/topology.*] Moved the host/topology of stream to topology runtime.
+- [kernel/graph.*] Fixed the bug in resource initialization for unassigned vertices and containers.
+- [unittest/catch.*] Updated catch to 2.1.0 to fix the timing error in unittests.
+- [ipc/socket.hpp] Removed SocketListener.
+- [event/event.*] Added return signal for event callback and all related streams/vertices.
+
+## 2018/12/01: DtCraft-0.2.1 released

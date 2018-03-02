@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -15,17 +15,6 @@
 
 namespace dtc {
    
-// Constructor
-Socket::Socket(const int fd) :
-  Device{fd} {
-  //make_socket_reuseable(fd);
-  //make_socket_keepalive(fd);
-}
-
-// Destructor
-Socket::~Socket() {
-}
-
 // Function: is_connected
 bool Socket::is_connected() const {
   // Special case for FreeBSD7, for which send() does not generate SIGPIPE.
@@ -125,48 +114,6 @@ std::shared_ptr<Socket> Socket::accept() const {
   }
 }
 
-// Function: read
-std::streamsize Socket::read(void* buf, std::streamsize sz) {
-
-  issue_read:
-  auto ret = ::recv(_fd, buf, sz, 0);
-
-  // case 1: fail or in-progress
-  if(ret == -1) {
-    if(errno == EINTR) {
-      goto issue_read;
-    }
-    else if(errno != EAGAIN && errno != EWOULDBLOCK) {
-      throw std::system_error(make_posix_error_code(errno), "Socket read failed");
-    }
-  }
-  // case 2: eof
-  else if(ret == 0 && sz != 0) {
-    throw std::system_error(make_posix_error_code(EPIPE), "Socket read failed");
-  }
-
-  return ret;
-}
-
-// Function: write
-std::streamsize Socket::write(const void* buf, std::streamsize sz) {
-
-  issue_write:
-  auto ret = ::send(_fd, buf, sz, MSG_NOSIGNAL);
-  
-  // Case 1: error
-  if(ret == -1) {
-    if(errno == EINTR) {
-      goto issue_write;
-    }
-    else if(errno != EAGAIN && errno != EWOULDBLOCK) {
-      throw std::system_error(make_posix_error_code(errno), "Socket write failed");
-    }
-  }
-  
-  return ret;
-}
-
 //-------------------------------------------------------------------------------------------------
 
 // Function: to_host
@@ -194,21 +141,26 @@ std::tuple<std::string, std::string> to_host(struct sockaddr& sa, size_t len) no
   return {"", ""};
 }
 
-// Function: make_domain_pair
-std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_domain_pair() {
-  if(int fd[2]; ::socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0, fd) == -1) {
+// Function: make_socket_pair
+std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_socket_pair() {
+  int fd[2];
+  if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0, fd) == -1) {
     throw std::system_error(make_posix_error_code(errno), "Failed to create socketpair");
 	}
-	else {
-    return {std::make_shared<dtc::Socket>(fd[0]), std::make_shared<dtc::Socket>(fd[1])};
-  }
+  return {std::make_shared<dtc::Socket>(fd[0]), std::make_shared<dtc::Socket>(fd[1])};
 }
 
+// Function: make_socket_pair_raw
+std::tuple<int, int> make_socket_pair_raw() {
+  int fd[2];
+  if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0, fd) == -1) {
+    throw std::system_error(make_posix_error_code(errno), "Failed to create socketpair");
+  }
+  return std::make_tuple(fd[0], fd[1]);
+}
 
-// Function: make_socket_server_fd
-int make_socket_server_fd(std::string_view port, std::error_code& errc) noexcept {
-
-  errc.clear();
+// Function: make_socket_server
+std::shared_ptr<Socket> make_socket_server(std::string_view P) {
 
   // Memo:
   // struct addrinfo {
@@ -242,9 +194,8 @@ int make_socket_server_fd(std::string_view port, std::error_code& errc) noexcept
   int one {1};
   int ret;  
 
-  if((ret = ::getaddrinfo(nullptr, port.data(), &hints, &res)) != 0) {
-    errc = make_posix_error_code(ret);
-    return -1;
+  if((ret = ::getaddrinfo(nullptr, P.data(), &hints, &res)) != 0) {
+    throw std::system_error(make_posix_error_code(EINVAL), ::gai_strerror(ret));
   }
 
   // Try to connect to the first one that is available.
@@ -256,19 +207,16 @@ int make_socket_server_fd(std::string_view port, std::error_code& errc) noexcept
     }
     
     if((fd = ::socket(ptr->ai_family, ptr->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, ptr->ai_protocol)) == -1) {
-      errc = make_posix_error_code(errno);
       goto try_next;
     }
     
     ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
 
     if(::bind(fd, ptr->ai_addr, ptr->ai_addrlen) == -1) {
-      errc = make_posix_error_code(errno);
       goto try_next;
     }
 
     if(::listen(fd, 128) == -1) {
-      errc = make_posix_error_code(errno);
       goto try_next;
     }
     else {
@@ -285,30 +233,18 @@ int make_socket_server_fd(std::string_view port, std::error_code& errc) noexcept
   }
   
   ::freeaddrinfo(res);
+  
+  if(fd == -1) {
+    throw std::system_error(make_posix_error_code(EINVAL), "Failed to bind to "s + P.data());
+  }
 
   // Assign the socket to the underlying event native handle.
-  return fd;
+  return std::make_shared<Socket>(fd);
 }
 
-// Function: make_socket_server_fd
-int make_socket_server_fd(std::string_view P) {
-  std::error_code errc;
-  if(auto fd = make_socket_server_fd(P, errc); errc) {
-    throw std::system_error(errc, "Failed to listen to port "s + P.data());
-  }
-  else return fd;
-}
-
-// Function: make_socket_server
-std::shared_ptr<Socket> make_socket_server(std::string_view port) {
-  return std::make_shared<Socket>(make_socket_server_fd(port));
-}
-
-// Function: make_socket_client_fd
-int make_socket_client_fd(std::string_view H, std::string_view P, std::error_code& errc) {
-
-  errc.clear();
-
+// Function: make_socket_client
+std::shared_ptr<Socket> make_socket_client(std::string_view H, std::string_view P) {
+  
   struct addrinfo hints;
   struct addrinfo* res {nullptr};
   
@@ -321,12 +257,10 @@ int make_socket_client_fd(std::string_view H, std::string_view P, std::error_cod
   int fd {-1};
   int tries;
   
-  // TODO: change the error code
   if((ret = ::getaddrinfo(H.data(), P.data(), &hints, &res)) != 0) {
-    errc = make_posix_error_code(ret);
-    return -1;
+    throw std::system_error(make_posix_error_code(EINVAL), ::gai_strerror(ret));
   }
-  
+
   // Try each internet entry.
   for(auto ptr = res; ptr != nullptr; ptr = ptr->ai_next) {
 
@@ -336,7 +270,6 @@ int make_socket_client_fd(std::string_view H, std::string_view P, std::error_cod
     }
     
     if((fd = ::socket(ptr->ai_family, ptr->ai_socktype | SOCK_NONBLOCK | SOCK_CLOEXEC, ptr->ai_protocol)) == -1) {
-      errc = make_posix_error_code(errno);
       goto try_next;
     }
 
@@ -356,19 +289,16 @@ int make_socket_client_fd(std::string_view H, std::string_view P, std::error_cod
       else if(errno != EINPROGRESS) {
         goto try_next;
       }
-      errc = make_posix_error_code(errno);
     }
     
     // Poll the socket. Note that writable return doesn't mean it is connected to the other end.
-    if(select_on_write(fd, 5, errc) && !errc) {
+    if(select_on_write(fd, std::chrono::seconds(5))) {
       int optval = -1;
       socklen_t optlen = sizeof(optval);
       if(::getsockopt(fd, SOL_SOCKET, SO_ERROR, &optval, &optlen) < 0) {
-        errc = make_posix_error_code(errno);
         goto try_next;
       }
       if(optval != 0) {
-        errc = make_posix_error_code(optval);
         goto try_next;
       }
       break;
@@ -383,47 +313,35 @@ int make_socket_client_fd(std::string_view H, std::string_view P, std::error_cod
   }
   
   ::freeaddrinfo(res);
-
-  return fd;
-}
-
-// Function: make_socket_client_fd
-int make_socket_client_fd(std::string_view H, std::string_view P) {
-  std::error_code errc;
-  if(auto fd = make_socket_client_fd(H, P, errc); errc) {
-    throw std::system_error(errc, "Failed to connect to "s + H.data() + ":" + P.data());
+  
+  if(fd == -1) {
+    throw std::system_error(
+      make_posix_error_code(EINVAL), "Failed to connect to "s + H.data() + ":" + P.data()
+    );
   }
-  else return fd;
-}
 
-// Function: make_socket_client
-std::shared_ptr<Socket> make_socket_client(std::string_view H, std::string_view P) {
-  return std::make_shared<Socket>(make_socket_client_fd(H, P));
+  return std::make_shared<Socket>(fd);
 }
 
 // Function: redirect_to_socket
-void redirect_to_socket(
-  int tgt, 
-  std::string_view H, 
-  std::string_view P, 
-  std::error_code& errc
-) {
-  auto fd = make_socket_client_fd(H, P, errc);
-  if(fd != -1) {
-    if(::dup2(fd, tgt) == -1 || ::close(fd) == -1) {
-      errc = std::make_error_code(static_cast<std::errc>(errno));
-    }
-  }
-}
+//void redirect_to_socket(int tgt, std::string_view H, std::string_view P) {
+//  auto fd = make_socket_client_fd(H, P, errc);
+//  auto client = 
+//  if(fd != -1) {
+//    if(::dup2(fd, tgt) == -1 || ::close(fd) == -1) {
+//      errc = std::make_error_code(static_cast<std::errc>(errno));
+//    }
+//  }
+//}
 
 // Function: redirect_to_socket
-void redirect_to_socket(int tgt, std::string_view H, std::string_view P) {
-  std::error_code errc;
-  redirect_to_socket(tgt, H, P, errc);
-  if(errc) {
-    throw std::system_error(errc, "Failed to redirect to"s + H.data() + ":" + P.data());
-  }
-}
+//void redirect_to_socket(int tgt, std::string_view H, std::string_view P) {
+//  std::error_code errc;
+//  redirect_to_socket(tgt, H, P, errc);
+//  if(errc) {
+//    throw std::system_error(errc, "Failed to redirect to"s + H.data() + ":" + P.data());
+//  }
+//}
 
 
 

@@ -96,12 +96,16 @@ sbin_PROGRAMS =
 bin_PROGRAMS =
 noinst_PROGRAMS = bin/master$(EXEEXT) bin/agent$(EXEEXT) \
 	example/pi$(EXEEXT) example/hello_world$(EXEEXT) \
+	example/feeder$(EXEEXT) example/prober$(EXEEXT) \
 	example/kmeans$(EXEEXT) example/prime$(EXEEXT) \
-	example/reduce_sum$(EXEEXT) unittest/archive$(EXEEXT) \
+	example/operator$(EXEEXT) example/external$(EXEEXT) \
+	example/mnist$(EXEEXT) example/reduce_sum$(EXEEXT) \
+	app/debs18/debs18$(EXEEXT) unittest/archive$(EXEEXT) \
 	unittest/statgrab$(EXEEXT) unittest/webui$(EXEEXT) \
 	unittest/ipc$(EXEEXT) unittest/reactor$(EXEEXT) \
 	unittest/utility$(EXEEXT) unittest/traits$(EXEEXT) \
-	unittest/scheduler$(EXEEXT) unittest/concurrent$(EXEEXT)
+	unittest/scheduler$(EXEEXT) unittest/ml$(EXEEXT) \
+	unittest/concurrent$(EXEEXT)
 pkglibexec_PROGRAMS =
 check_PROGRAMS =
 subdir = .
@@ -109,6 +113,7 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ax_compare_version.m4 \
 	$(top_srcdir)/m4/ax_compiler_vendor.m4 \
 	$(top_srcdir)/m4/ax_compiler_version.m4 \
+	$(top_srcdir)/m4/ax_count_cpus.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
 	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
@@ -163,18 +168,21 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)" \
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 lib_libDtCraft_la_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
-am_lib_libDtCraft_la_OBJECTS = src/statgrab/statgrab.lo \
-	src/event/reactor.lo src/event/event.lo src/event/select.lo \
-	src/ipc/device.lo src/ipc/socket.lo src/ipc/ipc.lo \
-	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/shm.lo \
-	src/ipc/streambuf.lo src/utility/os.lo \
-	src/utility/http_parser.lo src/utility/table.lo src/error.lo \
-	src/policy.lo src/protobuf/resource.lo \
+am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
+	src/csv/csv.lo src/exit.lo src/event/reactor.lo \
+	src/event/event.lo src/event/select.lo src/event/epoll.lo \
+	src/ipc/socket.lo src/ipc/ipc.lo src/ipc/domain.lo \
+	src/ipc/fifo.lo src/ipc/notifier.lo src/ipc/pipe.lo \
+	src/ipc/shm.lo src/ipc/streambuf.lo src/utility/os.lo \
+	src/utility/http_parser.lo src/utility/table.lo \
+	src/ml/linear.lo src/ml/optimizer.lo src/ml/dnn.lo \
+	src/error.lo src/policy.lo src/protobuf/resource.lo \
 	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
 	src/protobuf/protobuf.lo src/protobuf/solution.lo \
 	src/protobuf/common.lo src/protobuf/topology.lo \
 	src/kernel/container.lo src/kernel/cgroup.lo \
-	src/kernel/manager.lo src/kernel/scheduler.lo \
+	src/kernel/manager.lo src/kernel/stream.lo \
+	src/kernel/scheduler.lo src/kernel/vertex.lo \
 	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
 	src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
@@ -184,24 +192,44 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(pkglibexec_PROGRAMS) \
 	$(sbin_PROGRAMS)
+am_app_debs18_debs18_OBJECTS = app/debs18/utility.$(OBJEXT) \
+	app/debs18/map.$(OBJEXT) app/debs18/debs18.$(OBJEXT) \
+	app/debs18/dtr.$(OBJEXT) app/debs18/dnn.$(OBJEXT)
+app_debs18_debs18_OBJECTS = $(am_app_debs18_debs18_OBJECTS)
+app_debs18_debs18_DEPENDENCIES = lib/libDtCraft.la
 am_bin_agent_OBJECTS = main/agent.$(OBJEXT)
 bin_agent_OBJECTS = $(am_bin_agent_OBJECTS)
 bin_agent_DEPENDENCIES = lib/libDtCraft.la
 am_bin_master_OBJECTS = main/master.$(OBJEXT)
 bin_master_OBJECTS = $(am_bin_master_OBJECTS)
 bin_master_DEPENDENCIES = lib/libDtCraft.la
+am_example_external_OBJECTS = example/external.$(OBJEXT)
+example_external_OBJECTS = $(am_example_external_OBJECTS)
+example_external_DEPENDENCIES = lib/libDtCraft.la
+am_example_feeder_OBJECTS = example/feeder.$(OBJEXT)
+example_feeder_OBJECTS = $(am_example_feeder_OBJECTS)
+example_feeder_DEPENDENCIES = lib/libDtCraft.la
 am_example_hello_world_OBJECTS = example/hello_world.$(OBJEXT)
 example_hello_world_OBJECTS = $(am_example_hello_world_OBJECTS)
 example_hello_world_DEPENDENCIES = lib/libDtCraft.la
 am_example_kmeans_OBJECTS = example/kmeans.$(OBJEXT)
 example_kmeans_OBJECTS = $(am_example_kmeans_OBJECTS)
 example_kmeans_DEPENDENCIES = lib/libDtCraft.la
+am_example_mnist_OBJECTS = example/mnist.$(OBJEXT)
+example_mnist_OBJECTS = $(am_example_mnist_OBJECTS)
+example_mnist_DEPENDENCIES = lib/libDtCraft.la
+am_example_operator_OBJECTS = example/operator.$(OBJEXT)
+example_operator_OBJECTS = $(am_example_operator_OBJECTS)
+example_operator_DEPENDENCIES = lib/libDtCraft.la
 am_example_pi_OBJECTS = example/pi.$(OBJEXT)
 example_pi_OBJECTS = $(am_example_pi_OBJECTS)
 example_pi_DEPENDENCIES = lib/libDtCraft.la
 am_example_prime_OBJECTS = example/prime.$(OBJEXT)
 example_prime_OBJECTS = $(am_example_prime_OBJECTS)
 example_prime_DEPENDENCIES = lib/libDtCraft.la
+am_example_prober_OBJECTS = example/prober.$(OBJEXT)
+example_prober_OBJECTS = $(am_example_prober_OBJECTS)
+example_prober_DEPENDENCIES = lib/libDtCraft.la
 am_example_reduce_sum_OBJECTS = example/reduce_sum.$(OBJEXT)
 example_reduce_sum_OBJECTS = $(am_example_reduce_sum_OBJECTS)
 example_reduce_sum_DEPENDENCIES = lib/libDtCraft.la
@@ -217,6 +245,9 @@ unittest_concurrent_DEPENDENCIES = lib/libDtCraft.la \
 am_unittest_ipc_OBJECTS = unittest/ipc.$(OBJEXT)
 unittest_ipc_OBJECTS = $(am_unittest_ipc_OBJECTS)
 unittest_ipc_DEPENDENCIES = lib/libDtCraft.la $(am__DEPENDENCIES_1)
+am_unittest_ml_OBJECTS = unittest/ml.$(OBJEXT)
+unittest_ml_OBJECTS = $(am_unittest_ml_OBJECTS)
+unittest_ml_DEPENDENCIES = lib/libDtCraft.la $(am__DEPENDENCIES_1)
 am_unittest_reactor_OBJECTS = unittest/reactor.$(OBJEXT)
 unittest_reactor_OBJECTS = $(am_unittest_reactor_OBJECTS)
 unittest_reactor_DEPENDENCIES = lib/libDtCraft.la \
@@ -275,21 +306,46 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(lib_libDtCraft_la_SOURCES) $(bin_agent_SOURCES) \
-	$(bin_master_SOURCES) $(example_hello_world_SOURCES) \
-	$(example_kmeans_SOURCES) $(example_pi_SOURCES) \
-	$(example_prime_SOURCES) $(example_reduce_sum_SOURCES) \
+COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CFLAGS) $(CFLAGS)
+AM_V_CC = $(am__v_CC_@AM_V@)
+am__v_CC_ = $(am__v_CC_@AM_DEFAULT_V@)
+am__v_CC_0 = @echo "  CC      " $@;
+am__v_CC_1 = 
+CCLD = $(CC)
+LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+AM_V_CCLD = $(am__v_CCLD_@AM_V@)
+am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
+am__v_CCLD_0 = @echo "  CCLD    " $@;
+am__v_CCLD_1 = 
+SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_debs18_debs18_SOURCES) \
+	$(bin_agent_SOURCES) $(bin_master_SOURCES) \
+	$(example_external_SOURCES) $(example_feeder_SOURCES) \
+	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
+	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
+	$(example_pi_SOURCES) $(example_prime_SOURCES) \
+	$(example_prober_SOURCES) $(example_reduce_sum_SOURCES) \
 	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
-	$(unittest_ipc_SOURCES) $(unittest_reactor_SOURCES) \
-	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
-	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
-	$(unittest_webui_SOURCES)
-DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) $(bin_agent_SOURCES) \
-	$(bin_master_SOURCES) $(example_hello_world_SOURCES) \
-	$(example_kmeans_SOURCES) $(example_pi_SOURCES) \
-	$(example_prime_SOURCES) $(example_reduce_sum_SOURCES) \
-	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
-	$(unittest_ipc_SOURCES) $(unittest_reactor_SOURCES) \
+	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
+	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
+	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
+	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
+DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) \
+	$(app_debs18_debs18_SOURCES) $(bin_agent_SOURCES) \
+	$(bin_master_SOURCES) $(example_external_SOURCES) \
+	$(example_feeder_SOURCES) $(example_hello_world_SOURCES) \
+	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
+	$(example_operator_SOURCES) $(example_pi_SOURCES) \
+	$(example_prime_SOURCES) $(example_prober_SOURCES) \
+	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
+	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
+	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
 	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
 	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
 	$(unittest_webui_SOURCES)
@@ -582,10 +638,9 @@ CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 
-# Preprocessor directive
-
 # DtCraft Package include
-CPPFLAGS = @CPPFLAGS@ $(BOOST_CPPFLAGS) -Iinclude
+CPPFLAGS = @CPPFLAGS@ -Iinclude
+CPU_COUNT = @CPU_COUNT@
 
 # Package-related substitution variables.
 CXX = @CXX@
@@ -726,29 +781,51 @@ include_HEADERS =
 pkginclude_HEADERS = 
 nobase_include_HEADERS = 
 nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
-	include/dtc/archive/archive.hpp \
+	include/dtc/archive/archive.hpp include/dtc/config.hpp.in \
+	include/dtc/device.hpp include/dtc/exit.hpp \
 	include/dtc/statgrab/statgrab.hpp include/dtc/error.hpp \
-	include/dtc/traits.hpp include/dtc/event/reactor.hpp \
-	include/dtc/event/select.hpp include/dtc/event/demux.hpp \
-	include/dtc/event/event.hpp include/dtc/ipc/streambuf.hpp \
-	include/dtc/ipc/device.hpp include/dtc/ipc/domain.hpp \
+	include/dtc/csv/csv.hpp include/dtc/traits.hpp \
+	include/dtc/cell/cell.hpp include/dtc/cell/feeder/feeder.hpp \
+	include/dtc/cell/feeder/debs.hpp \
+	include/dtc/cell/feeder/mnist.hpp \
+	include/dtc/cell/feeder/file.hpp \
+	include/dtc/cell/feeder/csv.hpp \
+	include/dtc/cell/feeder/socket.hpp include/dtc/cell/ml/dnn.hpp \
+	include/dtc/cell/operator.hpp include/dtc/cell/visitor.hpp \
+	include/dtc/event/reactor.hpp include/dtc/event/select.hpp \
+	include/dtc/event/epoll.hpp include/dtc/event/event.hpp \
+	include/dtc/ipc/notifier.hpp include/dtc/ipc/streambuf.hpp \
+	include/dtc/ipc/domain.hpp include/dtc/ipc/pipe.hpp \
 	include/dtc/ipc/fifo.hpp include/dtc/ipc/ipc.hpp \
-	include/dtc/ipc/shm.hpp include/dtc/ipc/ios.hpp \
-	include/dtc/ipc/socket.hpp include/dtc/headerdef.hpp \
-	include/dtc/utility/os.hpp include/dtc/utility/allocator.hpp \
-	include/dtc/utility/table.hpp include/dtc/utility/random.hpp \
-	include/dtc/utility/mempool.hpp \
+	include/dtc/ipc/shm.hpp include/dtc/ipc/socket.hpp \
+	include/dtc/headerdef.hpp include/dtc/utility/os.hpp \
+	include/dtc/utility/allocator.hpp \
+	include/dtc/utility/table.hpp \
+	include/dtc/utility/scope_guard.hpp \
+	include/dtc/utility/random.hpp include/dtc/utility/mempool.hpp \
+	include/dtc/utility/algorithm.hpp \
 	include/dtc/utility/http_parser.hpp \
 	include/dtc/utility/hash.hpp include/dtc/utility/lambda.hpp \
 	include/dtc/utility/literals.hpp \
-	include/dtc/utility/singleton.hpp include/dtc/utility/json.hpp \
+	include/dtc/utility/lexical_cast.hpp \
+	include/dtc/utility/singleton.hpp \
+	include/dtc/utility/utility.hpp include/dtc/utility/ios.hpp \
 	include/dtc/utility/chrono.hpp include/dtc/utility/uuid.hpp \
-	include/dtc/utility/logger.hpp include/dtc/unittest/catch.hpp \
+	include/dtc/utility/logger.hpp include/dtc/ml/mnist.hpp \
+	include/dtc/ml/ml.hpp include/dtc/ml/activation.hpp \
+	include/dtc/ml/linear.hpp include/dtc/ml/loss.hpp \
+	include/dtc/ml/dnn.hpp include/dtc/ml/optimizer.hpp \
+	include/dtc/stamp-h1 include/dtc/config.hpp \
+	include/dtc/config.hpp.in~ include/dtc/unittest/catch.hpp \
+	include/dtc/static/threadpool.hpp \
+	include/dtc/static/logger.hpp \
+	include/dtc/concurrent/shared_guard.hpp \
 	include/dtc/concurrent/synchronized.hpp \
 	include/dtc/concurrent/concurrent.hpp \
 	include/dtc/concurrent/deque.hpp \
 	include/dtc/concurrent/mutex.hpp \
 	include/dtc/concurrent/fifo.hpp \
+	include/dtc/concurrent/unique_guard.hpp \
 	include/dtc/concurrent/threadpool.hpp \
 	include/dtc/concurrent/queue.hpp \
 	include/dtc/protobuf/solution.hpp \
@@ -759,13 +836,303 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/protobuf/protobuf.hpp \
 	include/dtc/protobuf/topology.hpp \
 	include/dtc/protobuf/resource.hpp \
-	include/dtc/protobuf/frontier.hpp include/dtc/dtc.hpp \
-	include/dtc/macrodef.hpp include/dtc/utility.hpp \
-	include/dtc/kernel/executor.hpp include/dtc/kernel/manager.hpp \
+	include/dtc/protobuf/frontier.hpp \
+	include/dtc/protobuf/brokenio.hpp include/dtc/dtc.hpp \
+	include/dtc/Eigen/src/SVD/BDCSVD.h \
+	include/dtc/Eigen/src/SVD/UpperBidiagonalization.h \
+	include/dtc/Eigen/src/SVD/JacobiSVD.h \
+	include/dtc/Eigen/src/SVD/JacobiSVD_LAPACKE.h \
+	include/dtc/Eigen/src/SVD/SVDBase.h \
+	include/dtc/Eigen/src/SparseQR/SparseQR.h \
+	include/dtc/Eigen/src/Geometry/OrthoMethods.h \
+	include/dtc/Eigen/src/Geometry/Homogeneous.h \
+	include/dtc/Eigen/src/Geometry/Rotation2D.h \
+	include/dtc/Eigen/src/Geometry/arch/Geometry_SSE.h \
+	include/dtc/Eigen/src/Geometry/AngleAxis.h \
+	include/dtc/Eigen/src/Geometry/Quaternion.h \
+	include/dtc/Eigen/src/Geometry/AlignedBox.h \
+	include/dtc/Eigen/src/Geometry/EulerAngles.h \
+	include/dtc/Eigen/src/Geometry/RotationBase.h \
+	include/dtc/Eigen/src/Geometry/Translation.h \
+	include/dtc/Eigen/src/Geometry/Umeyama.h \
+	include/dtc/Eigen/src/Geometry/Hyperplane.h \
+	include/dtc/Eigen/src/Geometry/Transform.h \
+	include/dtc/Eigen/src/Geometry/ParametrizedLine.h \
+	include/dtc/Eigen/src/Geometry/Scaling.h \
+	include/dtc/Eigen/src/OrderingMethods/Ordering.h \
+	include/dtc/Eigen/src/OrderingMethods/Amd.h \
+	include/dtc/Eigen/src/OrderingMethods/Eigen_Colamd.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_relax_snode.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_kernel_bmod.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_panel_dfs.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_Structs.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_panel_bmod.h \
+	include/dtc/Eigen/src/SparseLU/SparseLUImpl.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_column_dfs.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_Utils.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_gemm_kernel.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_column_bmod.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_copy_to_ucol.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_heap_relax_snode.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_SupernodalMatrix.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_pivotL.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_Memory.h \
+	include/dtc/Eigen/src/SparseLU/SparseLU_pruneL.h \
+	include/dtc/Eigen/src/SuperLUSupport/SuperLUSupport.h \
+	include/dtc/Eigen/src/plugins/MatrixCwiseUnaryOps.h \
+	include/dtc/Eigen/src/plugins/CommonCwiseUnaryOps.h \
+	include/dtc/Eigen/src/plugins/BlockMethods.h \
+	include/dtc/Eigen/src/plugins/MatrixCwiseBinaryOps.h \
+	include/dtc/Eigen/src/plugins/CommonCwiseBinaryOps.h \
+	include/dtc/Eigen/src/plugins/ArrayCwiseUnaryOps.h \
+	include/dtc/Eigen/src/plugins/ArrayCwiseBinaryOps.h \
+	include/dtc/Eigen/src/SparseCholesky/SimplicialCholesky_impl.h \
+	include/dtc/Eigen/src/SparseCholesky/SimplicialCholesky.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/IncompleteLUT.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/ConjugateGradient.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/IncompleteCholesky.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/SolveWithGuess.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/BiCGSTAB.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/BasicPreconditioners.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/LeastSquareConjugateGradient.h \
+	include/dtc/Eigen/src/IterativeLinearSolvers/IterativeSolverBase.h \
+	include/dtc/Eigen/src/PardisoSupport/PardisoSupport.h \
+	include/dtc/Eigen/src/LU/Determinant.h \
+	include/dtc/Eigen/src/LU/PartialPivLU.h \
+	include/dtc/Eigen/src/LU/FullPivLU.h \
+	include/dtc/Eigen/src/LU/arch/Inverse_SSE.h \
+	include/dtc/Eigen/src/LU/PartialPivLU_LAPACKE.h \
+	include/dtc/Eigen/src/LU/InverseImpl.h \
+	include/dtc/Eigen/src/CholmodSupport/CholmodSupport.h \
+	include/dtc/Eigen/src/StlSupport/StdDeque.h \
+	include/dtc/Eigen/src/StlSupport/StdList.h \
+	include/dtc/Eigen/src/StlSupport/details.h \
+	include/dtc/Eigen/src/StlSupport/StdVector.h \
+	include/dtc/Eigen/src/Cholesky/LLT.h \
+	include/dtc/Eigen/src/Cholesky/LDLT.h \
+	include/dtc/Eigen/src/Cholesky/LLT_LAPACKE.h \
+	include/dtc/Eigen/src/Householder/HouseholderSequence.h \
+	include/dtc/Eigen/src/Householder/BlockHouseholder.h \
+	include/dtc/Eigen/src/Householder/Householder.h \
+	include/dtc/Eigen/src/UmfPackSupport/UmfPackSupport.h \
+	include/dtc/Eigen/src/Jacobi/Jacobi.h \
+	include/dtc/Eigen/src/Eigenvalues/Tridiagonalization.h \
+	include/dtc/Eigen/src/Eigenvalues/HessenbergDecomposition.h \
+	include/dtc/Eigen/src/Eigenvalues/EigenSolver.h \
+	include/dtc/Eigen/src/Eigenvalues/SelfAdjointEigenSolver_LAPACKE.h \
+	include/dtc/Eigen/src/Eigenvalues/SelfAdjointEigenSolver.h \
+	include/dtc/Eigen/src/Eigenvalues/GeneralizedSelfAdjointEigenSolver.h \
+	include/dtc/Eigen/src/Eigenvalues/ComplexSchur_LAPACKE.h \
+	include/dtc/Eigen/src/Eigenvalues/RealQZ.h \
+	include/dtc/Eigen/src/Eigenvalues/MatrixBaseEigenvalues.h \
+	include/dtc/Eigen/src/Eigenvalues/GeneralizedEigenSolver.h \
+	include/dtc/Eigen/src/Eigenvalues/RealSchur.h \
+	include/dtc/Eigen/src/Eigenvalues/ComplexEigenSolver.h \
+	include/dtc/Eigen/src/Eigenvalues/RealSchur_LAPACKE.h \
+	include/dtc/Eigen/src/Eigenvalues/ComplexSchur.h \
+	include/dtc/Eigen/src/Core/BooleanRedux.h \
+	include/dtc/Eigen/src/Core/GeneralProduct.h \
+	include/dtc/Eigen/src/Core/BandMatrix.h \
+	include/dtc/Eigen/src/Core/ReturnByValue.h \
+	include/dtc/Eigen/src/Core/Swap.h \
+	include/dtc/Eigen/src/Core/Inverse.h \
+	include/dtc/Eigen/src/Core/GenericPacketMath.h \
+	include/dtc/Eigen/src/Core/ConditionEstimator.h \
+	include/dtc/Eigen/src/Core/CwiseTernaryOp.h \
+	include/dtc/Eigen/src/Core/DenseCoeffsBase.h \
+	include/dtc/Eigen/src/Core/MapBase.h \
+	include/dtc/Eigen/src/Core/Diagonal.h \
+	include/dtc/Eigen/src/Core/SolveTriangular.h \
+	include/dtc/Eigen/src/Core/MathFunctions.h \
+	include/dtc/Eigen/src/Core/Matrix.h \
+	include/dtc/Eigen/src/Core/DiagonalMatrix.h \
+	include/dtc/Eigen/src/Core/Transpose.h \
+	include/dtc/Eigen/src/Core/Select.h \
+	include/dtc/Eigen/src/Core/NoAlias.h \
+	include/dtc/Eigen/src/Core/PermutationMatrix.h \
+	include/dtc/Eigen/src/Core/Assign_MKL.h \
+	include/dtc/Eigen/src/Core/Assign.h \
+	include/dtc/Eigen/src/Core/CommaInitializer.h \
+	include/dtc/Eigen/src/Core/AssignEvaluator.h \
+	include/dtc/Eigen/src/Core/NestByValue.h \
+	include/dtc/Eigen/src/Core/VectorwiseOp.h \
+	include/dtc/Eigen/src/Core/MatrixBase.h \
+	include/dtc/Eigen/src/Core/Dot.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/TypeCasting.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/Complex.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/Half.h \
+	include/dtc/Eigen/src/Core/arch/CUDA/PacketMathHalf.h \
+	include/dtc/Eigen/src/Core/arch/ZVector/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/ZVector/Complex.h \
+	include/dtc/Eigen/src/Core/arch/ZVector/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/AVX512/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/AVX512/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/Default/Settings.h \
+	include/dtc/Eigen/src/Core/arch/AltiVec/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/AltiVec/Complex.h \
+	include/dtc/Eigen/src/Core/arch/AltiVec/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/AVX/TypeCasting.h \
+	include/dtc/Eigen/src/Core/arch/AVX/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/AVX/Complex.h \
+	include/dtc/Eigen/src/Core/arch/AVX/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/SSE/TypeCasting.h \
+	include/dtc/Eigen/src/Core/arch/SSE/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/SSE/Complex.h \
+	include/dtc/Eigen/src/Core/arch/SSE/PacketMath.h \
+	include/dtc/Eigen/src/Core/arch/NEON/MathFunctions.h \
+	include/dtc/Eigen/src/Core/arch/NEON/Complex.h \
+	include/dtc/Eigen/src/Core/arch/NEON/PacketMath.h \
+	include/dtc/Eigen/src/Core/TriangularMatrix.h \
+	include/dtc/Eigen/src/Core/EigenBase.h \
+	include/dtc/Eigen/src/Core/CoreEvaluators.h \
+	include/dtc/Eigen/src/Core/SolverBase.h \
+	include/dtc/Eigen/src/Core/VectorBlock.h \
+	include/dtc/Eigen/src/Core/IO.h \
+	include/dtc/Eigen/src/Core/GlobalFunctions.h \
+	include/dtc/Eigen/src/Core/Random.h \
+	include/dtc/Eigen/src/Core/DiagonalProduct.h \
+	include/dtc/Eigen/src/Core/Array.h \
+	include/dtc/Eigen/src/Core/Fuzzy.h \
+	include/dtc/Eigen/src/Core/SelfCwiseBinaryOp.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointMatrixMatrix_BLAS.h \
+	include/dtc/Eigen/src/Core/products/GeneralBlockPanelKernel.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixMatrixTriangular_BLAS.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointMatrixVector_BLAS.h \
+	include/dtc/Eigen/src/Core/products/TriangularSolverMatrix.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointProduct.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixMatrix.h \
+	include/dtc/Eigen/src/Core/products/TriangularMatrixVector.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointMatrixMatrix.h \
+	include/dtc/Eigen/src/Core/products/TriangularMatrixMatrix_BLAS.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixVector.h \
+	include/dtc/Eigen/src/Core/products/TriangularMatrixVector_BLAS.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixMatrix_BLAS.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointMatrixVector.h \
+	include/dtc/Eigen/src/Core/products/TriangularSolverVector.h \
+	include/dtc/Eigen/src/Core/products/Parallelizer.h \
+	include/dtc/Eigen/src/Core/products/TriangularMatrixMatrix.h \
+	include/dtc/Eigen/src/Core/products/SelfadjointRank2Update.h \
+	include/dtc/Eigen/src/Core/products/TriangularSolverMatrix_BLAS.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixMatrixTriangular.h \
+	include/dtc/Eigen/src/Core/products/GeneralMatrixVector_BLAS.h \
+	include/dtc/Eigen/src/Core/StableNorm.h \
+	include/dtc/Eigen/src/Core/Transpositions.h \
+	include/dtc/Eigen/src/Core/Visitor.h \
+	include/dtc/Eigen/src/Core/CoreIterators.h \
+	include/dtc/Eigen/src/Core/DenseStorage.h \
+	include/dtc/Eigen/src/Core/ForceAlignedAccess.h \
+	include/dtc/Eigen/src/Core/CwiseUnaryView.h \
+	include/dtc/Eigen/src/Core/functors/NullaryFunctors.h \
+	include/dtc/Eigen/src/Core/functors/TernaryFunctors.h \
+	include/dtc/Eigen/src/Core/functors/AssignmentFunctors.h \
+	include/dtc/Eigen/src/Core/functors/BinaryFunctors.h \
+	include/dtc/Eigen/src/Core/functors/UnaryFunctors.h \
+	include/dtc/Eigen/src/Core/functors/StlFunctors.h \
+	include/dtc/Eigen/src/Core/CwiseNullaryOp.h \
+	include/dtc/Eigen/src/Core/PlainObjectBase.h \
+	include/dtc/Eigen/src/Core/Reverse.h \
+	include/dtc/Eigen/src/Core/CwiseUnaryOp.h \
+	include/dtc/Eigen/src/Core/Ref.h \
+	include/dtc/Eigen/src/Core/CwiseBinaryOp.h \
+	include/dtc/Eigen/src/Core/Map.h \
+	include/dtc/Eigen/src/Core/Block.h \
+	include/dtc/Eigen/src/Core/NumTraits.h \
+	include/dtc/Eigen/src/Core/SelfAdjointView.h \
+	include/dtc/Eigen/src/Core/util/BlasUtil.h \
+	include/dtc/Eigen/src/Core/util/Macros.h \
+	include/dtc/Eigen/src/Core/util/StaticAssert.h \
+	include/dtc/Eigen/src/Core/util/XprHelper.h \
+	include/dtc/Eigen/src/Core/util/ForwardDeclarations.h \
+	include/dtc/Eigen/src/Core/util/Constants.h \
+	include/dtc/Eigen/src/Core/util/Memory.h \
+	include/dtc/Eigen/src/Core/util/NonMPL2.h \
+	include/dtc/Eigen/src/Core/util/ReenableStupidWarnings.h \
+	include/dtc/Eigen/src/Core/util/MKL_support.h \
+	include/dtc/Eigen/src/Core/util/Meta.h \
+	include/dtc/Eigen/src/Core/util/DisableStupidWarnings.h \
+	include/dtc/Eigen/src/Core/ProductEvaluators.h \
+	include/dtc/Eigen/src/Core/Redux.h \
+	include/dtc/Eigen/src/Core/ArrayBase.h \
+	include/dtc/Eigen/src/Core/Product.h \
+	include/dtc/Eigen/src/Core/ArrayWrapper.h \
+	include/dtc/Eigen/src/Core/Solve.h \
+	include/dtc/Eigen/src/Core/DenseBase.h \
+	include/dtc/Eigen/src/Core/MathFunctionsImpl.h \
+	include/dtc/Eigen/src/Core/Stride.h \
+	include/dtc/Eigen/src/Core/Replicate.h \
+	include/dtc/Eigen/src/QR/CompleteOrthogonalDecomposition.h \
+	include/dtc/Eigen/src/QR/FullPivHouseholderQR.h \
+	include/dtc/Eigen/src/QR/ColPivHouseholderQR.h \
+	include/dtc/Eigen/src/QR/HouseholderQR_LAPACKE.h \
+	include/dtc/Eigen/src/QR/HouseholderQR.h \
+	include/dtc/Eigen/src/QR/ColPivHouseholderQR_LAPACKE.h \
+	include/dtc/Eigen/src/misc/Kernel.h \
+	include/dtc/Eigen/src/misc/lapacke.h \
+	include/dtc/Eigen/src/misc/RealSvd2x2.h \
+	include/dtc/Eigen/src/misc/blas.h \
+	include/dtc/Eigen/src/misc/lapacke_mangling.h \
+	include/dtc/Eigen/src/misc/lapack.h \
+	include/dtc/Eigen/src/misc/Image.h \
+	include/dtc/Eigen/src/SparseCore/SparseSolverBase.h \
+	include/dtc/Eigen/src/SparseCore/SparseAssign.h \
+	include/dtc/Eigen/src/SparseCore/SparseRef.h \
+	include/dtc/Eigen/src/SparseCore/SparseRedux.h \
+	include/dtc/Eigen/src/SparseCore/SparseFuzzy.h \
+	include/dtc/Eigen/src/SparseCore/MappedSparseMatrix.h \
+	include/dtc/Eigen/src/SparseCore/SparseDiagonalProduct.h \
+	include/dtc/Eigen/src/SparseCore/SparseTriangularView.h \
+	include/dtc/Eigen/src/SparseCore/SparseDenseProduct.h \
+	include/dtc/Eigen/src/SparseCore/SparseColEtree.h \
+	include/dtc/Eigen/src/SparseCore/SparseMatrix.h \
+	include/dtc/Eigen/src/SparseCore/SparseTranspose.h \
+	include/dtc/Eigen/src/SparseCore/SparseCwiseUnaryOp.h \
+	include/dtc/Eigen/src/SparseCore/SparseSparseProductWithPruning.h \
+	include/dtc/Eigen/src/SparseCore/ConservativeSparseSparseProduct.h \
+	include/dtc/Eigen/src/SparseCore/SparseProduct.h \
+	include/dtc/Eigen/src/SparseCore/AmbiVector.h \
+	include/dtc/Eigen/src/SparseCore/SparseCompressedBase.h \
+	include/dtc/Eigen/src/SparseCore/SparseDot.h \
+	include/dtc/Eigen/src/SparseCore/SparseSelfAdjointView.h \
+	include/dtc/Eigen/src/SparseCore/SparsePermutation.h \
+	include/dtc/Eigen/src/SparseCore/SparseBlock.h \
+	include/dtc/Eigen/src/SparseCore/SparseCwiseBinaryOp.h \
+	include/dtc/Eigen/src/SparseCore/SparseMatrixBase.h \
+	include/dtc/Eigen/src/SparseCore/SparseMap.h \
+	include/dtc/Eigen/src/SparseCore/SparseUtil.h \
+	include/dtc/Eigen/src/SparseCore/TriangularSolver.h \
+	include/dtc/Eigen/src/SparseCore/CompressedStorage.h \
+	include/dtc/Eigen/src/SparseCore/SparseView.h \
+	include/dtc/Eigen/src/SparseCore/SparseVector.h \
+	include/dtc/Eigen/src/PaStiXSupport/PaStiXSupport.h \
+	include/dtc/Eigen/src/SPQRSupport/SuiteSparseQRSupport.h \
+	include/dtc/Eigen/src/MetisSupport/MetisSupport.h \
+	include/dtc/Eigen/SVD include/dtc/Eigen/SparseQR \
+	include/dtc/Eigen/Geometry include/dtc/Eigen/OrderingMethods \
+	include/dtc/Eigen/SparseLU include/dtc/Eigen/SuperLUSupport \
+	include/dtc/Eigen/SparseCholesky include/dtc/Eigen/Dense \
+	include/dtc/Eigen/StdList \
+	include/dtc/Eigen/IterativeLinearSolvers \
+	include/dtc/Eigen/PardisoSupport include/dtc/Eigen/LU \
+	include/dtc/Eigen/CholmodSupport include/dtc/Eigen/Cholesky \
+	include/dtc/Eigen/Sparse include/dtc/Eigen/StdDeque \
+	include/dtc/Eigen/StdVector include/dtc/Eigen/Householder \
+	include/dtc/Eigen/UmfPackSupport include/dtc/Eigen/Eigen \
+	include/dtc/Eigen/Jacobi include/dtc/Eigen/CMakeLists.txt \
+	include/dtc/Eigen/Eigenvalues include/dtc/Eigen/Core \
+	include/dtc/Eigen/QR include/dtc/Eigen/SparseCore \
+	include/dtc/Eigen/PaStiXSupport include/dtc/Eigen/SPQRSupport \
+	include/dtc/Eigen/QtAlignedMalloc \
+	include/dtc/Eigen/MetisSupport include/dtc/json/json.hpp \
+	include/dtc/macrodef.hpp include/dtc/kernel/executor.hpp \
+	include/dtc/kernel/manager.hpp include/dtc/kernel/vertex.hpp \
 	include/dtc/kernel/graph.hpp include/dtc/kernel/scheduler.hpp \
 	include/dtc/kernel/master.hpp include/dtc/kernel/container.hpp \
 	include/dtc/kernel/agent.hpp include/dtc/kernel/cgroup.hpp \
-	include/dtc/policy.hpp include/dtc/webui/webui.hpp
+	include/dtc/kernel/stream.hpp include/dtc/policy.hpp \
+	include/dtc/webui/webui.hpp
 dist_bin_SCRIPTS = 
 dist_pkglibexec_SCRIPTS = 
 nobase_dist_pkgdata_DATA = 
@@ -776,25 +1143,28 @@ BUILT_SOURCES =
 CLEANFILES = 
 
 # Add files to the distribution list
-EXTRA_DIST = Makefile.sh conf sbin webui
+EXTRA_DIST = Makefile.sh conf sbin webui benchmark
 PHONY_TARGETS = 
 LDADD = 
 TESTS = unittest/archive.sh unittest/statgrab.sh unittest/webui.sh \
 	unittest/ipc.sh unittest/reactor.sh unittest/utility.sh \
-	unittest/traits.sh unittest/scheduler.sh \
+	unittest/traits.sh unittest/scheduler.sh unittest/ml.sh \
 	unittest/concurrent.sh
-lib_libDtCraft_la_SOURCES = src/statgrab/statgrab.cpp \
-	src/event/reactor.cpp src/event/event.cpp src/event/select.cpp \
-	src/ipc/device.cpp src/ipc/socket.cpp src/ipc/ipc.cpp \
-	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/shm.cpp \
-	src/ipc/streambuf.cpp src/utility/os.cpp \
+lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
+	src/csv/csv.cpp src/exit.cpp src/event/reactor.cpp \
+	src/event/event.cpp src/event/select.cpp src/event/epoll.cpp \
+	src/ipc/socket.cpp src/ipc/ipc.cpp src/ipc/domain.cpp \
+	src/ipc/fifo.cpp src/ipc/notifier.cpp src/ipc/pipe.cpp \
+	src/ipc/shm.cpp src/ipc/streambuf.cpp src/utility/os.cpp \
 	src/utility/http_parser.cpp src/utility/table.cpp \
+	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
 	src/error.cpp src/policy.cpp src/protobuf/resource.cpp \
 	src/protobuf/frontier.cpp src/protobuf/taskinfo.cpp \
 	src/protobuf/protobuf.cpp src/protobuf/solution.cpp \
 	src/protobuf/common.cpp src/protobuf/topology.cpp \
 	src/kernel/container.cpp src/kernel/cgroup.cpp \
-	src/kernel/manager.cpp src/kernel/scheduler.cpp \
+	src/kernel/manager.cpp src/kernel/stream.cpp \
+	src/kernel/scheduler.cpp src/kernel/vertex.cpp \
 	src/kernel/graph.cpp src/kernel/master.cpp \
 	src/kernel/agent.cpp src/kernel/executor.cpp \
 	src/webui/webui.cpp
@@ -806,12 +1176,27 @@ example_pi_SOURCES = example/pi.cpp
 example_pi_LDADD = lib/libDtCraft.la
 example_hello_world_SOURCES = example/hello_world.cpp
 example_hello_world_LDADD = lib/libDtCraft.la
+example_feeder_SOURCES = example/feeder.cpp
+example_feeder_LDADD = lib/libDtCraft.la
+example_prober_SOURCES = example/prober.cpp
+example_prober_LDADD = lib/libDtCraft.la
 example_kmeans_SOURCES = example/kmeans.cpp
 example_kmeans_LDADD = lib/libDtCraft.la
 example_prime_SOURCES = example/prime.cpp
 example_prime_LDADD = lib/libDtCraft.la
+example_operator_SOURCES = example/operator.cpp
+example_operator_LDADD = lib/libDtCraft.la
+example_external_SOURCES = example/external.cpp
+example_external_LDADD = lib/libDtCraft.la
+example_mnist_SOURCES = example/mnist.cpp
+example_mnist_LDADD = lib/libDtCraft.la
 example_reduce_sum_SOURCES = example/reduce_sum.cpp
 example_reduce_sum_LDADD = lib/libDtCraft.la
+app_debs18_debs18_LDADD = lib/libDtCraft.la
+app_debs18_debs18_SOURCES = app/debs18/debs18.hpp \
+	app/debs18/feeder.hpp app/debs18/utility.cpp \
+	app/debs18/map.cpp app/debs18/debs18.cpp app/debs18/dtr.cpp \
+	app/debs18/dnn.cpp
 unittest_archive_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_archive_SOURCES = unittest/archive.cpp
 unittest_statgrab_LDADD = lib/libDtCraft.la $(TEST_LIBS)
@@ -828,6 +1213,8 @@ unittest_traits_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_traits_SOURCES = unittest/traits.cpp
 unittest_scheduler_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_scheduler_SOURCES = unittest/scheduler.cpp
+unittest_ml_LDADD = lib/libDtCraft.la $(TEST_LIBS)
+unittest_ml_SOURCES = unittest/ml.cpp
 unittest_concurrent_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_concurrent_SOURCES = unittest/concurrent.cpp
 all: $(BUILT_SOURCES)
@@ -929,6 +1316,13 @@ clean-noinstLTLIBRARIES:
 	  echo rm -f $${locs}; \
 	  rm -f $${locs}; \
 	}
+src/$(am__dirstamp):
+	@$(MKDIR_P) src
+	@: > src/$(am__dirstamp)
+src/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/$(DEPDIR)
+	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/device.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/statgrab/$(am__dirstamp):
 	@$(MKDIR_P) src/statgrab
 	@: > src/statgrab/$(am__dirstamp)
@@ -937,6 +1331,15 @@ src/statgrab/$(DEPDIR)/$(am__dirstamp):
 	@: > src/statgrab/$(DEPDIR)/$(am__dirstamp)
 src/statgrab/statgrab.lo: src/statgrab/$(am__dirstamp) \
 	src/statgrab/$(DEPDIR)/$(am__dirstamp)
+src/csv/$(am__dirstamp):
+	@$(MKDIR_P) src/csv
+	@: > src/csv/$(am__dirstamp)
+src/csv/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/csv/$(DEPDIR)
+	@: > src/csv/$(DEPDIR)/$(am__dirstamp)
+src/csv/csv.lo: src/csv/$(am__dirstamp) \
+	src/csv/$(DEPDIR)/$(am__dirstamp)
+src/exit.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/event/$(am__dirstamp):
 	@$(MKDIR_P) src/event
 	@: > src/event/$(am__dirstamp)
@@ -949,14 +1352,14 @@ src/event/event.lo: src/event/$(am__dirstamp) \
 	src/event/$(DEPDIR)/$(am__dirstamp)
 src/event/select.lo: src/event/$(am__dirstamp) \
 	src/event/$(DEPDIR)/$(am__dirstamp)
+src/event/epoll.lo: src/event/$(am__dirstamp) \
+	src/event/$(DEPDIR)/$(am__dirstamp)
 src/ipc/$(am__dirstamp):
 	@$(MKDIR_P) src/ipc
 	@: > src/ipc/$(am__dirstamp)
 src/ipc/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ipc/$(DEPDIR)
 	@: > src/ipc/$(DEPDIR)/$(am__dirstamp)
-src/ipc/device.lo: src/ipc/$(am__dirstamp) \
-	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/socket.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/ipc.lo: src/ipc/$(am__dirstamp) \
@@ -964,6 +1367,10 @@ src/ipc/ipc.lo: src/ipc/$(am__dirstamp) \
 src/ipc/domain.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/fifo.lo: src/ipc/$(am__dirstamp) \
+	src/ipc/$(DEPDIR)/$(am__dirstamp)
+src/ipc/notifier.lo: src/ipc/$(am__dirstamp) \
+	src/ipc/$(DEPDIR)/$(am__dirstamp)
+src/ipc/pipe.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/shm.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
@@ -981,12 +1388,17 @@ src/utility/http_parser.lo: src/utility/$(am__dirstamp) \
 	src/utility/$(DEPDIR)/$(am__dirstamp)
 src/utility/table.lo: src/utility/$(am__dirstamp) \
 	src/utility/$(DEPDIR)/$(am__dirstamp)
-src/$(am__dirstamp):
-	@$(MKDIR_P) src
-	@: > src/$(am__dirstamp)
-src/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/$(DEPDIR)
-	@: > src/$(DEPDIR)/$(am__dirstamp)
+src/ml/$(am__dirstamp):
+	@$(MKDIR_P) src/ml
+	@: > src/ml/$(am__dirstamp)
+src/ml/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/ml/$(DEPDIR)
+	@: > src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/linear.lo: src/ml/$(am__dirstamp) \
+	src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/optimizer.lo: src/ml/$(am__dirstamp) \
+	src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/dnn.lo: src/ml/$(am__dirstamp) src/ml/$(DEPDIR)/$(am__dirstamp)
 src/error.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/policy.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/protobuf/$(am__dirstamp):
@@ -1021,7 +1433,11 @@ src/kernel/cgroup.lo: src/kernel/$(am__dirstamp) \
 	src/kernel/$(DEPDIR)/$(am__dirstamp)
 src/kernel/manager.lo: src/kernel/$(am__dirstamp) \
 	src/kernel/$(DEPDIR)/$(am__dirstamp)
+src/kernel/stream.lo: src/kernel/$(am__dirstamp) \
+	src/kernel/$(DEPDIR)/$(am__dirstamp)
 src/kernel/scheduler.lo: src/kernel/$(am__dirstamp) \
+	src/kernel/$(DEPDIR)/$(am__dirstamp)
+src/kernel/vertex.lo: src/kernel/$(am__dirstamp) \
 	src/kernel/$(DEPDIR)/$(am__dirstamp)
 src/kernel/graph.lo: src/kernel/$(am__dirstamp) \
 	src/kernel/$(DEPDIR)/$(am__dirstamp)
@@ -1210,6 +1626,26 @@ clean-sbinPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
+app/debs18/$(am__dirstamp):
+	@$(MKDIR_P) app/debs18
+	@: > app/debs18/$(am__dirstamp)
+app/debs18/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) app/debs18/$(DEPDIR)
+	@: > app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/utility.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/map.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/debs18.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/dtr.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/dnn.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
+
+app/debs18/debs18$(EXEEXT): $(app_debs18_debs18_OBJECTS) $(app_debs18_debs18_DEPENDENCIES) $(EXTRA_app_debs18_debs18_DEPENDENCIES) app/debs18/$(am__dirstamp)
+	@rm -f app/debs18/debs18$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(app_debs18_debs18_OBJECTS) $(app_debs18_debs18_LDADD) $(LIBS)
 main/$(am__dirstamp):
 	@$(MKDIR_P) main
 	@: > main/$(am__dirstamp)
@@ -1237,6 +1673,18 @@ example/$(am__dirstamp):
 example/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) example/$(DEPDIR)
 	@: > example/$(DEPDIR)/$(am__dirstamp)
+example/external.$(OBJEXT): example/$(am__dirstamp) \
+	example/$(DEPDIR)/$(am__dirstamp)
+
+example/external$(EXEEXT): $(example_external_OBJECTS) $(example_external_DEPENDENCIES) $(EXTRA_example_external_DEPENDENCIES) example/$(am__dirstamp)
+	@rm -f example/external$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(example_external_OBJECTS) $(example_external_LDADD) $(LIBS)
+example/feeder.$(OBJEXT): example/$(am__dirstamp) \
+	example/$(DEPDIR)/$(am__dirstamp)
+
+example/feeder$(EXEEXT): $(example_feeder_OBJECTS) $(example_feeder_DEPENDENCIES) $(EXTRA_example_feeder_DEPENDENCIES) example/$(am__dirstamp)
+	@rm -f example/feeder$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(example_feeder_OBJECTS) $(example_feeder_LDADD) $(LIBS)
 example/hello_world.$(OBJEXT): example/$(am__dirstamp) \
 	example/$(DEPDIR)/$(am__dirstamp)
 
@@ -1249,6 +1697,18 @@ example/kmeans.$(OBJEXT): example/$(am__dirstamp) \
 example/kmeans$(EXEEXT): $(example_kmeans_OBJECTS) $(example_kmeans_DEPENDENCIES) $(EXTRA_example_kmeans_DEPENDENCIES) example/$(am__dirstamp)
 	@rm -f example/kmeans$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(example_kmeans_OBJECTS) $(example_kmeans_LDADD) $(LIBS)
+example/mnist.$(OBJEXT): example/$(am__dirstamp) \
+	example/$(DEPDIR)/$(am__dirstamp)
+
+example/mnist$(EXEEXT): $(example_mnist_OBJECTS) $(example_mnist_DEPENDENCIES) $(EXTRA_example_mnist_DEPENDENCIES) example/$(am__dirstamp)
+	@rm -f example/mnist$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(example_mnist_OBJECTS) $(example_mnist_LDADD) $(LIBS)
+example/operator.$(OBJEXT): example/$(am__dirstamp) \
+	example/$(DEPDIR)/$(am__dirstamp)
+
+example/operator$(EXEEXT): $(example_operator_OBJECTS) $(example_operator_DEPENDENCIES) $(EXTRA_example_operator_DEPENDENCIES) example/$(am__dirstamp)
+	@rm -f example/operator$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(example_operator_OBJECTS) $(example_operator_LDADD) $(LIBS)
 example/pi.$(OBJEXT): example/$(am__dirstamp) \
 	example/$(DEPDIR)/$(am__dirstamp)
 
@@ -1261,6 +1721,12 @@ example/prime.$(OBJEXT): example/$(am__dirstamp) \
 example/prime$(EXEEXT): $(example_prime_OBJECTS) $(example_prime_DEPENDENCIES) $(EXTRA_example_prime_DEPENDENCIES) example/$(am__dirstamp)
 	@rm -f example/prime$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(example_prime_OBJECTS) $(example_prime_LDADD) $(LIBS)
+example/prober.$(OBJEXT): example/$(am__dirstamp) \
+	example/$(DEPDIR)/$(am__dirstamp)
+
+example/prober$(EXEEXT): $(example_prober_OBJECTS) $(example_prober_DEPENDENCIES) $(EXTRA_example_prober_DEPENDENCIES) example/$(am__dirstamp)
+	@rm -f example/prober$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(example_prober_OBJECTS) $(example_prober_LDADD) $(LIBS)
 example/reduce_sum.$(OBJEXT): example/$(am__dirstamp) \
 	example/$(DEPDIR)/$(am__dirstamp)
 
@@ -1291,6 +1757,12 @@ unittest/ipc.$(OBJEXT): unittest/$(am__dirstamp) \
 unittest/ipc$(EXEEXT): $(unittest_ipc_OBJECTS) $(unittest_ipc_DEPENDENCIES) $(EXTRA_unittest_ipc_DEPENDENCIES) unittest/$(am__dirstamp)
 	@rm -f unittest/ipc$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(unittest_ipc_OBJECTS) $(unittest_ipc_LDADD) $(LIBS)
+unittest/ml.$(OBJEXT): unittest/$(am__dirstamp) \
+	unittest/$(DEPDIR)/$(am__dirstamp)
+
+unittest/ml$(EXEEXT): $(unittest_ml_OBJECTS) $(unittest_ml_DEPENDENCIES) $(EXTRA_unittest_ml_DEPENDENCIES) unittest/$(am__dirstamp)
+	@rm -f unittest/ml$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(unittest_ml_OBJECTS) $(unittest_ml_LDADD) $(LIBS)
 unittest/reactor.$(OBJEXT): unittest/$(am__dirstamp) \
 	unittest/$(DEPDIR)/$(am__dirstamp)
 
@@ -1435,16 +1907,21 @@ uninstall-nodist_sbinSCRIPTS:
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f app/debs18/*.$(OBJEXT)
 	-rm -f example/*.$(OBJEXT)
 	-rm -f main/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/*.lo
+	-rm -f src/csv/*.$(OBJEXT)
+	-rm -f src/csv/*.lo
 	-rm -f src/event/*.$(OBJEXT)
 	-rm -f src/event/*.lo
 	-rm -f src/ipc/*.$(OBJEXT)
 	-rm -f src/ipc/*.lo
 	-rm -f src/kernel/*.$(OBJEXT)
 	-rm -f src/kernel/*.lo
+	-rm -f src/ml/*.$(OBJEXT)
+	-rm -f src/ml/*.lo
 	-rm -f src/protobuf/*.$(OBJEXT)
 	-rm -f src/protobuf/*.lo
 	-rm -f src/statgrab/*.$(OBJEXT)
@@ -1458,22 +1935,37 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/debs18.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/dnn.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/dtr.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/map.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/utility.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/external.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/feeder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/hello_world.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/kmeans.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/mnist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/operator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/pi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prime.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prober.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/reduce_sum.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/agent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/master.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/device.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/error.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/exit.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/policy.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/csv/$(DEPDIR)/csv.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/epoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/event.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/reactor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/select.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/device.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/domain.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/fifo.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/ipc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/notifier.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/pipe.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/shm.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/socket.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/streambuf.Plo@am__quote@
@@ -1485,6 +1977,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/manager.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/master.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/scheduler.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/stream.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/vertex.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/dnn.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/linear.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/optimizer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/frontier.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/protobuf.Plo@am__quote@
@@ -1500,6 +1997,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/archive.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/concurrent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/ipc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/ml.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/reactor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/scheduler.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@unittest/$(DEPDIR)/statgrab.Po@am__quote@
@@ -1536,13 +2034,16 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+	-rm -rf app/debs18/.libs app/debs18/_libs
 	-rm -rf bin/.libs bin/_libs
 	-rm -rf example/.libs example/_libs
 	-rm -rf lib/.libs lib/_libs
 	-rm -rf src/.libs src/_libs
+	-rm -rf src/csv/.libs src/csv/_libs
 	-rm -rf src/event/.libs src/event/_libs
 	-rm -rf src/ipc/.libs src/ipc/_libs
 	-rm -rf src/kernel/.libs src/kernel/_libs
+	-rm -rf src/ml/.libs src/ml/_libs
 	-rm -rf src/protobuf/.libs src/protobuf/_libs
 	-rm -rf src/statgrab/.libs src/statgrab/_libs
 	-rm -rf src/utility/.libs src/utility/_libs
@@ -1969,6 +2470,13 @@ unittest/scheduler.sh.log: unittest/scheduler.sh
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+unittest/ml.sh.log: unittest/ml.sh
+	@p='unittest/ml.sh'; \
+	b='unittest/ml.sh'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 unittest/concurrent.sh.log: unittest/concurrent.sh
 	@p='unittest/concurrent.sh'; \
 	b='unittest/concurrent.sh'; \
@@ -2225,6 +2733,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f app/debs18/$(DEPDIR)/$(am__dirstamp)
+	-rm -f app/debs18/$(am__dirstamp)
 	-rm -f bin/$(am__dirstamp)
 	-rm -f example/$(DEPDIR)/$(am__dirstamp)
 	-rm -f example/$(am__dirstamp)
@@ -2233,12 +2743,16 @@ distclean-generic:
 	-rm -f main/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f src/csv/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/csv/$(am__dirstamp)
 	-rm -f src/event/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/event/$(am__dirstamp)
 	-rm -f src/ipc/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/ipc/$(am__dirstamp)
 	-rm -f src/kernel/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/kernel/$(am__dirstamp)
+	-rm -f src/ml/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/ml/$(am__dirstamp)
 	-rm -f src/protobuf/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/protobuf/$(am__dirstamp)
 	-rm -f src/statgrab/$(DEPDIR)/$(am__dirstamp)
@@ -2263,7 +2777,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-libtool distclean-tags
@@ -2316,7 +2830,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2491,6 +3005,9 @@ echo_OMP_CXXFLAGS:
 
 echo_BOOST_CPPFLAGS:
 	@echo $(BOOST_CPPFLAGS)
+
+echo_CPU_COUNT:
+	@echo $(CPU_COUNT)
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

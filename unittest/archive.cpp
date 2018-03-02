@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -230,8 +230,8 @@ void test_string() {
                                                                  \
   for(size_t i=0; i<1024; i++) {                                 \
     const size_t num_data = dtc::random<size_t>(1, 1024);        \
-    dtc::OutputStreamBuffer os;                                        \
-    SerializerT oar(os);                                     \
+    dtc::OutputStreamBuffer os;                                  \
+    SerializerT oar(os);                                         \
                                                                  \
     std::container <int32_t>     o_int32s  (num_data);           \
     std::container <int64_t>     o_int64s  (num_data);           \
@@ -250,8 +250,8 @@ void test_string() {
                                                                  \
     auto o_sz = oar(o_int32s, o_int64s, o_chars, o_floats, o_doubles, o_strings, o_podses);\
                                                                  \
-    dtc::InputStreamBuffer is(os);                                     \
-    DeserializerT iar(is);                                      \
+    dtc::InputStreamBuffer is(os);                               \
+    DeserializerT iar(is);                                       \
                                                                  \
     std::container <int32_t>     i_int32s;                       \
     std::container <int64_t>     i_int64s;                       \
@@ -306,8 +306,8 @@ void test_forward_list() {
                                                                                    \
   for (size_t i = 0; i < 1024; i++) {                                              \
     const size_t num_data = dtc::random<size_t>(1, 1024);                          \
-    dtc::OutputStreamBuffer os;                                                          \
-    SerializerT oar(os);                                                       \
+    dtc::OutputStreamBuffer os;                                                    \
+    SerializerT oar(os);                                                           \
                                                                                    \
     std::container<int32_t, int32_t> o_int32s;                                     \
     std::container<int64_t, int64_t> o_int64s;                                     \
@@ -328,7 +328,7 @@ void test_forward_list() {
     auto o_sz = oar(o_int32s, o_int64s, o_chars, o_floats, o_doubles , o_strings); \
     REQUIRE(o_sz == os.out_avail());                                               \
                                                                                    \
-    dtc::InputStreamBuffer is(os);                                                       \
+    dtc::InputStreamBuffer is(os);                                                 \
     DeserializerT iar(is);                                                         \
                                                                                    \
     std::container<int32_t, int32_t> i_int32s;                                     \
@@ -368,8 +368,8 @@ void test_unordered_map() {
                                                                                   \
   for (size_t i = 0; i < 1024; i++) {                                             \
     const size_t num_data = dtc::random<size_t>(1, 1024);                         \
-    dtc::OutputStreamBuffer os;                                                         \
-    SerializerT oar(os);                                                      \
+    dtc::OutputStreamBuffer os;                                                   \
+    SerializerT oar(os);                                                          \
                                                                                   \
     std::container<int32_t> o_int32s;                                             \
     std::container<int64_t> o_int64s;                                             \
@@ -389,7 +389,7 @@ void test_unordered_map() {
     auto o_sz = oar(o_int32s, o_int64s, o_chars, o_floats, o_doubles, o_strings); \
     REQUIRE(o_sz == os.out_avail());                                              \
                                                                                   \
-    dtc::InputStreamBuffer is(os);                                                      \
+    dtc::InputStreamBuffer is(os);                                                \
     DeserializerT iar(is);                                                        \
                                                                                   \
     std::container<int32_t> i_int32s;                                             \
@@ -556,10 +556,10 @@ void test_smart_pointer() {
 template <typename SerializerT, typename DeserializerT>
 void test_atomicity() {
 
-  const size_t W = std::max(2u, std::thread::hardware_concurrency());
+  const size_t W = std::clamp(8u, 2u, std::thread::hardware_concurrency());
   const size_t N = W << 1;
     
-  for(size_t i=0; i<1024; ++i) {
+  for(size_t k=0; k<1024; ++k) {
     
     // Output field.
     dtc::OutputStreamBuffer os;
@@ -688,6 +688,98 @@ void test_chrono() {
   }
 }
 
+// Procedure: test_optional
+template <typename SerializerT, typename DeserializerT>
+void test_optional() {
+
+  for(auto i=0; i<1024; ++i) {
+
+    std::optional<bool> o_nbool, i_nbool{true};
+    std::optional<bool> o_ybool{true}, i_ybool;
+
+    std::optional<std::string> o_nstr, i_nstr{dtc::random<std::string>()};
+    std::optional<std::string> o_ystr{dtc::random<std::string>()}, i_ystr;
+
+    // Output archiver
+    dtc::OutputStreamBuffer os;
+    SerializerT oar(os);
+    auto osz = oar(o_nbool, o_ybool, o_nstr, o_ystr);
+    REQUIRE(osz == os.out_avail());
+
+    // Input archiver
+    dtc::InputStreamBuffer is(os);
+    DeserializerT iar(is);
+    auto isz = iar(i_nbool, i_ybool, i_nstr, i_ystr);
+    REQUIRE(0 == is.in_avail());
+
+    REQUIRE(o_nbool == i_nbool);
+    REQUIRE(o_ybool == i_ybool);
+    REQUIRE(o_nstr == i_nstr);
+    REQUIRE(o_ystr == i_ystr);
+  }
+}
+
+// Procedure: test_tuple
+template <typename SerializerT, typename DeserializerT>
+void test_tuple() {
+
+  for(auto i=0; i<1024; ++i) {
+
+    std::tuple<> o0, i0;
+    std::tuple<char> o1 {'a'}, i1 {'b'};
+    std::tuple<int, double> o2 {1, 2.4}, i2 {3, 0.9};
+    std::tuple<std::string, std::vector<int>, float> o3{"123", {1, 2, 3}, 4.5f}, i3;
+    std::tuple<int, std::tuple<int, int>, int> o4 {1, {2, 3}, 4}, i4;
+
+    // Output archiver
+    dtc::OutputStreamBuffer os;
+    SerializerT oar(os);
+    auto osz = oar(o0, o1, o2, o3, o4);
+    REQUIRE(osz == os.out_avail());
+
+    // Input archiver
+    dtc::InputStreamBuffer is(os);
+    DeserializerT iar(is);
+    auto isz = iar(i0, i1, i2, i3, i4);
+    REQUIRE(0 == is.in_avail());
+    REQUIRE(o0 == i0);
+    REQUIRE(o1 == i1);
+    REQUIRE(o2 == i2);
+    REQUIRE(o3 == i3);
+    REQUIRE(o4 == i4);
+  }
+}
+
+// Procedure: test_eigen
+template <typename SerializerT, typename DeserializerT>
+void test_eigen() {
+
+  for(auto i=0; i<1024; ++i) {
+
+    int rows = dtc::random<int>(0, 256);
+    int cols = dtc::random<int>(0, 256);
+    
+    Eigen::MatrixXf om = Eigen::MatrixXf::Random(rows, cols);
+    Eigen::MatrixXf im = Eigen::MatrixXf::Random(cols, rows);
+    Eigen::VectorXi ov = Eigen::VectorXi::Random(rows*cols); 
+    Eigen::VectorXi iv = Eigen::VectorXi::Random(rows+cols);
+
+    // Output archiver
+    dtc::OutputStreamBuffer os;
+    SerializerT oar(os);
+    auto osz = oar(om, ov);
+    REQUIRE(osz == os.out_avail());
+
+    // Input archiver
+    dtc::InputStreamBuffer is(os);
+    DeserializerT iar(is);
+    auto isz = iar(im, iv);
+    REQUIRE(0 == is.in_avail());
+    REQUIRE(om == im);
+    REQUIRE(ov == iv);
+  }
+}
+
 // ---- Archiver test -----------------------------------------------------------------------------
 
 // Unittest: ArchiverTest.BinaryPOD
@@ -768,6 +860,21 @@ TEST_CASE("ArchiverTest.BinaryAtomicity") {
 // Unittest: ArchiverTest.Chrono
 TEST_CASE("ArchiverTest.Chrono") {
   test_chrono<dtc::BinaryOutputArchiver, dtc::BinaryInputArchiver>();
+}
+
+// Unittest: ArchiverTest.Optional
+TEST_CASE("ArchiverTest.Optional") {
+  test_optional<dtc::BinaryOutputArchiver, dtc::BinaryInputArchiver>();
+}
+
+// Unittest: ArchiverTest.Tuple
+TEST_CASE("ArchiverTest.Tuple") {
+  test_tuple<dtc::BinaryOutputArchiver, dtc::BinaryInputArchiver>();
+}
+
+// Unittest: ArchiverTest.Eigen
+TEST_CASE("ArchiverTest.Eigen") {
+  test_eigen<dtc::BinaryOutputArchiver, dtc::BinaryInputArchiver>();
 }
 
 // ---- Packager test -----------------------------------------------------------------------------
@@ -852,6 +959,20 @@ TEST_CASE("PackagerTest.Chrono") {
   test_chrono<dtc::BinaryOutputPackager, dtc::BinaryInputPackager>();
 }
 
+// Unittest: PackagerTest.Optional
+TEST_CASE("PackagerTest.Optional") {
+  test_optional<dtc::BinaryOutputPackager, dtc::BinaryInputPackager>();
+}
+
+// Unittest: PackagerTest.Tuple
+TEST_CASE("PackagerTest.Tuple") {
+  test_tuple<dtc::BinaryOutputPackager, dtc::BinaryInputPackager>();
+}
+
+// Unittest: PackagerTest.Eigen
+TEST_CASE("PackagerTest.Eigen") {
+  test_eigen<dtc::BinaryOutputPackager, dtc::BinaryInputPackager>();
+}
 
 
 

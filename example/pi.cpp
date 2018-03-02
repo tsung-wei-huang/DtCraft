@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     [&] (dtc::Vertex& v) {
       v.any = Result();
       for(size_t i = 0; i < m2s.size(); ++i){
-        v.ostream(m2s[i])(num_samples/num_slaves);
+        (*v.ostream(m2s[i]))(num_samples/num_slaves);
       }
     }
   );
@@ -69,10 +69,10 @@ int main(int argc, char* argv[]) {
               ++count;
             }
           }
-          slave.ostream(other)(count);         
-          return dtc::Stream::CLOSE;         
+          (*slave.ostream(other))(count);         
+          return dtc::Event::REMOVE;         
         }
-        return dtc::Stream::DEFAULT;         
+        return dtc::Event::DEFAULT;         
       }
     );
   }
@@ -87,9 +87,9 @@ int main(int argc, char* argv[]) {
           if(++result.count == num_slaves) {
             std::cout << "pi estimation: " << 4.0 * result.value/num_samples << '\n';
           } 
-          return dtc::Stream::CLOSE;
+          return dtc::Event::REMOVE;
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::DEFAULT;
       }
     );
   }

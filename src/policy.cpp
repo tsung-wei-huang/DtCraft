@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2016, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,157 +14,332 @@
 #include <dtc/policy.hpp>
 
 namespace dtc {
-    
-// Constructor
-// Parse the environment variables.
-Policy::Policy() {
 
-  // Configure the policy values from the environments.
+// Move constructor
+Runtime::Runtime(Runtime&& rhs) : _map {std::move(rhs._map)} {
+}
 
-  if(auto str = std::getenv("DTC_SOCKET_CONNECTION_TIMEOUT")){
-    _SOCKET_CONNECTION_TIMEOUT = std::chrono::seconds(std::stoi(str));
-  }
+// Copy constructor
+Runtime::Runtime(const Runtime& rhs) : _map {rhs._map} {
+}
 
-  if(auto str = std::getenv("DTC_FIFO_CONNECTION_TIMEOUT")){
-    _FIFO_CONNECTION_TIMEOUT = std::chrono::seconds(std::stoi(str));
-  }
+// Move operator
+Runtime& Runtime::operator = (Runtime&& rhs) {
+  _map = std::move(rhs._map);
+  return *this;
+}
 
-  if(auto str = std::getenv("DTC_RESOURCE_PERIODIC")){
-    _RESOURCE_PERIODIC = std::chrono::seconds(std::stoi(str));    
-  }
+// Copy operator
+Runtime& Runtime::operator = (const Runtime& rhs) {
+  _map = rhs._map;
+  return *this;
+}
+ 
+// Move Operator =   
+Runtime& Runtime::operator = (std::unordered_map<std::string, std::string>&& rhs) {
+  _map = std::move(rhs);
+  return *this;
+}
 
-	if(auto str = std::getenv("DTC_THIS_HOST")) {
-    _THIS_HOST = str;
-	}
+// Copy Operator =
+Runtime& Runtime::operator = (const std::unordered_map<std::string, std::string>& rhs) {
+  _map = rhs;
+  return *this;
+}
 
-	if(auto str = std::getenv("DTC_MASTER_HOST")) {
-    _MASTER_HOST = str;
-	}
-
-  if(auto str = std::getenv("DTC_AGENT_LISTENER_PORT")){
-    _AGENT_LISTENER_PORT = str;
-  }
-
-  if(auto str = std::getenv("DTC_GRAPH_LISTENER_PORT")){
-    _GRAPH_LISTENER_PORT = str;
-  }
-  
-  if(auto str = std::getenv("DTC_SHELL_LISTENER_PORT")){
-    _SHELL_LISTENER_PORT = str;
-  }
-  
-  if(auto str = std::getenv("DTC_WEBUI_LISTENER_PORT")){
-    _WEBUI_LISTENER_PORT = str;
-  }
-
-  if(auto str = std::getenv("DTC_STDOUT_LISTENER_PORT")){
-    _STDOUT_LISTENER_PORT = str;
-  }
-  
-  if(auto str = std::getenv("DTC_STDERR_LISTENER_PORT")){
-    _STDERR_LISTENER_PORT = str;
-  }
-
-  if(auto str = std::getenv("DTC_FRONTIER_LISTENER_PORT")){
-    _FRONTIER_LISTENER_PORT = str;
-  }
-
-  if(auto str = std::getenv("DTC_EXECUTION_MODE")) {
-    if(std::string_view mode(str); mode=="local") {
-      _EXECUTION_MODE = LOCAL;  
+// Function: execution_mode
+ExecutionMode Runtime::execution_mode() const {
+  if(auto itr = _map.find("DTC_EXECUTION_MODE"); itr != _map.end()) {
+    if(itr->second == "local") {
+      return ExecutionMode::LOCAL;  
     }
-    else if(mode == "submit") {
-      _EXECUTION_MODE = SUBMIT;
+    else if(itr->second == "submit") {
+      return ExecutionMode::SUBMIT;
     }
-    else if(mode == "distributed") {
-      _EXECUTION_MODE = DISTRIBUTED;
+    else if(itr->second == "distributed") {
+      return ExecutionMode::DISTRIBUTED;
     }
-    else {
-      throw std::runtime_error("Invalid execution mode");
-    }
+    else throw std::runtime_error("Invalid execution mode");
   }
-  
-  if(auto str = std::getenv("DTC_SUBMIT_ARGV")) {
-    _SUBMIT_ARGV = str;
+  else {
+    return ExecutionMode::LOCAL;
   }
-  
-  if(auto str = std::getenv("DTC_SUBMIT_FILE")) {
-    _SUBMIT_FILE = str;
-  }
-  
-  if(auto str = std::getenv("DTC_TOPOLOGY_FD")) {
-    _TOPOLOGY_FD = std::stoi(str);
-  }
-  
-  if(auto str = std::getenv("DTC_STDOUT_FD")) {
-    _STDOUT_FD = std::stoi(str);
-  }
-  
-  if(auto str = std::getenv("DTC_STDERR_FD")) {
-    _STDERR_FD = std::stoi(str);
-  }
+}
 
-  if(auto str = std::getenv("DTC_LOG_FILE")) {
-    _LOG_FILE = str;
+// Procedure: execution_mode
+Runtime& Runtime::execution_mode(ExecutionMode mode) {
+  switch(mode) {
+    case ExecutionMode::DISTRIBUTED:
+      _map["DTC_EXECUTION_MODE"] = "distributed";
+    break;
+
+    case ExecutionMode::LOCAL:
+      _map["DTC_EXECUTION_MODE"] = "local";
+    break;
+
+    case ExecutionMode::SUBMIT:
+      _map["DTC_EXECUTION_MODE"] = "submit";
+    break;
   }
-  
-  if(auto str = std::getenv("DTC_FRONTIERS")) {
+  return *this;
+}
+
+// Procedure: merge
+Runtime& Runtime::merge(std::unordered_map<std::string, std::string>&& src) {
+  _map.merge(std::move(src));
+  return *this;
+}
+
+// Procedure: submit_file
+Runtime& Runtime::submit_file(std::string str) {
+  _map.insert_or_assign("DTC_SUBMIT_FILE", std::move(str));
+  return *this;
+}
+
+// Function: submit_file
+std::string Runtime::submit_file() const {
+  if(auto itr = _map.find("DTC_SUBMIT_FILE"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "";
+}
+
+// Procedure: submit_argv
+Runtime& Runtime::submit_argv(std::string str) {
+  _map.insert_or_assign("DTC_SUBMIT_ARGV", std::move(str));
+  return *this;
+}
+
+// Function: submit_argv
+std::string Runtime::submit_argv() const {
+  if(auto itr = _map.find("DTC_SUBMIT_ARGV"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "";
+}
+
+// Procedure: program
+Runtime& Runtime::program(std::string str) {
+  _map.insert_or_assign("DTC_PROGRAM", std::move(str));
+  return *this;
+}
+
+// Function: program
+std::string Runtime::program() const {
+  if(auto itr = _map.find("DTC_PROGRAM"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "";
+}
+
+// Function: this_host
+std::string Runtime::this_host() const {
+  if(auto itr = _map.find("DTC_THIS_HOST"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "127.0.0.1";
+}
+
+// Function: master_host
+std::string Runtime::master_host() const {
+  if(auto itr = _map.find("DTC_MASTER_HOST"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "127.0.0.1";
+}
+
+// Procedure: stdout_fd
+Runtime& Runtime::stdout_fd(int fd) {
+  _map.insert_or_assign("DTC_STDOUT_FD", std::to_string(fd));
+  return *this;
+}
+
+// Function: stdout_listener_port
+std::string Runtime::stdout_listener_port() const {
+  if(auto itr = _map.find("DTC_STDOUT_LISTENER_PORT"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "0";
+}
+
+// Procedure: stderr_fd
+Runtime& Runtime::stderr_fd(int fd) {
+  _map.insert_or_assign("DTC_STDERR_FD", std::to_string(fd));
+  return *this;
+}
+
+// Function: stderr_listener_port
+std::string Runtime::stderr_listener_port() const {
+  if(auto itr = _map.find("DTC_STDERR_LISTENER_PORT"); itr != _map.end()) {
+    return itr->second; 
+  }
+  return "0";
+}
+
+//// Function: bridges
+//std::unordered_map<std::string, int> Runtime::bridges() const {
+//
+//}
+
+// Procedure: bridges
+Runtime& Runtime::bridges(std::string str) {
+  _map.insert_or_assign("DTC_BRIDGES", std::move(str));
+  return *this;
+}
+
+// Procedure: frontiers
+Runtime& Runtime::frontiers(std::string str) {
+  _map.insert_or_assign("DTC_FRONTIERS", std::move(str));
+  return *this;
+}
+
+// Procedure: remove_frontiers
+Runtime& Runtime::remove_frontiers() {
+  _map.erase("DTC_FRONTIERS");
+  return *this;
+}
+
+// Procedure: topology_fd
+Runtime& Runtime::topology_fd(int fd) {
+  _map.insert_or_assign("DTC_TOPOLOGY_FD", std::to_string(fd));
+  return *this;
+}
+
+// Procedure: vertex_fd
+Runtime& Runtime::vertex_fd(int fd) {
+  _map.insert_or_assign("DTC_VERTEX_FD", std::to_string(fd));
+  return *this;
+}
+
+// Procedure: remove_topology_fd
+Runtime& Runtime::remove_topology_fd() {
+  _map.erase("DTC_TOPOLOGY_FD");
+  return *this;
+}
+
+// Procedure: vertex_hosts
+Runtime& Runtime::vertex_hosts(std::string str) {
+  _map.insert_or_assign("DTC_VERTEX_HOSTS", std::move(str));
+  return *this;
+}
+
+// Procedure: remove_vertex_hosts
+Runtime& Runtime::remove_vertex_hosts() {
+  _map.erase("DTC_VERTEX_HOSTS");
+  return *this;
+}
+
+// Function: vertex_hosts
+std::unordered_map<key_type, std::string> Runtime::vertex_hosts() const {
+
+  std::unordered_map<key_type, std::string> vhosts;
+
+  if(auto itr = _map.find("DTC_VERTEX_HOSTS"); itr != _map.end()) {
     const static std::regex e("[^\\s:]+"); 
-    std::string s(str);
-    auto sbeg = std::sregex_token_iterator(s.begin(), s.end(), e);
+    auto sbeg = std::sregex_token_iterator(itr->second.begin(), itr->second.end(), e);
     auto send = std::sregex_token_iterator();
-    assert((std::distance(sbeg, send) & 1) == 0);
+    assert((std::distance(sbeg, send) & 1) == 0);  // must be a pair
     for(auto itr=sbeg; itr!=send;) {
-      std::string k = *itr++;
+      key_type k = std::stoi(*itr++);
       std::string v = *itr++;
-      _FRONTIERS.try_emplace(std::move(k), std::move(v));
+      vhosts.try_emplace(k, std::move(v));
     }
   }
 
-  //---------------------------------------
-  // Register signal handler.             |
-  //---------------------------------------
+  return vhosts;
+}
 
-  // Ignore the SIGCHLD to enable automatica reaping.
-  //::signal(SIGCHLD, SIG_IGN);
-  ::signal(SIGPIPE, SIG_IGN);
+// Function: frontiers
+std::unordered_map<key_type, int> Runtime::frontiers() const {
+
+  std::unordered_map<key_type, int> frontiers;
+
+  if(auto itr = _map.find("DTC_FRONTIERS"); itr != _map.end()) {
+    const static std::regex e("[^\\s:]+"); 
+    auto sbeg = std::sregex_token_iterator(itr->second.begin(), itr->second.end(), e);
+    auto send = std::sregex_token_iterator();
+    assert((std::distance(sbeg, send) & 1) == 0);  // must be a pair
+    for(auto itr=sbeg; itr!=send;) {
+      key_type k = std::stoi(*itr++);
+      int fd = std::stoi(*itr++);
+      frontiers.try_emplace(k, fd);
+    }
+  }
+
+  return frontiers;
+
+}
+
+// Function: c_file
+std::unique_ptr<char[]> Runtime::c_file() const {
+  if(const auto itr = _map.find("DTC_SUBMIT_FILE"); itr != _map.end()) { 
+    auto ptr = std::make_unique<char[]>(itr->second.size() + 1);
+    std::strcpy(ptr.get(), itr->second.c_str());
+    return ptr;
+  }
+  else return nullptr;
+}
+
+// Function: c_argv
+std::unique_ptr<char*, std::function<void(char**)>> Runtime::c_argv() const { 
+ 
+  if(const auto p = _map.find("DTC_SUBMIT_ARGV"); p != _map.end()) {
+     
+    const static std::regex ws_re("\\s+|\\n+|\\t+"); 
+    
+    auto itr = std::sregex_token_iterator(p->second.begin(), p->second.end(), ws_re, -1);
+    auto end = std::sregex_token_iterator();
+    auto num = std::distance(itr, end);
+
+    std::unique_ptr<char*, std::function<void(char**)>> ptr(
+      new char*[num + 1],
+      [sz=num+1] (char** ptr) {
+        for(auto i=0; i<sz; ++i) {
+          delete [] ptr[i];
+        }
+        delete [] ptr;
+      }
+    );
+
+    for(int i=0; i<num; ++i, ++itr) {
+      ptr.get()[i] = new char [itr->length() + 1];
+      std::strcpy(ptr.get()[i], itr->str().c_str());
+    }
+
+    ptr.get()[num] = nullptr;
+
+    return ptr;
+  }
+  else return nullptr;
+}
+
+// Function: c_envp
+std::unique_ptr<char*, std::function<void(char**)>> Runtime::c_envp() const {
+
+  std::unique_ptr<char*, std::function<void(char**)>> ptr(
+    new char*[_map.size() + 1],
+    [sz=_map.size()+1](char** ptr) {
+      for(size_t i=0; i<sz; ++i) {
+        delete [] ptr[i];
+      }
+      delete [] ptr;
+    }
+  );
   
-  //---------------------------------------
-  // Initialize policy-dependent members. |
-  //---------------------------------------
+  auto idx = size_t{0};
 
+  for(const auto& [k, v] : _map) {
+    auto entry = k + "=" + v;
+    ptr.get()[idx] = new char[entry.size() + 1];
+    std::strcpy(ptr.get()[idx], entry.c_str());
+    ++idx;
+  }
+  ptr.get()[idx] = nullptr;
 
-
-  // Logging facilities.
-  LOGTO(_LOG_FILE);
-
-  // LevelDB field.
-  //std::filesystem::create_directories(_IOSDB_DIR);
-  //leveldb::Options options;
-  //options.create_if_missing = true;
-  //leveldb::Status status = leveldb::DB::Open(options, _IOSDB_DIR, &_iosdb);
-  //if(status.ok() != true) {
-  //  LOGF("Failed to open iosdb on ", _IOSDB_DIR, " (", status.ToString(), ")");
-  //}
+  return ptr;
 }
 
 
-// Destructor.
-Policy::~Policy() {
-
-  // LevelDB field.
-  //delete _iosdb;
-  //std::filesystem::remove_all(_IOSDB_DIR);
-}
-
-
-};  // End of namespace dtc. ----------------------------------------------------------------------
-
-
-
-
-
-
-
+};  // end of namespace dtc -----------------------------------------------------------------------
 
 

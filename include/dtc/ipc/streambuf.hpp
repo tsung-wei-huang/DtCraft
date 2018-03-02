@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,7 +14,8 @@
 #ifndef DTC_IPC_STREAMBUF_HPP_
 #define DTC_IPC_STREAMBUF_HPP_
 
-#include <dtc/ipc/device.hpp>
+#include <dtc/device.hpp>
+#include <dtc/static/logger.hpp>
 
 namespace dtc {
 
@@ -32,14 +33,16 @@ class OutputStreamBuffer {
   friend class BinaryOutputArchiver;
   friend class BinaryOutputPackager;
 
+  template <typename... S> friend auto LockStreamBuffer(S&&...);
+
   public:
 
     OutputStreamBuffer() = default;
     
     template <typename C>
-    OutputStreamBuffer(const std::shared_ptr<Device>&, C&&);
+    OutputStreamBuffer(Device*, C&&);
     
-    OutputStreamBuffer(const std::shared_ptr<Device>&) noexcept;
+    OutputStreamBuffer(Device*);
 
     ~OutputStreamBuffer();
 
@@ -49,10 +52,8 @@ class OutputStreamBuffer {
     std::streamsize write(const void*, std::streamsize);
     std::streamsize copy(void*, std::streamsize) const;
 
-    inline const std::shared_ptr<Device>& device() const noexcept;
-
-    template <typename D>
-    void device(D&&) noexcept;
+    inline void device(Device*);
+    inline Device* device() const;
 
     inline std::string_view string_view() const;
 
@@ -60,7 +61,8 @@ class OutputStreamBuffer {
 
     mutable std::recursive_mutex _mutex;
     
-    std::shared_ptr<Device> _device;
+    Device* _device {nullptr};
+    
     std::function<void()> _on_write;
 
     LocalStreamBuffer _size {sizeof(LocalStreamBuffer) - sizeof(char)};
@@ -79,18 +81,18 @@ class OutputStreamBuffer {
 };
 
 template <typename C>
-OutputStreamBuffer::OutputStreamBuffer(const std::shared_ptr<Device>& device, C&& c) : 
+OutputStreamBuffer::OutputStreamBuffer(Device* device, C&& c) : 
   _device {device},
   _on_write {std::forward<C>(c)} {
 }
 
-inline const std::shared_ptr<Device>& OutputStreamBuffer::device() const noexcept {
+inline Device* OutputStreamBuffer::device() const {
   return _device;
 }
 
-template <typename D>
-void OutputStreamBuffer::device(D&& d) noexcept {
-  _device = std::forward<D>(d);
+inline void OutputStreamBuffer::device(Device* d) {
+  std::scoped_lock lock(_mutex);
+  _device = d;
 }
 
 inline std::string_view OutputStreamBuffer::string_view() const {
@@ -107,15 +109,17 @@ class InputStreamBuffer {
   friend class BinaryInputArchiver;
   friend class BinaryInputPackager;
   
+  template <typename... S> friend auto LockStreamBuffer(S&&...);
+  
   public:
 
     InputStreamBuffer() = default;
-    InputStreamBuffer(const std::shared_ptr<Device>&) noexcept;
+    InputStreamBuffer(Device*) noexcept;
     InputStreamBuffer(const OutputStreamBuffer&);
     InputStreamBuffer(OutputStreamBuffer&&);
     
     template <typename C>
-    InputStreamBuffer(const std::shared_ptr<Device>&, C&&);
+    InputStreamBuffer(Device*, C&&);
 
     ~InputStreamBuffer();
 
@@ -125,10 +129,9 @@ class InputStreamBuffer {
     std::streamsize copy(void*, std::streamsize) const;
     std::streamsize drop(std::streamsize);
 
-    inline const std::shared_ptr<Device>& device() const noexcept;
-
-    template <typename D>
-    void device(D&&) noexcept;
+    inline Device* device() const;
+    
+    inline void device(Device*);
 
     inline std::string_view string_view() const;
     
@@ -136,7 +139,8 @@ class InputStreamBuffer {
     
     mutable std::recursive_mutex _mutex;
     
-    std::shared_ptr<Device> _device;
+    Device* _device {nullptr};
+
     std::function<void()> _on_read;
 
     LocalStreamBuffer _size {sizeof(LocalStreamBuffer) - sizeof(char)};
@@ -155,22 +159,31 @@ class InputStreamBuffer {
 };
     
 template <typename C>
-InputStreamBuffer::InputStreamBuffer(const std::shared_ptr<Device>& device, C&& c) :
+InputStreamBuffer::InputStreamBuffer(Device* device, C&& c) :
   _device {device}, _on_read {std::forward<C>(c)} {
 }
 
-inline const std::shared_ptr<Device>& InputStreamBuffer::device() const noexcept {
+inline Device* InputStreamBuffer::device() const {
   return _device;
 }
 
-template <typename D>
-void InputStreamBuffer::device(D&& d) noexcept {
-  _device = std::forward<D>(d);
+inline void InputStreamBuffer::device(Device* d) {
+  std::scoped_lock lock(_mutex);
+  _device = d;
 }
 
 inline std::string_view InputStreamBuffer::string_view() const {
   return {_gptr, static_cast<typename std::string_view::size_type>(_egptr - _gptr)};
 }
+
+//-------------------------------------------------------------------------------------------------
+
+template <typename... Ts>
+auto LockStreamBuffer(Ts&&... bufs) {
+  auto mutex = [] (auto& buf) -> auto& { return buf._mutex; };
+  return std::scoped_lock(mutex(bufs)...);
+}
+
 
 //-------------------------------------------------------------------------------------------------
 

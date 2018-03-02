@@ -25,7 +25,7 @@
 #include <thread>
 #include <mutex>
 
-//namespace dtc {
+namespace dtc {
 
 // Enum: LoggingSeverity
 enum class LoggingSeverity {
@@ -46,53 +46,55 @@ class LogPolicyInterface {
 
     std::ostream* _os {&std::cerr};
 
+    bool _color {true};
+
   public:
     
-    inline Policy* policy();
-    inline const Policy* policy() const;
+    Policy* policy();
+    const Policy* policy() const;
 
-    //inline bool is_console() const;
-    
     void open(const std::string& name);
     void close();
     void write(const std::string& msg);
+    void color(bool);
 
+    bool color() const;
 };
 
 // Function: policy
 template <typename Policy>
-inline Policy* LogPolicyInterface<Policy>::policy() {
+Policy* LogPolicyInterface<Policy>::policy() {
   return static_cast<Policy*>(this);
 }
 
 // Function: policy
 template <typename Policy>
-inline const Policy* LogPolicyInterface<Policy>::policy() const {
+const Policy* LogPolicyInterface<Policy>::policy() const {
   return static_cast<const Policy*>(this);
 }
-
-// Function: is_console
-//template <typename Policy>
-//inline bool LogPolicyInterface<Policy>::is_console() const {
-//  return _os == &std::cerr || _os == &std::cout;
-//}
     
 // Procedure: open
 template <typename Policy>
-inline void LogPolicyInterface<Policy>::open(const std::string& name) {
+void LogPolicyInterface<Policy>::open(const std::string& name) {
   return policy()->_open(name);
 }
 
 // Procedure: close
 template <typename Policy>
-inline void LogPolicyInterface<Policy>::close() {
+void LogPolicyInterface<Policy>::close() {
   return policy()->_close();
 }
 
 // Procedure: write
 template <typename Policy>
-inline void LogPolicyInterface<Policy>::write(const std::string& msg) {
+void LogPolicyInterface<Policy>::write(const std::string& msg) {
   return policy()->_write(msg);
+}
+
+// Function: color
+template <typename Policy>
+bool LogPolicyInterface<Policy>::color() const {
+  return _color;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -158,19 +160,24 @@ template<typename LogPolicyT>
 class Logger {
 
   private:
-  
-    //static constexpr const char* _set_red     {"\033[1;31m"};
-    //static constexpr const char* _set_green   {"\033[1;32m"};
-    //static constexpr const char* _set_yellow  {"\033[1;33m"};
-    //static constexpr const char* _set_cyan    {"\033[1;36m"};
-    //static constexpr const char* _set_magenta {"\033[1;35m"};
-    //static constexpr const char* _reset_color {"\033[0m"   };
+
+    static constexpr const char* _set_green   {"\033[1;32m"};
+    static constexpr const char* _set_yellow  {"\033[1;33m"};
+    static constexpr const char* _set_cyan    {"\033[1;36m"};
+    static constexpr const char* _set_magenta {"\033[1;35m"};
+    static constexpr const char* _reset_color {"\033[0m"   };
     
     LogPolicyT _policy;
 
     //std::atomic_flag _lock = ATOMIC_FLAG_INIT;
 
   public:
+    
+    static constexpr const char* ERROR_COLOR   {"\033[1;31m"};
+    static constexpr const char* FATAL_COLOR   {"\033[1;31m"};
+    static constexpr const char* DEBUG_COLOR   {"\033[1;36m"};
+    static constexpr const char* WARNING_COLOR {"\033[1;33m"};
+    static constexpr const char* RESET_COLOR   {"\033[0m"   };
 
     Logger(const std::string& fpath = "");
     ~Logger();
@@ -199,24 +206,9 @@ class Logger {
     
     template <LoggingSeverity severity>
     void _append_header(std::ostringstream&, const char*, const int);
-
-    template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::DEBUG>* = nullptr>
-    void _append_severity(std::ostringstream&);
     
-    template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::INFO>* = nullptr>
+    template <LoggingSeverity s>
     void _append_severity(std::ostringstream&);
-    
-    template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::WARNING>* = nullptr>
-    void _append_severity(std::ostringstream&);
-    
-    template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::ERROR>* = nullptr>
-    void _append_severity(std::ostringstream&);
-    
-    template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::FATAL>* = nullptr>
-    void _append_severity(std::ostringstream&);
-    
-    template <typename... ArgsT>
-    void _append_message(std::ostringstream&, ArgsT&&...);
     
     constexpr const char* _strend(const char*) const;
     constexpr const char* _basename(const char*, const char*) const;
@@ -326,78 +318,46 @@ void Logger<LogPolicyT>::_append_header(std::ostringstream& oss, const char* fpa
   oss << _basename(fpath) << ":" << line << "] ";
 }
 
-template <typename LogPolicyT>    
-template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::DEBUG>*>
-void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
-  //if(_policy.is_console()) {
-  //  oss << _set_cyan;
-  //}
-  oss << "D ";
-}
-
-template <typename LogPolicyT>    
-template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::INFO>*>
-void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
-  oss << "I ";
-}
-
-template <typename LogPolicyT>    
-template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::WARNING>*>
-void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
-  //if(_policy.is_console()) {
-  //  oss << _set_yellow;
-  //}
-  oss << "W ";
-}
-
-template <typename LogPolicyT>    
-template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::ERROR>*>
-void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
-  //if(_policy.is_console()) {
-  //  oss << _set_red;
-  //}
-  oss << "X ";
-}
-
-template <typename LogPolicyT>    
-template <LoggingSeverity s, std::enable_if_t<s==LoggingSeverity::FATAL>*>
-void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
-  //if(_policy.is_console()) {
-  //  oss << _set_red;
-  //}
-  oss << "! ";
-}
-
 template <typename LogPolicyT>
-template <typename... ArgsT>
-void Logger<LogPolicyT>::_append_message(std::ostringstream& oss, ArgsT&&... args) {
-  (oss << ... << args) ;
+template <LoggingSeverity severity>
+void Logger<LogPolicyT>::_append_severity(std::ostringstream& oss) {
+
+  if constexpr(severity == LoggingSeverity::DEBUG) {
+    oss << DEBUG_COLOR << "D ";
+  }
+  else if constexpr(severity == LoggingSeverity::WARNING) {
+    oss << WARNING_COLOR << "W ";
+  }
+  else if constexpr(severity == LoggingSeverity::ERROR) {
+    oss << ERROR_COLOR << "E "; 
+  }
+  else if constexpr(severity == LoggingSeverity::FATAL) {
+    oss << FATAL_COLOR << "F ";
+  }
+  else {
+    oss << "I ";
+  }
 }
 
 // Procedure: write
-template< typename LogPolicyT >
-template< LoggingSeverity severity , typename...ArgsT >
+template<typename LogPolicyT>
+template<LoggingSeverity severity, typename...ArgsT>
 void Logger<LogPolicyT>::write(const char* fpath, const int line, ArgsT&&... args) {
 
   std::ostringstream oss;
   
-  // Clear the ostringstream and clear any possible failing bits.
-  oss.str("");
-  oss.clear();
-
   // Append the header into the ostringstream.
   _append_header<severity>(oss, fpath, line);
 
   // Append the given message to the ostringstream.
-  _append_message(oss, std::forward<ArgsT>(args)...);
-
-  // Append the reset color.
-  //if(_policy.is_console()) oss << _reset_color;
+  (oss << ... << args);
   
-  // Write to the device (under lock).
-  //while(_lock.test_and_set(std::memory_order_acquire));
+  if constexpr(severity != LoggingSeverity::INFO) {
+    oss << RESET_COLOR;
+  }
+  
+  // Write to the device.
   _policy.write(oss.str());
-  //_lock.clear(std::memory_order_release);
 }
 
 // Procedure: debug
@@ -439,43 +399,24 @@ void Logger<LogPolicyT>::fatal(const char* fpath, const int line, ArgsT&&... arg
 
 //-------------------------------------------------------------------------------------------------
 
-// Global declaration and macro usage.
-static Logger<FileLogPolicy> logger;
+// Atomic cout
+template <typename... Ts>
+auto& cout(Ts&&... args) {
+  std::ostringstream oss;
+  (oss << ... << args); 
+  return (std::cout << oss.str());
+}
 
-#define LOG_REMOVE_FIRST_HELPER(N, ...) __VA_ARGS__
-#define LOG_GET_FIRST_HELPER(N, ...) N
-#define LOG_GET_FIRST(...) LOG_GET_FIRST_HELPER(__VA_ARGS__)
-#define LOG_REMOVE_FIRST(...) LOG_REMOVE_FIRST_HELPER(__VA_ARGS__)
+// Atomic cerr
+template <typename... Ts>
+auto& cerr(Ts&&... args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return (std::cerr << oss.str());
+}
 
-#define LOGTO(...) logger.redir (__VA_ARGS__)
 
-#define LOGD(...) logger.debug  (__FILE__, __LINE__, __VA_ARGS__, '\n')
-#define LOGI(...) logger.info   (__FILE__, __LINE__, __VA_ARGS__, '\n')
-#define LOGW(...) logger.warning(__FILE__, __LINE__, __VA_ARGS__, '\n')
-#define LOGE(...) logger.error  (__FILE__, __LINE__, __VA_ARGS__, '\n')
-#define LOGF(...) logger.fatal  (__FILE__, __LINE__, __VA_ARGS__, '\n')
-
-#define LOGD_IF(...) if(LOG_GET_FIRST(__VA_ARGS__)) {           \
-                       LOGD(LOG_REMOVE_FIRST(__VA_ARGS__));     \
-                     }
-
-#define LOGI_IF(...) if(LOG_GET_FIRST(__VA_ARGS__)) {           \
-                       LOGI(LOG_REMOVE_FIRST(__VA_ARGS__));     \
-                     }
-
-#define LOGW_IF(...) if(LOG_GET_FIRST(__VA_ARGS__)) {           \
-                       LOGW(LOG_REMOVE_FIRST(__VA_ARGS__));     \
-                     }
-
-#define LOGE_IF(...) if(LOG_GET_FIRST(__VA_ARGS__)) {           \
-                       LOGE(LOG_REMOVE_FIRST(__VA_ARGS__));     \
-                     }
-
-#define LOGF_IF(...) if(LOG_GET_FIRST(__VA_ARGS__)) {           \
-                       LOGF(LOG_REMOVE_FIRST(__VA_ARGS__));     \
-                     }
-
-//};  // End of namespace dtc. --------------------------------------------------------------
+};  // End of namespace dtc. --------------------------------------------------------------
 
 
 #endif

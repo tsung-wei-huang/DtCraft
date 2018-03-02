@@ -14,10 +14,6 @@
 #ifndef DTC_EVENT_SELECT_HPP_
 #define DTC_EVENT_SELECT_HPP_
 
-#include <dtc/event/demux.hpp>
-
-namespace dtc {
-
 // Class: Select
 //
 // Select allows a program to monitor multiple file descriptors, waiting until one or more of the
@@ -36,44 +32,37 @@ namespace dtc {
 // void FD_SET(int fd, fd_set *set);
 // void FD_ZERO(fd_set *set);
 //
+
+#include <dtc/event/event.hpp>
+
+namespace dtc {
+
+// Class: Select
 class Select {
 
   friend class Reactor;
-
-  template <typename C>
-  Select(C&&);
 
   ~Select();
 
   inline size_t num_fds_per_mask() const;
   inline size_t num_masks(const size_t) const;
-
-  // Callback handler.
-  std::function<void(Event*)> _handler;
   
   int _max_fd       {-1};
   size_t _cap[2]    {0, 0};               // in/out
   fd_set* _R[2]     {nullptr, nullptr};   // in/out
   fd_set* _W[2]     {nullptr, nullptr};   // in/out
-  fd_set* _M[2]     {nullptr, nullptr};   // read/write
   Event** _fd2ev[2] {nullptr, nullptr};   // read/write
   
-  template <typename DurationT>
-  void _poll(DurationT&&);
-  
-  void _select(struct timeval&&);
+  template <typename D, typename C>
+  void _poll(D&&, C&&);
+
+  void _prepare_select();
   void _recap(const int);
-  void _make_pollee(uint8_t*, const uint8_t*, const uint8_t*, const size_t);
+  void _make_pollee(uint8_t*, const uint8_t*, const size_t);
   void _insert(Event*);
   void _remove(Event*);
-  void _freeze(Event*);
-  void _thaw(Event*);
+  void _clear();
 };
-
-// Constructor.
-template <typename C>
-Select::Select(C&& c) : _handler {std::forward<C>(c)} {
-}
 
 // Function: num_fds_per_mask
 // Each byte can accommodate eight bits (eight file descriptors).
@@ -88,13 +77,46 @@ inline size_t Select::num_masks(const size_t num_fds) const {
   return (num_fds + num_fds_per_mask() - 1) / num_fds_per_mask();
 }
 
-// Procedure: _poll
-template <typename DurationT>
-void Select::_poll(DurationT&& d) {
-  _select(duration_cast<struct timeval>(std::forward<DurationT>(d)));
-}
+// Procedure: poll
+template <typename D, typename C>
+void Select::_poll(D&& d, C&& on) {
+  
+  if(_max_fd == -1) return;
 
+  _prepare_select();
+  
+  // Privatize the storage that is going to be used by the select system call.
+  const auto pmax_fd = _max_fd;
+
+  auto tv = duration_cast<struct timeval>(std::forward<D>(d));
+  
+  // Here the caller goes to the sleep.
+  auto ret = ::select(pmax_fd + 1, _R[1], _W[1], nullptr, &tv);
+
+  // Let's move to the next dispatch cycle.
+  if(ret == -1) {
+    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), "Select failed");
+  }
+
+  // Invoke the handler for every active read/write event.
+  for(int fd=pmax_fd; fd >= 0; --fd) {
+    if(FD_ISSET(fd, _R[1]) && _fd2ev[0][fd]) {
+      on(_fd2ev[0][fd]);
+    }
+    if(FD_ISSET(fd, _W[1]) && _fd2ev[1][fd]) {
+      on(_fd2ev[1][fd]);
+    }
+  }
+
+}
 //-------------------------------------------------------------------------------------------------
+
+bool select_on_write(int, struct timeval&&);
+
+template <typename T>
+bool select_on_write(int fd, T&& d) {
+  return select_on_write(fd, duration_cast<struct timeval>(std::forward<T>(d))); 
+}
 
 bool select_on_write(int, int, std::error_code&);
 

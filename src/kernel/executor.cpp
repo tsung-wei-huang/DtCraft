@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -11,13 +11,14 @@
  *                                                                            *
  ******************************************************************************/
 
+#include <dtc/kernel/graph.hpp>
 #include <dtc/kernel/executor.hpp>
 
 namespace dtc {
 
 // Constructor
 Executor::Executor(Graph& G) : 
-  KernelBase {Policy::get().EXECUTOR_NUM_THREADS()},
+  KernelBase {env::executor_num_threads()},
   _graph {G} {
 }
 
@@ -28,134 +29,102 @@ Executor::~Executor() {
 // Procedure: run
 void Executor::run() {
 
-  switch(Policy::get().EXECUTION_MODE()) {
-    case Policy::LOCAL:
+  switch(env::execution_mode()) {
+    case ExecutionMode::LOCAL:
       _setup_local();
     break;
 
-    case Policy::SUBMIT:
+    case ExecutionMode::SUBMIT:
       _setup_submit();
     break;
 
-    case Policy::DISTRIBUTED:
+    case ExecutionMode::DISTRIBUTED:
       _setup_distributed();
     break;
   }
 
   dispatch();
 
-  switch(Policy::get().EXECUTION_MODE()) {
-    case Policy::LOCAL:
+  switch(env::execution_mode()) {
+    case ExecutionMode::LOCAL:
+      _teardown_local();
     break;
 
-    case Policy::SUBMIT:
+    case ExecutionMode::SUBMIT:
+      _teardown_submit();
     break;
     
-    case Policy::DISTRIBUTED:
+    case ExecutionMode::DISTRIBUTED:
       _teardown_distributed();
-    break;
-  }
-}
-
-// Function: num_vertices
-// Query the number of vertices associated to this executor.
-std::future<size_t> Executor::num_vertices() {
-  return promise([E=this] () { return E->_graph._vertices.size(); });
-}
-
-// Function: _num_vertices
-// Query the number of streams associated to this executor.
-size_t Executor::_num_vertices() const {
-  assert(is_owner());
-  return _graph._vertices.size();
-}
-
-// Function: _num_task_events
-size_t Executor::_num_task_events() const {
-
-  assert(is_owner());
-
-  switch(Policy::get().EXECUTION_MODE()) {
-    case Policy::LOCAL:
-      return num_events();
-    break;
-
-    case Policy::DISTRIBUTED:
-      return num_events() - 2;
-    break;
-
-    default:
-      return 0;
     break;
   }
 }
 
 // Function: num_streams
 // Query the number of streams associated to this executor.
-std::future<size_t> Executor::num_streams() {
-  return promise([E=this] () { return E->_num_streams(); });
+size_t Executor::num_streams() const {
+  return _graph._streams.size();
 }
 
-// Function: _num_streams
-// Query the number of streams associated to this executor.
-size_t Executor::_num_streams() const {
-  assert(is_owner());
-  return _graph._streams.size();
+// Function: num_vertices
+// Query the number of vertices associated to this executor.
+size_t Executor::num_vertices() const {
+  return _graph._vertices.size();
+}
+
+// Function: num_probers
+// Query the number of probers associated to this executor.
+size_t Executor::num_probers() const {
+  return _graph._probers.size();
 }
 
 // Function: graph_size
 // Query the number of streams and vertices associated to this executor.
-std::future<size_t> Executor::graph_size() {
-  return promise([E=this] () { return E->_graph_size(); });
+size_t Executor::graph_size() const {
+  return num_streams() + num_vertices();
 }
 
-// Function: _graph_size
-// Query the number of streams and vertices associated to this executor.
-size_t Executor::_graph_size() const {
+// Procedure: _remove_istream
+// Remove the stream from the istream side.
+void Executor::_remove_istream(key_type key) {
+  
   assert(is_owner());
-  return _num_streams() + _num_vertices();
-}
 
-// Function: _remove_stream
-void Executor::_remove_stream(key_type key, std::error_code& errc) {
+  if(auto s = _graph._stream(key); s) {
 
-  // Remove the stream event.
-  if(auto sitr = _graph._streams.find(key); sitr != _graph._streams.end()) {
-    _remove(sitr->second._ostream.lock());
-    _remove(sitr->second._istream.lock());
-  }
+    if(s->_critical) std::exit(EXIT_CRITICAL_STREAM);
 
-  // Stop the executor in case of an error
-  if(errc) {
-    LOGE("Executor encountered stream error: ", errc.message());
-    for(auto& kvp : _graph._streams) {
-      _remove(kvp.second._ostream.lock());
-      _remove(kvp.second._istream.lock());
+    if(s->is_intra_stream()) {
+      remove(s->istream(), s->ostream());
     }
-    goto shutdown;
+    else {
+      remove(s->istream());
+    }
   }
-
-  // Update the task error code
-  if(_num_task_events() != 0) {
-    return;
-  }
-
-  shutdown:
-
-  // Shut down the executor.
-  if(_agent) {
-    _remove(std::move(_agent->ostream));
-    _remove(std::move(_agent->istream));
-  }
-
-  assert(num_events() == 0);
 }
 
-// Function: remove_stream
-// Update the task with a given error code. A task refers to either a vertex event or a stream
-// event that is associated with a key. 
-std::future<void> Executor::remove_stream(key_type key, std::error_code errc) {
-  return promise([E=this, key, errc=std::move(errc)] () mutable { E->_remove_stream(key, errc); });
+// Procedure: _remove_ostream
+// Remove the stream from the ostream side.
+void Executor::_remove_ostream(key_type key) {
+
+  assert(is_owner());
+
+  if(auto s = _graph._stream(key); s) {
+
+    if(s->_critical) std::exit(EXIT_CRITICAL_STREAM);
+
+    if(s->is_intra_stream()) {
+      if(auto os = s->ostream(); os) {
+        os->remove_on_flush();
+      }
+    }
+    else {
+      remove(s->istream());
+      if(auto os = s->ostream(); os) {
+        os->remove_on_flush();
+      }
+    }
+  }
 }
 
 // Procedure: _setup_local
@@ -168,6 +137,10 @@ void Executor::_setup_local() {
   _make_graph(nullptr);
 }
 
+// Procedure: _teardown_local
+void Executor::_teardown_local() {
+}
+
 // Procedure: _setup_submit
 // Launch the executor in submit mode. The procedure first connects to the master through the
 // environment variable set up by the submission script. By default, it is set to localhost, 
@@ -176,33 +149,41 @@ void Executor::_setup_submit() {
 
   assert(is_owner());
 
-  _insert_stdout_listener();
-  _insert_stderr_listener();
+  _stdout_listener = insert_stdout_listener();
+  _stderr_listener = insert_stderr_listener();
 
   LOGI(
-    "Executor @", Policy::get().THIS_HOST(), " ",
-    "[stdout:", Policy::get().STDOUT_LISTENER_PORT(), 
-    "|stderr:", Policy::get().STDERR_LISTENER_PORT(), "]"
+    "Executor @", env::this_host(), " ",
+    "[stdout:", env::stdout_listener_port(), 
+    "|stderr:", env::stderr_listener_port(), "]"
   );
 
-  LOGI(
-    "Submitting graph to master @",
-    Policy::get().MASTER_HOST(), ":", Policy::get().GRAPH_LISTENER_PORT()
-  ); 
+  LOGI("Submit graph to master @", env::master_host(), ":", env::graph_listener_port()); 
   
-  auto M = make_socket_client(Policy::get().MASTER_HOST(), Policy::get().GRAPH_LISTENER_PORT());
-  
-  _master = _insert_actor<Master>(M)(
-    [E=this] (const std::error_code& errc) { 
-      LOGF("Error on master IO (", errc.message(), ")"); 
+  auto M = make_socket_client(env::master_host(), env::graph_listener_port());
+
+  _master = std::make_optional<Master>();
+
+  std::tie(_master->istream, _master->ostream) = insert_channel(std::move(M))(
+    [this] (pb::BrokenIO& b) { 
+      LOGE("Error on master IO (", b.errc.message(), ")"); 
+      std::exit(EXIT_BROKEN_CONNECTION);
     },
-    [E=this] (pb::Solution& s) { 
+    [this] (pb::Solution& s) { 
       LOGI("Solution received\n", s);
-      E->shutdown(); 
+      break_loop(); 
     }
   );
 
   (*_master->ostream)(pb::Protobuf(_graph._topologize()));
+}
+
+// Procedure: _teardown_submit
+void Executor::_teardown_submit() {
+  remove(
+    std::move(_master->istream), std::move(_master->ostream),
+    std::move(_stdout_listener), std::move(_stderr_listener)
+  );
 }
     
 // Procedure: _setup_distributed
@@ -217,31 +198,40 @@ void Executor::_setup_distributed() {
     
   //LOGI("Executor launched in distributed mode");
 
-  const auto fd = Policy::get().TOPOLOGY_FD();
+  const auto fd = env::topology_fd();
 
   make_fd_close_on_exec(fd);
 
   auto skt = std::make_shared<Socket>(fd);
 
-  _agent = _insert_actor<Agent>(skt)(
-    [E=this] (const std::error_code& errc) { LOGF("Error on agent IO (", errc.message(), ")"); },
-    [E=this] (pb::Topology& t) { E->make_graph(std::move(t)); }
+  _agent = std::make_optional<Agent>();
+
+  std::tie(_agent->istream, _agent->ostream) = insert_channel(std::move(skt))(
+    [this] (pb::BrokenIO& b) -> void { 
+      LOGE("Error on agent IO (", b.errc.message(), ")"); 
+      std::exit(EXIT_BROKEN_CONNECTION);
+    },
+    [this] (pb::Topology& t) -> void { 
+      make_graph(std::move(t)); 
+    }
   );
 
   // Build standard stream channels.
   _agent->stdout = duplicate_fd(STDOUT_FILENO);
   _agent->stderr = duplicate_fd(STDERR_FILENO);
 
-  assert(is_fd_valid(Policy::get().STDOUT_FD()));
-  assert(is_fd_valid(Policy::get().STDERR_FD()));
+  assert(is_fd_valid(env::stdout_fd()));
+  assert(is_fd_valid(env::stderr_fd()));
 
-  redirect_fd(STDOUT_FILENO, Policy::get().STDOUT_FD());
-  redirect_fd(STDERR_FILENO, Policy::get().STDERR_FD());
+  redirect_fd(STDOUT_FILENO, env::stdout_fd());
+  redirect_fd(STDERR_FILENO, env::stderr_fd());
 }
 
 // Procedure: _teardown_distributed
 void Executor::_teardown_distributed() {
+
   assert(is_owner());
+
   std::cout.flush();
   std::cerr.flush();
   ::fsync(STDOUT_FILENO);
@@ -250,99 +240,246 @@ void Executor::_teardown_distributed() {
   redirect_fd(STDERR_FILENO, _agent->stderr);
   _agent->stdout = STDOUT_FILENO;
   _agent->stderr = STDERR_FILENO;
+  
+  remove(_agent->ostream, _agent->istream);
 }
 
 // Procedure: make_graph
 // The public call to initialize the graph from the given topology.
 // will only take place once. This function is called by submit and distributed mode.
 std::future<void> Executor::make_graph(pb::Topology&& tpg) {
-  return promise([E=this, tpg=std::move(tpg)] () mutable { E->_make_graph(&tpg); });
+  return promise([this, tpg=std::move(tpg)] () mutable { _make_graph(&tpg); });
 }
 
 // Procedure: _make_graph
-// The bottom-most call to initiate the graph from a given topology. Thie procedure should be
-// called by only once as stream events and vertex events cannot be duplicated.
-// Notice that the procedure must be atomic and private, as all stream handlers will not be ready
-// until the call of _make_streams. Thanks to the design of the reactor, we guarantee events
-// will happen after this private function call.
-// The procedure is only called by submit and distributed mode.
+// Initialize the graph from a given topology. This can be called in either local or distributed
+// mode, depending on the tpg pointer value.
 void Executor::_make_graph(pb::Topology* tpg) {
-  assert(is_owner());
-  _graph._make(tpg);
-  _make_vertices();
-  _make_streams();
-}
 
-// Procedure: _make_vertices
-// Create a timeout event for each vertex. The callback from the vertex will be executed once
-// before all adjacent stream events can take place.
-// Notice here we create a timeout event for every vertex in order to synchronize all events.
-void Executor::_make_vertices() {
   assert(is_owner());
+
+  // Initialize the graph from the topology.
+  _graph._make(tpg);
+  
+  // Create stream events.
+  _insert_streams(tpg);
+
+  // Create prober events.
+  _insert_probers(tpg);
+
+  // Create vertex events (this must come after streams).
+  _insert_vertices(tpg);
+  
+  // Stop the executor when the event count is fewer than two.
+  if(tpg) {
+    threshold(2);
+  }
+}
+  
+// Procedure: _insert_vertices
+void Executor::_insert_vertices(pb::Topology* tpg) {
+
+  /*std::vector< std::future<std::optional<Vertex::Program>> > _futures;
+    
   for(auto& kvp : _graph._vertices) {
-    _insert<TimeoutEvent>(0ms, [E=this, &v=kvp.second] (Event& e) { v(); });
+
+    auto& v = kvp.second;
+    
+    // Assign the executor pointer.
+    v._executor = this;
+
+    // External vertex.
+    if(v.program()) {
+      _futures.push_back(async([&v=v] () { 
+        v();
+        return std::make_optional(v._prespawn());
+      }));
+    }
+    // Internal vertex
+    else {
+      _futures.push_back(async([&v=v] () { 
+        v(); 
+        return std::optional<Vertex::Program>(std::nullopt);
+      }));
+    }
+  }
+  
+  // Synchronize with all futures
+  for(auto& fu : _futures) {
+    if(auto program = fu.get(); program) {
+      _spawn(*program);
+    }
+  }*/
+
+  for(auto& kvp : _graph._vertices) {
+    
+    // Assign the executor pointer.
+    kvp.second._executor = this;
+    
+    // Create a timeout event for each vertex.
+    insert<TimeoutEvent>(0ms, [this, &v=kvp.second] (Event& e) mutable {
+      v();
+      if(v.program()) {
+        promise([this, program=v._prespawn()] () mutable {
+          _spawn(program);
+        });  
+      }
+    });
   }
 }
 
-// Procedure: _make_streams
-// Create IO events for each stream of the graph. For inter stream, we simply create a file
-// descriptor pair with self-pipe trick to enable non-blocking communcation. For distributed
-// mode the file descriptors for inter stream is stored in the environment variables DTC_FRONTIERS 
-// initiated from the agent in the format of "key_type:fd_value".
-void Executor::_make_streams() {
+// Procedure: _spawn
+// Spawn a vertex program.
+void Executor::_spawn(Vertex::Program& program) {
 
   assert(is_owner());
 
-  const auto& ftrs = Policy::get().FRONTIERS();
+  try {
+    auto& v = _graph._vertices.at(program.vertex);
 
-  // Create iostream for each stream.
+    LOGI("Spawn vertex pgoram ", program.vertex, " [", v._runtime.program(), "]");
+    // Create a communication channel based on domain sockets.
+    auto [rp, wp] = make_pipe();
+
+    // Open-on-exec all related devices.
+    std::vector<ScopedDeviceRestorer> devices;
+    for(auto& bridge : program.bridges) {
+      devices.emplace_back(std::move(bridge));
+    }
+    devices.emplace_back(std::move(wp));
+    
+    // Fork-exec
+    auto pid = spawn(program.c_file.get(), program.c_argv.get(), program.c_envp.get());
+
+    // Build a connection channel.
+    LOGI("Successfully spawned vertex program ", program.vertex);
+    insert<ReadEvent>(std::move(rp), [pid] (Event& ev) {
+      int s;
+      assert(::read(ev.device()->fd(), &s, sizeof(s)) == 0); 
+      assert(::waitpid(pid, &s, 0) == pid);
+      if((WIFEXITED(s) && WEXITSTATUS(s)!=EXIT_SUCCESS) || WIFSIGNALED(s)) {
+        std::exit(s);
+      }
+      LOGI("Vertex program sccessfully exited");
+      return Event::REMOVE;
+    });
+  }
+  catch(std::exception& e) {
+    LOGE("Failed to spawn vertex program ", program.vertex, " (", e.what(), ")");
+    std::exit(EXIT_VERTEX_EXEC_FAILED);
+  }
+}
+
+// Procedure: _insert_probers
+// Create a periodic event for each prober vertex.
+void Executor::_insert_probers(pb::Topology* tpg) {
+
+  for(auto& kvp : _graph._probers) {
+    if(auto& s = kvp.second; s._on == nullptr) {
+      continue;
+    }
+    else {
+      s._event = insert<PeriodicEvent>(
+        s._duration,
+        true,
+        [this, &s=s] (Event& e) {
+          return s();
+        }
+      ).get();
+    }
+  }
+}
+
+// Procedure: _insert_streams
+// Create an IO event for each stream of the graph. The stream and fd information is stored 
+// in the runtime variable of topology.
+void Executor::_insert_streams(pb::Topology* tpg) {
+
+  auto frontiers = tpg ? tpg->runtime.frontiers() : std::unordered_map<key_type, int>();
+  
   for(auto& [key, stream] : _graph._streams) {
 
-    std::shared_ptr<Device> device;
-
     // Case 1: intra stream
-    if(auto fitr=ftrs.find(std::to_string(key)); fitr == ftrs.end()) {
-      assert(stream._head && stream._tail);
-      device = make_shared_memory();
-      //LOGI("Created an intra stream for ", key, " fd=", device->fd());
+    if(auto fitr=frontiers.find(key); fitr == frontiers.end()) {
+
+      assert(!stream.is_inter_stream());
+
+      auto [rdev, wdev] = make_socket_pair();
+
+      //LOGI("Created an intra stream for ", key, " fd=", rdev->fd());
+      _insert_istream(stream, std::move(rdev));
+      _insert_ostream(stream, std::move(wdev));
     }
     // Case 2: inter stream
     else {
-      make_fd_close_on_exec(std::stoi(fitr->second));
+
+      assert(stream.is_inter_stream());
+
+      make_fd_close_on_exec(fitr->second);
       //LOGI("Created an inter stream for ", key, " fd=", fitr->second);
-      device = std::make_shared<Socket>(std::stoi(fitr->second)); 
+      
+      if(stream.is_inter_stream(std::ios_base::in)) {
+        _insert_istream(stream, std::make_shared<Socket>(fitr->second));
+      }
+      else if(stream.is_inter_stream(std::ios_base::out)) {
+        _insert_ostream(stream, std::make_shared<Socket>(fitr->second));
+      }
+      else {
+        assert(false);
+      }
     }
-
-    stream._istream = _insert_stream(device, std::ios_base::in)(
-      [E=this, &stream] (const std::error_code& errc) {
-        auto e = stream.is_inter_stream(std::ios_base::in) ? errc : std::error_code();
-        E->remove_stream(stream.key, e);
-      },
-      [E=this, &stream] (InputStream& istream) {
-        assert(stream._head);
-        if(auto r = stream(*(stream._head), istream); r == Stream::CLOSE) {
-          E->remove_stream(stream.key, std::error_code());
-        }
-      }
-    ).first;
-
-    stream._ostream = _insert_stream(device, std::ios_base::out)(
-      [E=this, &stream] (const std::error_code& errc) {
-        auto e = stream.is_inter_stream(std::ios_base::out) ? errc : std::error_code();
-        E->remove_stream(stream.key, e);
-      },
-      [E=this, &stream] (OutputStream& ostream) {
-        assert(stream._tail);
-        if(auto r = stream(*(stream._tail), ostream); r == Stream::CLOSE) {
-          E->remove_stream(stream.key, std::error_code());
-        }
-      }
-    ).second;
-
   }
 }
 
+// Procedure: _insert_istream
+void Executor::_insert_istream(Stream& stream, std::shared_ptr<Device> idev) {
 
+  if(stream._head->program()) {
+    stream._reader = std::move(idev);
+    return;
+  }
+
+  std::tie(stream._reader, std::ignore) = insert_channel(std::move(idev), std::ios_base::in)(
+    [this, &stream] (pb::BrokenIO& b) {
+      remove_istream(stream.key);
+    },
+    [this, &stream] (InputStream& istream) {
+      assert(stream._head);
+      if(auto r = stream(istream); r == Event::REMOVE) {
+        remove_istream(stream.key);
+      }
+    }
+  );
+}
+
+// Procedure: _insert_ostream
+void Executor::_insert_ostream(Stream& stream, std::shared_ptr<Device> odev) {
+
+  if(stream._tail->program()) {
+    stream._writer = std::move(odev);
+    return;
+  }
+        
+  if(stream.is_inter_stream(std::ios_base::out)) {
+    std::tie(stream._reader, std::ignore) = insert_channel(odev, std::ios_base::in)(
+      [this, &stream] (pb::BrokenIO& b) {
+        remove_ostream(stream.key);
+      }
+    );
+  }
+
+  std::tie(std::ignore, stream._writer) = insert_channel(std::move(odev), std::ios_base::out)(
+    [this, &stream] (pb::BrokenIO& b) {
+      remove_ostream(stream.key);
+    },
+    [this, &stream] (OutputStream& ostream) {
+      if(auto r = stream(ostream); r == Event::REMOVE) {
+        remove_ostream(stream.key);
+      }
+    }
+  );
+
+}
 
 }  // End of namespace dtc::graph. ----------------------------------------------------
 

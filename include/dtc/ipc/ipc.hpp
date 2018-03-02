@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,37 +14,46 @@
 #ifndef DTC_IPC_IPC_HPP_
 #define DTC_IPC_IPC_HPP_
 
-#include <dtc/ipc/ios.hpp>
+#include <dtc/archive/binary.hpp>
+#include <dtc/ipc/streambuf.hpp>
 #include <dtc/event/reactor.hpp>
 
 namespace dtc {
 
 // Class: InputStream
 class InputStream : public ReadEvent {
- 
+
   public:
 
     InputStreamBuffer isbuf;
 
     template <typename C>
-    InputStream(const std::shared_ptr<Device>&, C&&);
+    InputStream(std::shared_ptr<Device>, C&&);
 
     ~InputStream() = default;
     
     template <typename... T>
     std::streamsize operator()(T&&...);
+
+    operator bool ();
 };
 
 // Constructor.
 template <typename C>
-InputStream::InputStream(const std::shared_ptr<Device>& device, C&& c) :
+InputStream::InputStream(std::shared_ptr<Device> device, C&& c) :
   ReadEvent {
-    device->fd(),
-    [&, c=std::forward<C>(c)] (Event& e) mutable {
-      c(*this);
+    device,
+    [this, c=std::forward<C>(c)] (Event& e) mutable {
+      if constexpr(std::is_same_v<std::invoke_result_t<C, InputStream&>, Event::Signal>) {
+        return c(*this);
+      }
+      else {
+        c(*this);
+        return Event::DEFAULT;
+      }
     }
   },
-  isbuf {device, nullptr} {
+  isbuf {device.get(), nullptr} {
 }
 
 // Operator
@@ -59,41 +68,61 @@ std::streamsize InputStream::operator()(T&&... t) {
 class OutputStream : public WriteEvent {
 
   private:
-
+    
+    bool _disabled {false};
     bool _notified {false};
     bool _notify();
+
+    Event::Signal _remove_on_flush();
     
   public:
     
     OutputStreamBuffer osbuf;
 
     template <typename C>
-    OutputStream(const std::shared_ptr<Device>&, C&&);
+    OutputStream(std::shared_ptr<Device>, C&&);
 
-    ~OutputStream() = default;
+    ~OutputStream();
 
     template <typename... T>
     std::streamsize operator()(T&&...);
+    
+    void remove_on_flush();
 };
 
 // Constructor.
 template <typename C>
-OutputStream::OutputStream(const std::shared_ptr<Device>& device, C&& c) :
+OutputStream::OutputStream(std::shared_ptr<Device> device, C&& c) :
   WriteEvent {
-    device->fd(),
-    [&, c=std::forward<C>(c)] (Event& e) mutable {
+    device,
+    [this, c=std::forward<C>(c)] (Event& e) mutable {
 
-      assert(_notified == true);
+      if(!_disabled) {
+      
+        assert(_notified == true);
 
-      c(*this);
+        if constexpr(std::is_same_v<std::invoke_result_t<C, OutputStream&>, Event::Signal>) {
+          if(auto s = c(*this); s != Event::DEFAULT) {
+            return s;
+          }
+        }
+        else {
+          c(*this);
+        }
 
-      // We have to unmark the flag at the very end.
-      std::lock_guard lock(osbuf._mutex);
-      _notified = false;
-      _notify();
+        // We have to unmark the flag at the very end.
+        std::lock_guard lock(osbuf._mutex);
+        _notified = false;
+        _notify();
+
+        return Event::DEFAULT;
+      }
+      else {
+        return _remove_on_flush();
+      }
     }
   },
-  osbuf {device, [&](){_notify();}} {
+  osbuf {device.get(), [this](){_notify();}} {
 }
 
 // Operator: ()
@@ -102,18 +131,6 @@ std::streamsize OutputStream::operator()(T&&... t) {
   return BinaryOutputPackager(osbuf)(std::forward<T>(t)...);
 }
 
-// ------------------------------------------------------------------------------------------------
-
-// Function: write_at_once
-// The function forces a write of all data in the object item via the given device's underlying 
-// synchronization method.
-template <typename T>
-std::streamsize write_at_once(const std::shared_ptr<Device>& device, T&& item) {
-  OutputStreamBuffer osbuf { device, nullptr };  
-  BinaryOutputPackager pkger(osbuf);
-  pkger(std::forward<T>(item));
-  return osbuf.flush();
-}
 
 }  // End of namespace dtc. -----------------------------------------------------------------------
 

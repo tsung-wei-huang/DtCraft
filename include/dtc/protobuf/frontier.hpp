@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -24,7 +24,6 @@ namespace dtc::pb {
 struct Frontier {
 
   key_type graph {-1};   
-  key_type topology {-1};
   key_type stream {-1}; 
 
   std::shared_ptr<Socket> socket;
@@ -39,20 +38,12 @@ struct Frontier {
 
   std::string to_kvp() const;
 
-  inline auto task_id() const;
-
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT& ar) {
-    return ar(graph, topology, stream);
+    return ar(graph, stream);
   }
 
-};
-
-// Function: task_id
-inline auto Frontier::task_id() const {
-  return TaskID{graph, topology};
-}
-
+}; 
 
 };  // End of namespace dtc::pb. ------------------------------------------------------------
 

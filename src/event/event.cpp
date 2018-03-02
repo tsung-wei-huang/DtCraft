@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -21,7 +21,7 @@ bool TimeoutEventHeap::empty() const {
 }
 
 // Function: top 
-const Event* TimeoutEventHeap::top() const {
+Event* TimeoutEventHeap::top() const {
   return empty() ? nullptr : _array[0];
 }
 
@@ -33,7 +33,7 @@ const size_t TimeoutEventHeap::size() const {
 // Procedure: clear 
 void TimeoutEventHeap::clear() {
   for(auto e : _array) {
-    e->_descriptor = -1;
+    e->_timer().satellite = -1;
   }
   _array.clear();
 }
@@ -42,24 +42,24 @@ void TimeoutEventHeap::clear() {
 void TimeoutEventHeap::remove(Event* e) {
 
   // Invalid removal.
-  if(e->_descriptor == -1) return;
+  if(e->_timer().satellite == -1) return;
 
   // Event exists in the heap.
   auto last = _array.back();
   _array.pop_back();
 
-  if(e->_descriptor && _less(last, _array[(e->_descriptor-1) >> 1])) {
-    _bubble_up(e->_descriptor, last);
+  if(e->_timer().satellite && _less(last, _array[(e->_timer().satellite-1) >> 1])) {
+    _bubble_up(e->_timer().satellite, last);
   }
   else {
-    _bubble_down(e->_descriptor, last);
+    _bubble_down(e->_timer().satellite, last);
   }
-  e->_descriptor = -1;
+  e->_timer().satellite = -1;
 }
 
 // Function: insert 
 void TimeoutEventHeap::insert(Event* e) {
-  if(e->_descriptor != -1) return;
+  if(e->_timer().satellite != -1) return;
   _array.push_back(e);
   _bubble_up(_array.size()-1, e);
 }
@@ -71,7 +71,7 @@ Event* TimeoutEventHeap::pop() {
     auto last = _array.back();
     _array.pop_back();
     _bubble_down(0, last);
-    e->_descriptor = -1;
+    e->_timer().satellite = -1;
     return e;
   }
   return nullptr;
@@ -79,7 +79,7 @@ Event* TimeoutEventHeap::pop() {
 
 // Function: _less
 bool TimeoutEventHeap::_less(Event* l, Event* r) const {
-  return l->_timeout < r->_timeout;
+  return l->_timer().timeout < r->_timer().timeout;
 }
 
 // Procedure: _bubble_up
@@ -89,10 +89,10 @@ void TimeoutEventHeap::_bubble_up(size_t idx, Event* e) {
     if(!_less(e, _array[parent])) {
       break;
     }
-    (_array[idx] = _array[parent])->_descriptor = idx;
+    (_array[idx] = _array[parent])->_timer().satellite = idx;
     idx = parent;
   }
-  (_array[idx] = e)->_descriptor = idx;
+  (_array[idx] = e)->_timer().satellite = idx;
 }
 
 // Procedure: _bubble_down 
@@ -103,10 +103,10 @@ void TimeoutEventHeap::_bubble_down(size_t idx, Event* e) {
       --min_child;
     }
     if(min_child >= _array.size() || !_less(_array[min_child], e)) break;
-    (_array[idx] = _array[min_child])->_descriptor = idx;
+    (_array[idx] = _array[min_child])->_timer().satellite = idx;
     idx = min_child;
   }
-  (_array[idx] = e)->_descriptor = idx;
+  (_array[idx] = e)->_timer().satellite = idx;
 }
 
 

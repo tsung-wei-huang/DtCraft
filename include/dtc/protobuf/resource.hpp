@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin and Martin D. F. Wong,   *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -40,7 +40,7 @@ namespace dtc::pb {
 //
 struct Resource {
   
-  std::string host {Policy::get().THIS_HOST()};
+  std::string host {env::this_host()};
 
   uintmax_t num_cpus {0};
   uintmax_t memory_limit_in_bytes {0};

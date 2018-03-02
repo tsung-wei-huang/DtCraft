@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -120,9 +120,9 @@ template <typename T, typename U> struct dtc_static_wrapper_helper<T(U)> { using
 #endif
 
 // Exception:
-#define THROW(...) _throw(__FILE__, __LINE__, #__VA_ARGS__);
+#define DTC_THROW(...) __throw__(__FILE__, __LINE__, __VA_ARGS__);
 
-inline void _throw(const char* fname, const size_t line, auto&&... args) {
+inline void __throw__(const char* fname, const size_t line, auto&&... args) {
   std::ostringstream oss;
   oss << "[" << fname << ":" << line << "] ";
   (oss << ... << args);

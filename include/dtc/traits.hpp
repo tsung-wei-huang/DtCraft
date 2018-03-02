@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -29,11 +29,18 @@
 #include <set>
 #include <variant>
 #include <chrono>
+#include <any>
 #include <unordered_map>
 #include <unordered_set>
 
+#include <dtc/Eigen/Core>
+
 // Namespace: dtc
 namespace dtc {
+
+//-------------------------------------------------------------------------------------------------
+// stl type query
+//-------------------------------------------------------------------------------------------------
 
 template <typename T> struct is_std_basic_string : std::false_type {};
 template <typename... ArgsT> struct is_std_basic_string <std::basic_string<ArgsT...>> : std::true_type {};
@@ -79,6 +86,10 @@ template <typename T> struct is_std_variant : std::false_type {};
 template <typename... ArgsT> struct is_std_variant <std::variant<ArgsT...>> : std::true_type {};
 template <typename T> constexpr bool is_std_variant_v = is_std_variant<T>::value;
 
+template <typename T> struct is_std_optional : std::false_type {};
+template <typename... ArgsT> struct is_std_optional <std::optional<ArgsT...>> : std::true_type {};
+template <typename T> constexpr bool is_std_optional_v = is_std_optional<T>::value;
+
 template <typename T> struct is_std_unique_ptr : std::false_type {};
 template <typename... ArgsT> struct is_std_unique_ptr <std::unique_ptr<ArgsT...>> : std::true_type {};
 template <typename T> constexpr bool is_std_unique_ptr_v = is_std_unique_ptr<T>::value;
@@ -98,6 +109,15 @@ template <typename T> constexpr bool is_std_duration_v = is_std_duration<T>::val
 template <typename T> struct is_std_time_point : std::false_type {};
 template <typename... ArgsT> struct is_std_time_point<std::chrono::time_point<ArgsT...>> : std::true_type {};
 template <typename T> constexpr bool is_std_time_point_v = is_std_time_point<T>::value;
+
+template <typename T> struct is_std_tuple : std::false_type {};
+template <typename... ArgsT> struct is_std_tuple<std::tuple<ArgsT...>> : std::true_type {};
+template <typename T> constexpr bool is_std_tuple_v = is_std_tuple<T>::value;
+
+template <typename T> struct is_eigen_matrix : std::false_type {};
+template <typename S, int R, int C, int O, int MR, int MC>
+struct is_eigen_matrix<Eigen::Matrix<S, R, C, O, MR, MC>> : std::true_type {};
+template <typename T> constexpr bool is_eigen_matrix_v = is_eigen_matrix<T>::value;
 
 
 // Pairwise Boolean AND - Generic definition.
@@ -133,6 +153,38 @@ C const & container( std::queue<T, C> const & queue )
   };
   return H::get( queue );
 }
+
+//-------------------------------------------------------------------------------------------------
+// Closure traits
+//-------------------------------------------------------------------------------------------------
+
+template <typename T>
+struct closure_traits : closure_traits<decltype(&T::operator())> {};
+
+#define DTC_CLOSURE_REM_CTOR(...) __VA_ARGS__
+#define DTC_CLOSURE_TRAITS_SPEC(cv, var, is_var)                                \
+template <typename C, typename R, typename... Args>                             \
+struct closure_traits<R (C::*) (Args... DTC_CLOSURE_REM_CTOR var) cv>{          \
+  using arity = std::integral_constant<std::size_t, sizeof...(Args) >;          \
+  using is_variadic = std::integral_constant<bool, is_var>;                     \
+  using is_const    = std::is_const<int cv>;                                    \
+                                                                                \
+  using result_type = R;                                                        \
+                                                                                \
+  template <std::size_t i>                                                      \
+  using arg = std::tuple_element_t<i, std::tuple<Args...>>;                     \
+                                                                                \
+  template <std::size_t i>                                                      \
+  using decay_arg = std::tuple_element_t<i, std::tuple<std::decay_t<Args>...>>; \
+                                                                                \
+  using args = std::tuple<std::decay_t<Args>...>;                               \
+  using decay_args = std::tuple<std::decay_t<Args>...>;                         \
+};
+
+DTC_CLOSURE_TRAITS_SPEC(const, (,...), 1)
+DTC_CLOSURE_TRAITS_SPEC(const, (), 0)
+DTC_CLOSURE_TRAITS_SPEC(, (,...), 1)
+DTC_CLOSURE_TRAITS_SPEC(, (), 0)
 
 //-------------------------------------------------------------------------------------------------
 // Type extraction.
@@ -230,6 +282,10 @@ constexpr auto get(T&& t, Ts&&... ts) {
     return get<I-1>(std::forward<Ts>(ts)...);
 }
 
+//-------------------------------------------------------------------------------------------------
+// Functors.
+//-------------------------------------------------------------------------------------------------
+
 // Overloadded.
 template <typename... Ts>
 struct Functors : Ts... { 
@@ -238,6 +294,10 @@ struct Functors : Ts... {
 
 template <typename... Ts>
 Functors(Ts...) -> Functors<Ts...>;
+
+//-------------------------------------------------------------------------------------------------
+// Optional
+//-------------------------------------------------------------------------------------------------
 
 // Composition of optional object.
 template <typename T>
@@ -250,18 +310,62 @@ struct add_optionality < std::optional<T> > {
   using type = std::optional<T>;
 };
 
+template <>
+struct add_optionality <void> {
+  using type = void;
+};
+
 template <typename T>
 using add_optionality_t = typename add_optionality<T>::type;
 
 template <typename T, typename L>
-auto operator | (std::optional<T>& opt, L&& lambda) 
-  -> add_optionality_t< decltype(lambda(*opt)) > {
+auto operator | (std::optional<T>& opt, L&& lambda) -> add_optionality_t<decltype(lambda(*opt))> {
   if(opt) {
     return lambda(*opt);
   }
   else
     return {};
 }
+
+//-------------------------------------------------------------------------------------------------
+// Tuple
+//-------------------------------------------------------------------------------------------------
+
+template <int Trim, typename... T, std::size_t... I>
+auto __trim_tuple_impl(const std::tuple<T...>& t, std::index_sequence<I...>) {
+  return std::make_tuple(std::get<I+Trim>(t)...);
+}
+
+template <int Trim, typename... T>
+auto __trim_tuple(const std::tuple<T...>& t) {
+  return __trim_tuple_impl<Trim>(t, std::make_index_sequence<sizeof...(T) - Trim>());
+}
+
+template <int Trim, typename T>
+struct trim_tuple {
+	using type = decltype(__trim_tuple<Trim>(std::declval<T>()));
+};
+
+template <int Trim, typename T>
+using trim_tuple_t = typename trim_tuple<Trim, T>::type;
+
+// Make shared from tuple
+template <class T, class Tuple, std::size_t... I>
+constexpr auto make_shared_from_tuple_impl( Tuple&& t, std::index_sequence<I...> ) {
+  return std::make_shared<T>(std::get<I>(std::forward<Tuple>(t))...);
+}
+ 
+template <class T, class Tuple>
+constexpr auto make_shared_from_tuple( Tuple&& t ) {
+  return make_shared_from_tuple_impl<T>(
+    std::forward<Tuple>(t),
+    std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{}
+  );
+}
+
+//-------------------------------------------------------------------------------------------------
+// Dependent false.
+//-------------------------------------------------------------------------------------------------
 
 // Dependent false
 template <typename T> 

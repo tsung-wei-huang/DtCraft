@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -22,23 +22,19 @@ using namespace std::literals::chrono_literals;
 template <typename D>
 auto make_device_pair() {
 
-  std::shared_ptr<dtc::Device> rend, wend;
-
   if constexpr(std::is_same_v<D, dtc::Socket>) {
-    std::tie(rend, wend) = dtc::make_domain_pair();
+    return dtc::make_socket_pair();
   }
-  else if constexpr(std::is_same_v<D, dtc::SharedMemory>) {
-    rend = wend = dtc::make_shared_memory();
+  else if constexpr(std::is_same_v<D, dtc::Pipe>) {
+    return dtc::make_pipe();
   }
   else static_assert(dtc::dependent_false_v<D>);
-
-  return std::make_tuple(std::move(rend), std::move(wend));
 }
 
 // ---- Device test -------------------------------------------------------------------------------
 
 // Procedure: test_device_property
-auto test_device_property(std::shared_ptr<dtc::Device> device) {
+auto test_device_property(auto device) {
   REQUIRE(dtc::is_fd_valid(device->fd()));
   REQUIRE(dtc::is_fd_nonblocking(device->fd()));
   REQUIRE(dtc::is_fd_close_on_exec(device->fd()));
@@ -90,21 +86,14 @@ TEST_CASE("DeviceTest.Socket") {
   test_device_property(A);
 }
 
-// Test case: DeviceTest.ShareMemory
-TEST_CASE("DeviceTest.SharedMemory") {
-  auto shm = dtc::make_shared_memory();
-  REQUIRE((shm != nullptr));
-  test_device_property(shm);
-}
-
 // Test case: DeviceTest.IO.Socket
 TEST_CASE("DeviceTest.IO.Socket") {
   std::apply(test_device_io, make_device_pair<dtc::Socket>());
 }
 
-// Test case: DeviceTest.IO.SharedMemory
-TEST_CASE("DeviceTest.IO.SharedMemory") {
-  std::apply(test_device_io, make_device_pair<dtc::SharedMemory>());
+// Test case: DeviceTest.IO.Pipe
+TEST_CASE("DeviceTest.IO.Pipe") {
+  std::apply(test_device_io, make_device_pair<dtc::Pipe>());
 }
 
 // ---- StreamBufferTest --------------------------------------------------------------------------
@@ -150,7 +139,7 @@ auto test_streambuf_flush() {
       osbuf.write(&t, sizeof(t));
     }
     
-    osbuf.device(wend);
+    osbuf.device(wend.get());
     auto ret = osbuf.flush();
     REQUIRE(((ret == -1 && osbuf.out_avail() > 0) || (osbuf.out_avail() == 0)));
   }
@@ -216,8 +205,8 @@ auto test_streambuf_sync() {
 
   for(size_t n=0; n<=N; n = (n>1024) ? n<<1 : n+1) {
 
-    dtc::InputStreamBuffer isbuf(rend);
-    dtc::OutputStreamBuffer osbuf(wend);
+    dtc::InputStreamBuffer isbuf(rend.get());
+    dtc::OutputStreamBuffer osbuf(wend.get());
     
     REQUIRE((isbuf.sync() == -1 && osbuf.sync() == 0));
 
@@ -294,9 +283,9 @@ TEST_CASE("StreamBufferTest.Flush.Socket") {
   test_streambuf_flush<dtc::Socket>();
 }
 
-// Test case: StreamBufferTest.Flush.SharedMemory
-TEST_CASE("StreamBufferTest.Flush.SharedMemory") {
-  test_streambuf_flush<dtc::SharedMemory>();
+// Test case: StreamBufferTest.Flush.Pipe
+TEST_CASE("StreamBufferTest.Flush.Pipe") {
+  test_streambuf_flush<dtc::Pipe>();
 }
 
 // Test case: StreamBufferTest.Sync.Socket
@@ -304,9 +293,9 @@ TEST_CASE("StreamBufferTest.Sync.Socket") {
   test_streambuf_sync<dtc::Socket>();
 }
 
-// Test case: StreamBufferTest.Sync.SharedMemory
-TEST_CASE("StreamBufferTest.Sync.SharedMemory") {
-  test_streambuf_sync<dtc::SharedMemory>();
+// Test case: StreamBufferTest.Sync.Pipe
+TEST_CASE("StreamBufferTest.Sync.Pipe") {
+  test_streambuf_sync<dtc::Pipe>();
 }
 
 // ---- Stream test -------------------------------------------------------------------------------
@@ -317,50 +306,51 @@ TEST_CASE("StreamBufferTest.Sync.SharedMemory") {
 template <typename D>
 auto test_stream_criticality() {
   
-  dtc::Reactor R;
+  for(int i=0; i<=4; ++i) {
+   
+    dtc::Reactor R(i);
 
-  auto [rend, wend] = make_device_pair<D>();
+    auto [rend, wend] = make_device_pair<D>();
 
-  std::atomic<int> oexternal {0};
-  std::atomic<int> iexternal {0};
+    std::atomic<int> oexternal {0};
+    std::atomic<int> iexternal {0};
 
-  constexpr auto N = 1024;
-  constexpr auto P = 1024;
+    constexpr auto P = 1024;
 
-  // Create an ostream
-  auto ostream = R.insert<dtc::OutputStream>(
-    wend,
-    [ointernal=0, &oexternal] (dtc::OutputStream& ostream) mutable {
-      ostream.osbuf.sync();
-      REQUIRE(++ointernal == ++oexternal);
+    // Create an ostream
+    auto ostream = R.insert<dtc::OutputStream>(
+      wend,
+      [ointernal=0, &oexternal] (dtc::OutputStream& ostream) mutable {
+        ostream.osbuf.sync();
+        REQUIRE(++ointernal == ++oexternal);
+      }
+    ).get();
+
+    for(int p=0; p<P; ++p) { 
+      R.insert<dtc::TimeoutEvent>(
+        0ms,
+        [&ostream, i=0, &R] (dtc::Event& e) mutable {
+          char c = dtc::random<char>();
+          (*ostream)(c);
+        }
+      );
     }
-  ).get();
 
-  for(int p=0; p<P; ++p) { 
-    R.insert<dtc::PeriodicEvent>(
-      0ms,
-      true,
-      [&ostream, i=0, &R, N] (dtc::Event& e) mutable {
-        if(i++ < N) (*ostream)(dtc::random<char>());
-        else R.remove(e.shared_from_this());
+    R.insert<dtc::InputStream>(
+      rend,
+      [iinternal=0, &iexternal, i=0, &R] (dtc::InputStream& istream) mutable {
+        istream.isbuf.sync();
+        REQUIRE(++iinternal == ++iexternal);
+        char c;
+        while(istream(c) != -1) {
+          ++i;
+        }
+        if(i == P) R.break_loop();
       }
     );
+
+    R.dispatch(); 
   }
-
-  R.insert<dtc::InputStream>(
-    rend,
-    [iinternal=0, &iexternal, i=0, &R] (dtc::InputStream& istream) mutable {
-      istream.isbuf.sync();
-      REQUIRE(++iinternal == ++iexternal);
-      char c;
-      while(istream(c) != -1) {
-        ++i;
-      }
-      if(i == N*P) R.shutdown();
-    }
-  );
-
-  R.dispatch(); 
 }
 
 // Procedure: test_stream_io
@@ -368,40 +358,45 @@ auto test_stream_criticality() {
 template <typename D>
 auto test_stream_io() {
 
-  dtc::Reactor R;
+  for(int i=0; i<=4; ++i) {
 
-  for(int e=0; e<32; ++e) {
+    dtc::Reactor R(i);
 
-    auto [rend, wend] = make_device_pair<D>();
-    auto n = dtc::random<size_t>(0, 2000000);
-    auto data = dtc::random<std::string>('0', '9', n);
+    for(int e=0; e<32; ++e) {
 
-    // Create an ostream
-    auto ostream = R.insert<dtc::OutputStream>(
-      wend,
-      [&R] (auto& ostream) {
-        ostream.osbuf.sync();
-        if(ostream.osbuf.out_avail() == 0) {
-          R.remove(ostream.shared_from_this());
+      auto [rend, wend] = make_device_pair<D>();
+      auto n = dtc::random<size_t>(0, 2000000);
+      auto data = dtc::random<std::string>('0', '9', n);
+
+      // Create an ostream
+      auto ostream = R.insert<dtc::OutputStream>(
+        wend,
+        [] (auto& ostream) {
+          ostream.osbuf.sync();
+          if(ostream.osbuf.out_avail() == 0) {
+            return dtc::Event::REMOVE;
+          }
+          return dtc::Event::DEFAULT;
         }
-      }
-    ).get();
+      ).get();
 
-    (*ostream)(data);
+      (*ostream)(data);
 
-    R.insert<dtc::InputStream>(
-      rend,
-      [&R, data] (auto& istream) {
-        istream.isbuf.sync();
-        if(std::string recv; istream(recv) != -1) {
-          REQUIRE(recv == data);
-          R.remove(istream.shared_from_this());
+      R.insert<dtc::InputStream>(
+        rend,
+        [data] (auto& istream) {
+          istream.isbuf.sync();
+          if(std::string recv; istream(recv) != -1) {
+            REQUIRE(recv == data);
+            return dtc::Event::REMOVE;
+          }
+          return dtc::Event::DEFAULT;
         }
-      }
-    );
+      );
+    }
+    
+    R.dispatch(); 
   }
-  
-  R.dispatch(); 
 }
 
 // Test case: StreamTest.IO.Socket
@@ -409,22 +404,19 @@ TEST_CASE("StreamTest.IO.Socket") {
   test_stream_io<dtc::Socket>();
 }
 
-// Test case: StreamTest.IO.SharedMemory
-TEST_CASE("StreamTest.IO.SharedMemory") {
-  test_stream_io<dtc::SharedMemory>();
+// Test case: StreamTest.IO.Pipe
+TEST_CASE("StreamTest.IO.Pipe") {
+  test_stream_io<dtc::Pipe>();
 }
-
+//
 // Test case: StreamTest.Criticality.Socket
 TEST_CASE("StreamTest.Criticality.Socket") {
   test_stream_criticality<dtc::Socket>();
 }
 
-// Test case: StreamTest.Criticality.SharedMemory
-TEST_CASE("StreamTest.Criticality.SharedMemory") {
-  test_stream_criticality<dtc::SharedMemory>();
+// Test case: StreamTest.Criticality.Pipe
+TEST_CASE("StreamTest.Criticality.Pipe") {
+  test_stream_criticality<dtc::Pipe>();
 }
-
-
-
 
 

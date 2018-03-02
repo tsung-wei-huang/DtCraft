@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -33,22 +33,6 @@ std::unordered_map<std::string, std::string> environment_variables() {
     }
   }
   return res;
-}
-
-// Function: open
-int open(const char* fpath, int flags) {
-  using namespace std::literals::string_literals;
-  if(auto fd = ::open(fpath, flags); fd == -1) {
-    throw std::system_error(
-      std::make_error_code(static_cast<std::errc>(errno)), "Failed to open "s + fpath
-    ); 
-  }
-  else return fd;
-}
-
-// Function: open
-int open(const std::filesystem::path& fpath, int flags) {
-  return open(fpath.c_str(), flags);
 }
 
 // Function: is_fd_valid
@@ -119,7 +103,7 @@ bool is_fd_valid(const int fd) noexcept {
 void make_fd_nonblocking(const int fd) {
 
   if(auto flags = ::fcntl(fd, F_GETFL, nullptr); flags != -1) {
-    if(::fcntl(fd, F_SETFL, flags | O_NONBLOCK) != -1) {
+    if((flags & O_NONBLOCK) || ::fcntl(fd, F_SETFL, flags | O_NONBLOCK) != -1) {
       return;
     }
   }
@@ -151,7 +135,7 @@ bool is_fd_nonblocking(const int fd) noexcept {
 void make_fd_blocking(const int fd) {
 
   if(auto flags = ::fcntl(fd, F_GETFL, nullptr); flags != -1) {
-    if(::fcntl(fd, F_SETFL, flags & ~(O_NONBLOCK)) != -1) {
+    if(!(flags & O_NONBLOCK) || ::fcntl(fd, F_SETFL, flags & ~(O_NONBLOCK)) != -1) {
       return;
     }
   }
@@ -181,15 +165,18 @@ bool is_fd_blocking(const int fd) noexcept {
 
 // Function: make_fd_close_on_exec
 void make_fd_close_on_exec(const int fd) {
+  
+  using namespace std::literals::string_literals;
+
   if(auto flags = ::fcntl(fd, F_GETFD, nullptr); flags != -1) {
-    if(::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != -1) {
+    if((flags & FD_CLOEXEC) || ::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) != -1) {
       return;
     }
   }
 
   throw std::system_error(
     std::make_error_code(static_cast<std::errc>(errno)),
-    "Failed to make fd close on exec"
+    "Failed to make fd="s + std::to_string(fd) + " close on exec"
   );
 }
 
@@ -212,16 +199,18 @@ bool is_fd_close_on_exec(const int fd) noexcept {
 
 // Function: make_fd_open_on_exec
 void make_fd_open_on_exec(const int fd) {
+  
+  using namespace std::literals::string_literals;
 
   if(auto flags = ::fcntl(fd, F_GETFD, nullptr); flags != -1) {
-    if(::fcntl(fd, F_SETFD, flags & (~FD_CLOEXEC)) != -1) {
+    if(!(flags & FD_CLOEXEC) || ::fcntl(fd, F_SETFD, flags & (~FD_CLOEXEC)) != -1) {
       return;
     }
   }
 
   throw std::system_error(
     std::make_error_code(static_cast<std::errc>(errno)),
-    "Failed to make fd open on exec"
+    "Failed to make fd=" + std::to_string(fd) + " open on exec"
   );
 }
 
@@ -298,22 +287,22 @@ std::streamsize write_all(int fd, const void* B, std::streamsize N) {
   
   std::streamsize n = 0;
   
-  issue_write:
+  while(n < N) {
 
-  auto ret = ::write(fd, static_cast<const char*>(B) + n, N - n);
+    auto ret = ::write(fd, static_cast<const char*>(B) + n, N - n);
 
-  if(ret > 0) {
-    n += ret;
-    goto issue_write;
-  }
-  else if (ret == -1) {
-    if(errno == EINTR) {
-      goto issue_write;
+    if(ret > 0) {
+      n += ret;
     }
-    else if(errno != EAGAIN && errno != EWOULDBLOCK) {
-      throw std::system_error(
-        std::make_error_code(static_cast<std::errc>(errno)), "Failed to write all"
-      );
+    else if (ret == -1) {
+      if(errno == EINTR) {
+        continue;
+      }
+      else if(errno != EAGAIN && errno != EWOULDBLOCK) {
+        throw std::system_error(
+          std::make_error_code(static_cast<std::errc>(errno)), "Failed to write all"
+        );
+      }
     }
   }
   return n;
@@ -388,6 +377,107 @@ void unshare_user_namespace() {
   if(::geteuid() != 0 || ::getegid() != 0) {
     throw std::runtime_error("Failed to set uid_map/gid_map");
   }
+}
+
+// Procedure: show_fd_info
+void show_fd_info() {
+  auto numHandles = ::getdtablesize();
+  for(auto i = 0; i < numHandles; i++ ) {
+    auto fd_flags = ::fcntl( i, F_GETFD ); 
+    if(fd_flags == -1) continue;
+    show_fd_info( i );
+  }
+}
+
+// Procedure: show_fd_info
+void show_fd_info(int fd) {
+
+  char buf[1024];
+ 
+  auto fd_flags = ::fcntl( fd, F_GETFD ); 
+  if (fd_flags == -1) return;
+ 
+  auto fl_flags = ::fcntl( fd, F_GETFL ); 
+  if (fl_flags == -1) return;
+ 
+  char path[1024];
+  sprintf(path, "/proc/self/fd/%d", fd);
+ 
+  ::memset(buf, 0, sizeof(buf));
+  if(auto s = ::readlink(path, buf, sizeof(buf)); s == -1 ) {
+    std::cout << " (" << path << "): " << "not available";
+    return;
+  }
+  std::cout << fd << " (" << buf << "): ";
+ 
+  if(fd_flags & FD_CLOEXEC)  std::cout << "cloexec ";
+ 
+  // file status
+  if(fl_flags & O_APPEND  )  std::cout << "append ";
+  if(fl_flags & O_NONBLOCK)  std::cout << "nonblock ";
+ 
+  // acc mode
+  if(fl_flags & O_RDONLY)  std::cout << "read-only ";
+  if(fl_flags & O_RDWR  )  std::cout << "read-write ";
+  if(fl_flags & O_WRONLY)  std::cout << "write-only ";
+ 
+  if(fl_flags & O_DSYNC)  std::cout << "dsync ";
+  if(fl_flags & O_RSYNC)  std::cout << "rsync ";
+  if(fl_flags & O_SYNC )  std::cout << "sync ";
+ 
+  struct flock fl;
+  fl.l_type = F_WRLCK;
+  fl.l_whence = 0;
+  fl.l_start = 0;
+  fl.l_len = 0;
+  ::fcntl( fd, F_GETLK, &fl );
+  if(fl.l_type != F_UNLCK) {
+    if( fl.l_type == F_WRLCK )
+      std::cout << "write-locked";
+    else
+      std::cout << "read-locked";
+    std::cout << "(pid:" << fl.l_pid << ") ";
+  }
+  std::cout << std::endl;
+} 
+
+// Function: spawn
+pid_t spawn(const char* file, char *const argv[], char *const envp[]) {
+
+  pid_t pid {-1};
+  int fd[2] = {-1, -1};
+
+  // Create a pipe for synchronization
+  if(::pipe2(fd, O_CLOEXEC | O_DIRECT) == -1) {
+    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), "Pipe failed");
+  }
+
+  // Case 1: fork error (parent scope)
+  if(pid = ::fork(); pid == -1) {
+    ::close(fd[0]);
+    ::close(fd[1]);
+    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), "Fork failed");
+  }
+  // Case 2: child (child scope)
+  else if(pid == 0) {
+    ::execve(file, argv, envp);
+    int e = errno;
+    assert(::write(fd[1], &e, sizeof(e)) == sizeof(e));
+    std::exit(EXIT_FAILURE);
+  }
+  // Case 3: parent (parent scope)
+  else {
+    ::close(fd[1]);
+    if(int e=0; ::read(fd[0], &e, sizeof(e)) != 0) {
+      ::close(fd[0]);
+      assert(::waitpid(pid, nullptr, 0) == pid);
+      pid = -1;
+      throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), "Exec failed");
+    }
+    ::close(fd[0]);
+  }
+
+  return pid;
 }
 
 //-------------------------------------------------------------------------------------------------

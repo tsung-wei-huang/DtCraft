@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -21,7 +21,7 @@ Solution::Solution(key_type k) : graph {k} {
 
 // Function: num_errors
 size_t Solution::num_errors() const {
-  return (errc ? 1 : 0) + std::count_if(
+  return (what.empty() ? 0 : 1) + std::count_if(
     taskinfos.begin(), taskinfos.end(), [] (const auto& t) { return t.has_error(); }
   );
 }
@@ -29,25 +29,21 @@ size_t Solution::num_errors() const {
 // Function: to_string
 std::string Solution::to_string() const {
   
-  std::stringstream os;
+  std::ostringstream os;
   TableBuilder table;
 
   os << "[Graph " << graph << "]\n";
 
-  table.add("Topology", "Status", "Message").end_of_row();
+  //table.add("Task (graph-topology) information").end_of_row();
+  table.add("Task").add("Executor").add("Status").end_of_row();
 
   for(const auto& t : taskinfos) {
-    table.add(
-      t.task_id.to_string(), 
-      t.status_to_string(),
-      t.errc.message()
-    ).end_of_row();
+    table.add(t.task_id.to_string()).add(t.agent).add(status_to_string(t.status)).end_of_row();
   }
   
-  os << table 
-     << "Graph finished with " << num_errors() << " error(s)";
+  os << table << "Graph finished with " << num_errors() << " error(s)";
   
-  if(errc) os << ": " << errc.message();
+  if(!what.empty()) os << ": " << what;
 
   return os.str();
 }

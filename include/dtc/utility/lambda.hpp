@@ -11,8 +11,8 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef DTC_LAMBDA_HPP_
-#define DTC_LAMBDA_HPP_
+#ifndef DTC_UTILITY_LAMBDA_HPP_
+#define DTC_UTILITY_LAMBDA_HPP_
 
 #include <future>
 

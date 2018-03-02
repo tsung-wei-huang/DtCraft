@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -11,14 +11,16 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef DTC_DTC_HPP
-#define DTC_DTC_HPP
+#ifndef DTC_DTC_HPP_
+#define DTC_DTC_HPP_
 
 #include <dtc/kernel/master.hpp>
 #include <dtc/kernel/agent.hpp>
 #include <dtc/kernel/graph.hpp>
 #include <dtc/kernel/executor.hpp>
-#include <dtc/utility.hpp>
+#include <dtc/utility/utility.hpp>
 #include <dtc/ipc/ipc.hpp>
+#include <dtc/cell/cell.hpp>
+#include <dtc/ml/ml.hpp>
 
 #endif

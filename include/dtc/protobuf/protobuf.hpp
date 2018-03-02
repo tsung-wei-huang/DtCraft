@@ -20,15 +20,16 @@
 #include <dtc/protobuf/frontier.hpp>
 #include <dtc/protobuf/taskinfo.hpp>
 #include <dtc/protobuf/solution.hpp>
+#include <dtc/protobuf/brokenio.hpp>
 
 namespace dtc::pb { 
 
 // Protobuf.
 using Protobuf = std::variant<
   KillTask, 
+  BrokenIO,
   Topology, 
   Resource, 
-  Frontier, 
   TaskInfo, 
   Solution
 >;

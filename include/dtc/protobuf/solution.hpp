@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -23,7 +23,7 @@ namespace dtc::pb {
 struct Solution {
 
   key_type graph {-1};
-  std::error_code errc;
+  std::string what;
   std::list<TaskInfo> taskinfos;
 
   Solution() = default;
@@ -40,7 +40,7 @@ struct Solution {
   
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT& ar) {
-    return ar(graph, errc, taskinfos); 
+    return ar(graph, what, taskinfos); 
   }
 
 };

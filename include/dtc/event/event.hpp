@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -15,7 +15,8 @@
 #define DTC_EVENT_EVENT_HPP_
 
 #include <dtc/policy.hpp>
-#include <dtc/utility.hpp>
+#include <dtc/utility/utility.hpp>
+#include <dtc/device.hpp>
 
 namespace dtc {
 
@@ -23,6 +24,8 @@ namespace dtc {
 
 // Forward declaration.
 class Reactor;
+class Select;
+class Epoll;
 class TimeoutEventHeap;
 
 // Class: Event
@@ -34,9 +37,16 @@ class TimeoutEventHeap;
 class Event : public std::enable_shared_from_this <Event> {
 
   friend class Reactor;
+  friend class Select;
+  friend class Epoll;
   friend class TimeoutEventHeap;
   
   public:
+
+  enum Signal {
+    REMOVE,
+    DEFAULT
+  };
 
   enum Type {
     TIMEOUT = 0,
@@ -44,24 +54,32 @@ class Event : public std::enable_shared_from_this <Event> {
     READ,
     WRITE
   };
-    
+
+  struct Timer {
+    int satellite;
+    std::chrono::steady_clock::time_point::duration duration;
+    std::chrono::steady_clock::time_point timeout;
+  };
+
     const Type type;
+    
+    template <typename C>
+    constexpr static auto make_on(C&&);
 
   private:
 
     Reactor* _reactor {nullptr};
 
-    const std::function<void(Event&)> _on;
+    const std::function<Signal(Event&)> _on;
 
-    int _descriptor {-1};
-
-    std::chrono::steady_clock::time_point::duration _duration {0};
-    std::chrono::steady_clock::time_point _timeout {now()};
+    std::variant<std::shared_ptr<Device>, Timer> _handle;
+    
+    inline Timer& _timer();
 
   protected:
     
     template <typename C>
-    inline Event(const Type, const int, C&&);
+    inline Event(const Type, std::shared_ptr<Device>, C&&);
 
     template <typename D, typename C>
     inline Event(const Type, D&&, const bool, C&&);
@@ -77,39 +95,64 @@ class Event : public std::enable_shared_from_this <Event> {
     Event& operator()(Event&&) = delete;
     
     virtual ~Event() = default;
-
-    inline int descriptor() const;
+    
     inline Reactor* reactor() const;
+
+    inline const Timer& timer() const;
+    inline std::shared_ptr<Device> device();
 }; 
+
+// Event callback wrapper.
+template <typename C>
+constexpr auto Event::make_on(C&& c) {
+  if constexpr(std::is_same_v<std::invoke_result_t<C, Event&>, Event::Signal>) {
+    return std::forward<C>(c);
+  }
+  else {
+    return [c=std::forward<C>(c)] (Event& e) mutable {
+      c(e);
+      return Event::DEFAULT;
+    };
+  }
+}
 
 // IO event constructor.
 template <typename C>
-inline Event::Event(const Type t, const int des, C&& c) : 
+inline Event::Event(const Type t, std::shared_ptr<Device> dev, C&& c) : 
   type {t},
-  _on {std::forward<C>(c)},
-  _descriptor {des} {
+  _on {make_on(std::forward<C>(c))},
+  _handle {std::move(dev)} {
 }
 
 // Timeout event constructor.
 template <typename D, typename C>
 inline Event::Event(const Type t, D&& d, const bool from_now, C&& c) : 
   type {t},
-  _on {std::forward<C>(c)},
-  _duration {std::forward<D>(d)},
-  _timeout {from_now ? now() : now() + _duration} {
-}
-
-// Function: descriptor
-// Return the descriptor which could be either the file descriptor or the satellite for timeout
-// heap.
-inline int Event::descriptor() const {
-  return _descriptor;
+  _on {make_on(std::forward<C>(c))},
+  _handle { Timer{-1, d, from_now ? now() : now() + d} } {
 }
 
 // Function: reactor
 // Return the non-owned pointer to the reactor
 inline Reactor* Event::reactor() const {
   return _reactor;
+}
+
+// Function: timer
+// Return the timer handle of the event.
+inline const Event::Timer& Event::timer() const {
+  return std::get<Timer>(_handle);
+}
+
+// Function: _timer
+// Return the modifiable timer handle of the event.
+inline Event::Timer& Event::_timer() {
+  return std::get<Timer>(_handle);
+}
+
+// Function: device
+inline std::shared_ptr<Device> Event::device() {
+  return std::get<std::shared_ptr<Device>>(_handle);
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -152,7 +195,7 @@ class ReadEvent : public Event {
   public:
     
     template <typename C>
-    ReadEvent(const int fd, C&& c) : Event(READ, fd, std::forward<C>(c)) {
+    ReadEvent(std::shared_ptr<Device> dev, C&& c) : Event(READ, std::move(dev), std::forward<C>(c)) {
     }
 };
 
@@ -164,7 +207,7 @@ class WriteEvent : public Event {
   public:
     
     template <typename C>
-    WriteEvent(const int fd, C&& c) : Event(WRITE, fd, std::forward<C>(c)) {
+    WriteEvent(std::shared_ptr<Device> dev, C&& c) : Event(WRITE, std::move(dev), std::forward<C>(c)) {
     }
 };
 
@@ -200,7 +243,7 @@ class TimeoutEventHeap {
     const size_t size() const;
 
     Event* pop();
-    const Event* top() const;
+    Event* top() const;
 
   private:
     

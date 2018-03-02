@@ -7,18 +7,19 @@ namespace dtc {
 
 // Destructor
 Container::~Container() {
-  try {
-    kill();
-  }
-  catch (const std::system_error& se) {
-    LOGW("Failed to kill container (pid=", _pid, "): ", se.code().message());
+  if(_pid != -1) {
+    LOGF("Destructing container while process ", _pid, " is running");
   }
 }
 
 // Move constructor
 Container::Container(Container&& rhs) :
-  _pid {rhs._pid} {
+  _pid    {rhs._pid},
+  _status {rhs._status},
+  _stack  {std::move(rhs._stack)} {
+  
   rhs._pid = -1;
+  rhs._status = -1;
 }
 
 // Move operator
@@ -28,31 +29,46 @@ Container& Container::operator = (Container&& rhs) {
   _pid = rhs._pid;
   rhs._pid = -1;
 
+  // Status
+  _status = rhs._status;
+  rhs._status = -1;
+
+  // Stack
+  _stack = std::move(rhs._stack);
+
   return *this;
 }
 
 // Function: _entrypoint
 int Container::_entrypoint(void* arg) {
 
-  const auto& C = *(static_cast<CloneArgument*>(arg)); 
+  const auto& C = *(static_cast<ChildArgument*>(arg)); 
   
   // Close the parent-side communication.
   ::close(C.sync[0]);
       
   //printf("Child waiting for parent to finish uid/gid mapping\n");
-  if(int i=0; ::read(C.sync[1], &i, sizeof(int)) != sizeof(int)) {
-    ::close(C.sync[1]);
-    throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the parent");
-  }
+  //if(int i=0; ::read(C.sync[1], &i, sizeof(int)) != sizeof(int)) {
+  //  ::close(C.sync[1]);
+  //  throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the parent");
+  //}
   
-  // Here we must examine required field set correctly by the master program.
-  assert(geteuid() == 0 && getegid() == 0);
+  // Here we must check whether pid/uid is set correctly by the master program.
+  //std::cout << getuid() << " ----------------------- " << getgid() << " ---------- " << getpid() << '\n';
+  //assert(geteuid() == 0 && getegid() == 0);
 
-  // TODO (chun-xun)
+  // TODO (Chun-Xun)
   //printf("ready to execve\n");
+  ::mount(nullptr, "/proc", "proc", 0, nullptr);
+  ::mount(nullptr, "/sys", "sysfs", 0, nullptr);
+  ::mount(nullptr, std::filesystem::temp_directory_path().c_str(), "tmpfs", 0, nullptr);
 
   // Initialize container attributes.
-  ::execve(C.topology.c_file(), C.topology.c_argv().get(), C.topology.c_envp().get());  
+  ::execve(
+    C.topology.runtime.c_file().get(), 
+    C.topology.runtime.c_argv().get(), 
+    C.topology.runtime.c_envp().get()
+  );  
       
   if(int e=errno; ::write(C.sync[1], &e, sizeof(e)) != sizeof(e)) {
     ::close(C.sync[1]);
@@ -61,9 +77,7 @@ int Container::_entrypoint(void* arg) {
 
   ::close(C.sync[1]);
 
-  exit(EXIT_FAILURE);
-
-  return -1;
+  return EXIT_CONTAINER_EXEC_FAILED;
 }
 
 // Function: _write
@@ -90,10 +104,10 @@ bool Container::alive() const {
 void Container::exec2(const pb::Topology& tpg) {
   
   if(_pid != -1) {
-    THROW("Double fork");
+    throw std::system_error(make_posix_error_code(EAGAIN), "Double forked");
   }
 
-  CloneArgument C{tpg};
+  ChildArgument C{tpg};
 
   if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, C.sync) == -1) {
     throw std::system_error(make_posix_error_code(errno), "Container failed to creatd socket pair");
@@ -102,7 +116,8 @@ void Container::exec2(const pb::Topology& tpg) {
   constexpr size_t STACK_SIZE = 1024*1024;
 
   _stack = std::make_unique<char[]>(STACK_SIZE);
-
+  
+  // Create a new process under new namespaces. NEWNET is the most time-consuming.
   _pid = ::clone(
     _entrypoint, _stack.get() + STACK_SIZE, 
     CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, 
@@ -119,24 +134,26 @@ void Container::exec2(const pb::Topology& tpg) {
   }
   
   // Write uid and gid mapping.
-  std::filesystem::path path(std::filesystem::path("/proc") / std::to_string(_pid));
+  //std::filesystem::path path(std::filesystem::path("/proc") / std::to_string(_pid));
 
-  _write(path / "uid_map", "0 0 1");
-  _write(path / "gid_map", "0 0 1");
+  //_write(path / "uid_map", "0 0 1");
+  //_write(path / "gid_map", "0 0 1");
 
   //// Move the process to control group.
   //_group(_pid);
 
   // Synchronize with child
   //printf("parent done with uid/gid mapping, synchronizing with child %d\n", _pid);
-  if(int i=0; ::write(C.sync[0], &i, sizeof(int)) != sizeof(int)) {
-    ::close(C.sync[0]);
-    throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the child");
-  }
+  //if(int i=0; ::write(C.sync[0], &i, sizeof(int)) != sizeof(int)) {
+  //  ::close(C.sync[0]);
+  //  throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the child");
+  //}
 
   //printf("parent synchronize with child exec %d\n", _pid);
   if(int e=0; ::read(C.sync[0], &e, sizeof(e)) != 0) {
     ::close(C.sync[0]);
+    assert(::waitpid(_pid, &_status, 0) == _pid);
+    _pid = -1;
     throw std::system_error(make_posix_error_code(e), "Exec failed");
   }
   
@@ -147,9 +164,9 @@ void Container::exec2(const pb::Topology& tpg) {
 
 // Procedure: exec
 void Container::exec(const pb::Topology& tpg) {
-  
+
   if(_pid != -1) {
-    THROW("Double fork");
+    throw std::system_error(make_posix_error_code(EAGAIN), "Double forked");
   }
 
   // Create a pipe for synchronization
@@ -165,16 +182,18 @@ void Container::exec(const pb::Topology& tpg) {
     }
     // Case 2: child (child scope)
     else if(_pid == 0) {
-      ::execve(tpg.c_file(), tpg.c_argv().get(), tpg.c_envp().get());
+      ::execve(tpg.runtime.c_file().get(), tpg.runtime.c_argv().get(), tpg.runtime.c_envp().get());
       int e = errno;
       assert(::write(fd[1], &e, sizeof(e)) == sizeof(e));
-      ::exit(EXIT_FAILURE);
+      std::exit(EXIT_CONTAINER_EXEC_FAILED);
     }
     // Case 3: parent (parent scope)
     else {
       ::close(fd[1]);
       if(int e=0; ::read(fd[0], &e, sizeof(e)) != 0) {
         ::close(fd[0]);
+        assert(::waitpid(_pid, &_status, 0) == _pid);
+        _pid = -1;
         throw std::system_error(make_posix_error_code(e), "Exec failed");
       }
       ::close(fd[0]);
@@ -182,50 +201,40 @@ void Container::exec(const pb::Topology& tpg) {
   }
 }
 
-// Function: reap a process
-int Container::reap() {
+// Function: wait a process
+void Container::wait() {
 
   // Process does not exist.
-  if(_pid == -1) return 0;
+  if(_pid == -1) {
+    return;
+  }
   
-  // Now process is dead, we need to reap the process status.
-  int status = 0;
+  // Reap the process.
+  int r;
 
-  do{
+  do {
+    r = ::waitpid(_pid, &_status, 0);
+  }while((r == -1 && errno == EINTR) || (r != -1 && !WIFEXITED(_status) && !WIFSIGNALED(_status)));
 
-    if(::waitpid(_pid, &status, 0) == -1) {
-      throw std::system_error(make_posix_error_code(errno), "Failed to wait");
-    }
-
-    //if(WIFEXITED(status)) {
-    //  //printf("exited, status=%d\n", WEXITSTATUS(status));
-    //  break;
-    //} 
-    //else if (WIFSIGNALED(status)) {
-    //  //printf("killed by signal %d\n", WTERMSIG(status));
-    //  errc = make_signal_error_code(WTERMSIG(status));
-    //  break;
-    //} 
-
-  }while(!WIFEXITED(status) && !WIFSIGNALED(status));
-
-  _pid = -1;
-
-  return status;
+  if(r != _pid) {
+    throw std::system_error(make_posix_error_code(errno), "Failed to wait");
+  }
+  else {
+    _pid = -1;
+  }
 }
 
-// Function: kill a process
+// Function: kill
 void Container::kill() {
   if(_pid != -1 && ::kill(_pid, SIGKILL) == -1) {
     throw std::system_error(make_posix_error_code(errno), "Failed to kill");
   }
 }
 
-
 //-------------------------------------------------------------------------------------------------
 
-//// CloneArgument
-//Container::CloneArgument::CloneArgument(const char* f, char* const* a, char* const* e) : 
+//// ChildArgument
+//Container::ChildArgument::ChildArgument(const char* f, char* const* a, char* const* e) : 
 //  file{f}, argv{a}, envp{e} {
 //}
 //
@@ -318,7 +327,7 @@ void Container::kill() {
 //// The main entry point for the cloned child process.
 //int Container::_entrypoint(void* arg) {
 //  
-//  auto carg = static_cast<CloneArgument*>(arg); 
+//  auto carg = static_cast<ChildArgument*>(arg); 
 //  
 //  //printf("clond %s\n", carg->file);
 //
@@ -340,71 +349,6 @@ void Container::kill() {
 //  assert(::execve(carg->file, carg->argv, carg->envp) != -1);
 //
 //  return -1;
-//}
-//
-//// Function: execve
-//void Container::execve(const char* file, char* const* argv, char* const* envp) {
-//
-//  //static char stack[1024*1024];
-//
-//  _stack = std::make_unique<char[]>(1024*1024);
-//
-//  // Create a clone argument struct.
-//  CloneArgument cargs(file, argv, envp);
-//
-//  // We use a pipe to synchronize the parent and child, in order to
-//  // ensure that the parent sets the UID and GID maps before the child
-//  // calls execve(). This ensures that the child maintains its
-//  // capabilities during the execve() in the common case where we
-//  // want to map the child's effective user ID to 0 in the new user
-//  // namespace. Without this synchronization, the child would lose
-//  // its capabilities if it performed an execve() with nonzero
-//  // user IDs (see the capabilities(7) man page for details of the
-//  // transformation of a process's capabilities during execve()).
-//
-//  int fuck[2];
-//
-//  if(::pipe(cargs.sync) == -1 || ::pipe(fuck) == -1) return;
-//
-//  make_fd_close_on_exec(cargs.sync[0]);
-//  make_fd_close_on_exec(cargs.sync[1]);
-//  make_fd_close_on_exec(fuck[0]);
-//  make_fd_close_on_exec(fuck[1]);
-//
-//  _pid = ::clone(
-//    _entrypoint, _stack.get() + 1024*1024, 
-//    CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, 
-//    &cargs
-//  );
-//
-//  assert(::close(cargs.sync[0]) == 0);
-//
-//  // Initialization for the new cloned process.
-//  if(_pid != -1) {
-//    
-//    // Write uid and gid mapping.
-//    std::filesystem::path path(std::filesystem::path("/proc") / std::to_string(_pid));
-//    std::ostringstream umap;
-//    std::ostringstream gmap;
-//
-//    umap << "0 " << ::getuid() << " 1";
-//    gmap << "0 " << ::getgid() << " 1";
-//
-//    _write(path / "uid_map", umap.str());
-//    _write(path / "setgroups", "deny");
-//    _write(path / "gid_map", gmap.str());
-//
-//    // Move the process to control group.
-//    _group(_pid);
-//  }
-//
-//  // Synchronize with the child.
-//  assert(::close(cargs.sync[1]) == 0);
-//
-//  ::close(fuck[1]);
-//  char c;
-//  auto ret = ::read(fuck[0], &c, sizeof(char));
-//  assert(ret == 0 && ::close(fuck[0]) != -1);
 //}
 //
 //// Function: _group

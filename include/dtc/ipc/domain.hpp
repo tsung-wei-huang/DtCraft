@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,8 +14,8 @@
 #ifndef DTC_IPC_DOMAIN_HPP_
 #define DTC_IPC_DOMAIN_HPP_
 
-#include <dtc/ipc/device.hpp>
-#include <dtc/utility.hpp>
+#include <dtc/device.hpp>
+#include <dtc/utility/utility.hpp>
 #include <dtc/concurrent/fifo.hpp>
 
 // TODO:

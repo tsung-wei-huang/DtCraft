@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -25,6 +25,10 @@
 #include <cstdlib>
 #include <fstream>
 #include <string_view>
+#include <regex>
+#include <cassert>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -42,9 +46,8 @@ namespace std {
 
 namespace dtc {
 
-
 //-------------------------------------------------------------------------------------------------
-// Descriptor utilities.
+// Environment utilities.
 //-------------------------------------------------------------------------------------------------
 
 // Function: environment_variables
@@ -53,9 +56,9 @@ namespace dtc {
 // platforms.
 std::unordered_map<std::string, std::string> environment_variables();
 
-// Procedure: open
-int open(const char*, int);
-int open(const std::filesystem::path&, int);
+//-------------------------------------------------------------------------------------------------
+// File descriptor utilities.
+//-------------------------------------------------------------------------------------------------
 
 // Function: get_fd_flags
 // Get the flags of a file descriptor. File descriptor flags are miscellaneous attributes of 
@@ -142,6 +145,13 @@ void unshare_user_namespace();
 //  }
 //  #endif
 //}
+
+// Procedure: show_fd_info
+void show_fd_info();
+void show_fd_info(int);
+
+// Function: spawn
+pid_t spawn(const char*, char *const[], char *const[]);
 
 //-------------------------------------------------------------------------------------------------
 // Resource utilities.

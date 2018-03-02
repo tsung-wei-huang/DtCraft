@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,10 +14,12 @@
 #ifndef DTC_IPC_SHM_HPP_
 #define DTC_IPC_SHM_HPP_
 
-#include <dtc/ipc/device.hpp>
+#include <dtc/concurrent/fifo.hpp>
+#include <dtc/device.hpp>
 
 namespace dtc {
 
+/*
 // Class: SharedMemory
 class SharedMemory : public Device {
 
@@ -34,31 +36,33 @@ class SharedMemory : public Device {
   
     ~SharedMemory();
     
-    std::streamsize read(void*, std::streamsize) override final;
-    std::streamsize write(const void*, std::streamsize) override final;
+    std::streamsize read(void*, std::streamsize);
+    std::streamsize write(const void*, std::streamsize);
   
   private:  
     
     //std::array<char, BUFSIZ> _fifo;
-    std::unique_ptr<fifo_type, std::function<void(fifo_type*)>> _fifo {_allocate()};
-    std::streamsize _w_ptr {1};
-    std::streamsize _r_ptr {0};
-    std::streamsize _bufcpy(void*, const void*, std::streamsize);
+    ConcurrentFIFO<char, BUFSIZ> _fifo;
+
+    //std::unique_ptr<fifo_type, std::function<void(fifo_type*)>> _fifo {_allocate()};
+    //std::streamsize _w_ptr {1};
+    //std::streamsize _r_ptr {0};
+    //std::streamsize _bufcpy(void*, const void*, std::streamsize);
 
     bool _notify();
     
-    static std::unique_ptr<fifo_type, std::function<void(fifo_type*)>> _allocate();
+    //static std::unique_ptr<fifo_type, std::function<void(fifo_type*)>> _allocate();
 };
 
 // Function: _bufcpy
-inline std::streamsize SharedMemory::_bufcpy(void* to , const void* from , std::streamsize num){
-  std::memcpy(to, from, num);
-  return num;
-}
+//inline std::streamsize SharedMemory::_bufcpy(void* to , const void* from , std::streamsize num){
+//  std::memcpy(to, from, num);
+//  return num;
+//}
 
 
 // Function: make_shared_memory
-std::shared_ptr<SharedMemory> make_shared_memory();
+std::shared_ptr<SharedMemory> make_shared_memory(); */
 
 
 };  // End of namespace dtc. --------------------------------------------------------------

@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -24,7 +24,7 @@ class Container {
 
   friend class Agent;
 
-  struct CloneArgument {
+  struct ChildArgument {
 
     const pb::Topology& topology;
     
@@ -44,18 +44,21 @@ class Container {
 
     bool alive() const;
 
-    inline pid_t pid() const;
-
+    inline auto pid() const;
+    inline auto status() const;
+    
     void memory_limit_in_bytes(const size_t) const;
-    void exec(const pb::Topology&);
     void exec2(const pb::Topology&);
     void kill();
-    
-    int reap();
+    void kill(std::error_code&) noexcept;
+    void exec(const pb::Topology&);
+    void wait();
+    void wait(std::error_code&) noexcept;
 
   private:
     
     pid_t _pid {-1};
+    int _status {-1};
 
     std::unique_ptr<char[]> _stack;
 
@@ -65,8 +68,13 @@ class Container {
 };
 
 // Function: pid
-inline pid_t Container::pid() const {
+inline auto Container::pid() const {
   return _pid;
+}
+
+// Function: status
+inline auto Container::status() const {
+  return _status;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -74,7 +82,7 @@ inline pid_t Container::pid() const {
 // Class: Container
 //class Container {
 //
-//  struct CloneArgument {
+//  struct ChildArgument {
 //
 //    int sync[2] = {-1, -1};
 //
@@ -82,7 +90,7 @@ inline pid_t Container::pid() const {
 //    char* const* argv {nullptr};
 //    char* const* envp {nullptr};
 //
-//    CloneArgument(const char*, char* const*, char* const*);
+//    ChildArgument(const char*, char* const*, char* const*);
 //  };
 //  
 //  public:

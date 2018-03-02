@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang and Martin D. F. Wong,                 *
+ * Copyright (c) 2018, Tsung-Wei Huang and Martin D. F. Wong,                 *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -14,7 +14,7 @@
 #ifndef DTC_IPC_SOCKET_HPP_
 #define DTC_IPC_SOCKET_HPP_
 
-#include <dtc/ipc/device.hpp>
+#include <dtc/device.hpp>
 #include <dtc/event/select.hpp>
 
 //// Sockaddr
@@ -86,14 +86,16 @@ class Socket : public Device {
 
   public:
 
-    Socket(const int);
+    template <typename... Ts>
+    Socket(Ts&&...);
+
     Socket(Socket&&) = delete;
     Socket(const Socket&) = delete;
     
     Socket& operator = (Socket&&) = delete;
     Socket& operator = (const Socket&) = delete;
   
-    ~Socket();
+    ~Socket() = default;
     
     bool is_connected() const;
     bool is_listener() const;
@@ -102,59 +104,54 @@ class Socket : public Device {
 
     std::pair<std::string, std::string> peer_host() const;
     std::pair<std::string, std::string> this_host() const;
-
-    std::streamsize read(void*, std::streamsize) override final;
-    std::streamsize write(const void*, std::streamsize) override final;
 };
 
-std::tuple<std::string, std::string> to_host(struct sockaddr&, size_t) noexcept;
+template <typename... Ts>
+Socket::Socket(Ts&&... ts) : Device {std::forward<Ts>(ts)...} {}
 
-int make_socket_server_fd(std::string_view, std::error_code&) noexcept;
-int make_socket_server_fd(std::string_view);
-int make_socket_client_fd(std::string_view, std::string_view, std::error_code&);
-int make_socket_client_fd(std::string_view, std::string_view);
+std::tuple<std::string, std::string> to_host(struct sockaddr&, size_t) noexcept;
 
 std::shared_ptr<Socket> make_socket_server(std::string_view);
 std::shared_ptr<Socket> make_socket_client(std::string_view, std::string_view);
 
-std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_domain_pair();
+std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_socket_pair();
+std::tuple<int, int> make_socket_pair_raw();
 
-void redirect_to_socket(int, std::string_view, std::string_view, std::error_code&);
-void redirect_to_socket(int, std::string_view, std::string_view);
+//void redirect_to_socket(int, std::string_view, std::string_view);
 
 //-------------------------------------------------------------------------------------------------
 
-// Class: SocketListener
-// Base class for listener. Notice that the listener can be only registered as READ.
-class SocketListener : public ReadEvent {
-
-  private:
-
-    std::shared_ptr<Socket> _listener;
-  
-  public:
-    
-		template <typename C>
-    SocketListener(std::shared_ptr<Socket>&&, C&&);
-
-    inline const std::shared_ptr<Socket>& get() const;
-};
-
-template <typename C>
-SocketListener::SocketListener(std::shared_ptr<Socket>&& listener, C&& c) : 
-  ReadEvent {
-    listener->fd(),
-    [&, c=std::forward<C>(c)] (Event& e) {
-      c(_listener);
-    }
-  },
-  _listener {std::move(listener)} {
-}
-
-// Function: get
-inline const std::shared_ptr<Socket>& SocketListener::get() const {
-  return _listener;
-}
+//// Class: SocketListener
+//// Base class for listener. Notice that the listener can be only registered as READ.
+//class SocketListener : public ReadEvent {
+//
+//  private:
+//
+//    std::shared_ptr<Socket> _listener;
+//  
+//  public:
+//    
+//		template <typename C>
+//    SocketListener(std::shared_ptr<Socket>, C&&);
+//
+//    inline const std::shared_ptr<Socket>& get() const;
+//};
+//
+//template <typename C>
+//SocketListener::SocketListener(std::shared_ptr<Socket> listener, C&& c) : 
+//  ReadEvent {
+//    listener,
+//    [&, c=std::forward<C>(c)] (Event& e) {
+//      c(*_listener);
+//    }
+//  },
+//  _listener {std::move(listener)} {
+//}
+//
+//// Function: get
+//inline const std::shared_ptr<Socket>& SocketListener::get() const {
+//  return _listener;
+//}
 
 
 };  // End of namespace Socket. -------------------------------------------------------------------

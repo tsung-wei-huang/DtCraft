@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -24,59 +24,85 @@ class Agent : public KernelBase {
   
   // ---- Internal data structure ---------------
 
-  struct Topology {
+  struct FrontierPacket {
+    key_type graph;
+    key_type stream;
+  };
 
-    std::list<pb::Frontier> frontiers;
+  struct Frontier {
+    key_type graph;
+    key_type stream;
+    std::shared_ptr<Socket> socket;
+  };
+  
+  struct Task {
+    
+    pb::Topology topology;
 
-    std::optional<pb::Topology> topology;
-    std::optional<size_t> num_frontiers;
+    struct Hatchery {
+      size_t num_inter_streams;
+      std::list<Frontier> frontiers;
+      std::shared_ptr<Socket> stdout;
+      std::shared_ptr<Socket> stderr;
+    };
+    
+    struct Executor {
+      Container container;
+      std::shared_ptr<InputStream> istream;
+      std::shared_ptr<OutputStream> ostream;
+    };
 
-    std::optional<int> stdout;
-    std::optional<int> stderr;
+    std::variant<Hatchery, Executor> handle;
+
+    Task(pb::Topology&&);
+    Task(Task&& rhs) = default;
+    Task(const Task&) = delete;
+    Task& operator = (Task&&) = default;
+    Task& operator = (const Task&) = delete;
 
     bool ready() const;
+    bool match(const Frontier&) const;
+
+    std::string frontiers_to_string() const;
+    
+    void splice_frontiers(std::list<Frontier>&);
+
+    inline auto& hatchery() { return std::get<Hatchery>(handle); }
+    inline auto& executor() { return std::get<Executor>(handle); }
+    inline const auto& hatchery() const { return std::get<Hatchery>(handle); }
+    inline const auto& executor() const { return std::get<Executor>(handle); }
   };
   
-  // ---- Actor ---------------------------------
-  
-  struct Master : ActorBase {
-
+  // Mater channel.
+  struct Master {
+    std::shared_ptr<InputStream> istream;
+    std::shared_ptr<OutputStream> ostream;
   }; 
-
-
-  struct Executor : ActorBase {
-
-    const TaskID key;
-
-    Container container;
-
-    Executor(const TaskID& k) : key{k} {}
-  };
 
   private:
 
-    Master _master;
+    std::optional<Master> _master;
 
-    std::unordered_map<TaskID, Topology> _topologies;
-    std::unordered_map<TaskID, Executor> _executors;
+    std::unordered_map<TaskID, Task> _tasks;
+
+    std::list<Frontier> _frontiers;
     
-    bool _remove_executor(const TaskID&, bool, std::error_code);
+    bool _remove_task(const TaskID&, bool);
+    bool _deploy(Task&);
+    bool _insert_task(Task&);
 
     void _make_master();
+    void _insert_frontier(Frontier&);
     void _make_frontier_listener();
-    void _schedule(pb::Frontier&);
-    void _schedule(pb::Topology&, int, int);
-    void _deploy(const TaskID&);
 
   public:
 
     Agent();
     ~Agent() = default;
     
-    std::future<void> schedule(pb::Topology&&);
-    std::future<void> schedule(pb::Frontier&&);
-
-    std::future<bool> remove_executor(const TaskID&, bool);
+    std::future<bool> insert_task(pb::Topology&&);
+    std::future<bool> remove_task(const TaskID&, bool);
+    std::future<void> insert_frontier(Frontier&&);
 };
 
 };  // End of namespace dtc. --------------------------------------------------------------

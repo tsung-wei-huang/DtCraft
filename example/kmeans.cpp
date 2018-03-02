@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * Copyright (c) 2017, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
+ * Copyright (c) 2018, Tsung-Wei Huang, Chun-Xun Lin, and Martin D. F. Wong,  *
  * University of Illinois at Urbana-Champaign (UIUC), IL, USA.                *
  *                                                                            *
  * All Rights Reserved.                                                       *
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
        r.state = State::WAIT_MAPPING;
 
        for(size_t i = 0 ; i < AtoB.size(); ++ i){
-         v.ostream(AtoB[i])(r.cts);
+         (*v.ostream(AtoB[i]))(r.cts);
        }
     }
   );
@@ -155,14 +155,14 @@ int main(int argc, char* argv[]) {
         if(state == State::WAIT_CTS){
           if(std::vector<Point> cts; is(cts) != -1){
             if(cts.size() == 0){
-              v.ostream(other)(std::vector<size_t>());
-              return dtc::Stream::CLOSE;
+              (*v.ostream(other))(std::vector<size_t>());
+              return dtc::Event::REMOVE;
             }
             else{
               auto &pts = std::any_cast<std::vector<Point>&>(v.any);
               auto mapping = find_nearest(pts, cts); 
               state = State::WAIT_MAPPING;
-              v.ostream(other)(mapping);
+              (*v.ostream(other))(mapping);
             }
           }
         }
@@ -175,10 +175,10 @@ int main(int argc, char* argv[]) {
               avg[2*pt.nearest+1] += pt.y/(double)mapping[pt.nearest];     // Compute average y
             }
             state = State::WAIT_CTS;
-            v.ostream(other)(avg); 
+            (*v.ostream(other))(avg);
           }
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::DEFAULT;
       }
     );
   }
@@ -191,7 +191,7 @@ int main(int argc, char* argv[]) {
         if(r.state == State::WAIT_MAPPING){
           if(std::vector<size_t> vec; is(vec) != -1) {
             if(vec.size() == 0){
-              return dtc::Stream::CLOSE;
+              return dtc::Event::REMOVE;
             }
 
             for(size_t i = 0 ;i < num_centers; ++i){
@@ -209,7 +209,7 @@ int main(int argc, char* argv[]) {
               r.count = 0;
               r.state = State::WAIT_AVG;
               for(auto &e: AtoB) {
-                v.ostream(e)(r.mapping); 
+                (*v.ostream(e))(r.mapping); 
               }
             }
           }
@@ -250,17 +250,17 @@ int main(int argc, char* argv[]) {
               }
 
               for(auto &e: AtoB){
-                v.ostream(e)(r.cts); 
+                (*v.ostream(e))(r.cts); 
               }
             }
           }         
         }
-        return dtc::Stream::DEFAULT;
+        return dtc::Event::DEFAULT;
       }
     );
   }
 
-  G.container().add(A).num_cpus(1);
+  G.container().add(A).cpu(1);
 
   dtc::Executor(G).run(); 
 
