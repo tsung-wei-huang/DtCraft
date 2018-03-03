@@ -6,6 +6,7 @@
 3. Added basic machine learning library.
 4. Bug fixes and performance improvements.
 5. Improved the report format.
+6. Modify the website.
 
 ### Added
 - [configure.ac] Added dtcraft.engine@gmail.come and website.
