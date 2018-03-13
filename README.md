@@ -3,7 +3,9 @@
 # What's DtCraft?
 DtCraft is a C++-based programming engine to streamline cluster computing. It offers a new powerful programming model called *stream graph* to describe a parallel and distributed workload in terms of streams. Once an application is cast into this framework, the kernel transparently performs the job execution, process communication, and concurrency controls for you. You don't have to worry about DevOps and can focus on high-level development.
 
-<p align="center"><img src="http://dtcraft.web.engr.illinois.edu/images/stream_graph.jpg" width="50%"></p>
+
+|![](http://dtcraft.web.engr.illinois.edu/images/stream_graph.jpg)  |  ![](http://dtcraft.web.engr.illinois.edu/images/stream_graph_code.png)|
+|---|---|
 
 # Design Goal
 The goal of DtCraft is to help you write simple, easy, and effective code at cluster scale. The example below demonstrates a simple application to run two programs on two machines sending each other a message.
