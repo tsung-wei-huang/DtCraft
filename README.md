@@ -52,6 +52,12 @@ There are myriads of cluster computing frameworks such as Hadoop MapReduce, Apac
 
 - **Productivity**. DtCraft allows you to easily bring up a parallel and distributed workload in only a few lines of code. It takes only a few steps to set up a cluster to get things up and running.
 
+# System Requirements
+To install and run DtCraft, you only need the following:
+- 64-bit Linux machine(s) with Kernel 3.8 or higher
+- GNU C++ Compiler G++ v7.2 with -std=c++1z
+- GNU Autotool (autoconf, automake, libtool)
+
 # Learn More
 + <a href="http://dtcraft.web.engr.illinois.edu/">Official website</a>
 + <a href="http://dtcraft.web.engr.illinois.edu/papers/iccad17_paper.pdf">DtCraft ICCAD17 paper</a>
