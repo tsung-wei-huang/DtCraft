@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
 
 There are myriads of cluster computing frameworks such as Hadoop MapReduce, Apache Spark, Dryad, and Ray. We believe each has its reason to exist. DtCraft targets at:
 
-- **Programming model**. DtCraft leverages modern C++17 to develop a new programming model for cluster computing. Our model is very general and can implement most distributed computing patterns.
+- **Programming model**. DtCraft leverages modern C++17 to offer a new programming model for cluster computing. Our model is very general and can implement most distributed computing patterns.
 
 - **Performance**. DtCraft is designed completely from the ground up using advanced software techniques in order to deliver the best performance. 
 
