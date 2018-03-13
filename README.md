@@ -6,7 +6,7 @@ DtCraft is a C++-based programming engine to streamline cluster computing. It of
 <p align="center"><img src="http://dtcraft.web.engr.illinois.edu/images/stream_graph.jpg" width="50%"></p>
 
 ## Design Goal
-The goal of DtCraft is to help you write simple, easy, and effective parallel and distributed code. The example below demonstrates a simple application to run two programs sending each other a message.
+The goal of DtCraft is to help you write simple, easy, and effective code at cluster scale. The example below demonstrates a simple application to run two programs sending each other a message.
 
 ```cpp
 #include <dtc/dtc.hpp>
