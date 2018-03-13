@@ -1,11 +1,11 @@
 <img src="https://github.com/twhuang-uiuc/DtCraft/blob/master/logo.jpg" width="50%">
 
-## What's DtCraft?
+# What's DtCraft?
 DtCraft is a C++-based programming engine to streamline cluster computing. It offers a new powerful programming model called *stream graph* to describe a parallel and distributed workload in terms of streams. Once an application is cast into this framework, the kernel transparently performs the job execution, process communication, and concurrency controls for you. You don't have to worry about DevOps and can focus on high-level development.
 
 <p align="center"><img src="http://dtcraft.web.engr.illinois.edu/images/stream_graph.jpg" width="50%"></p>
 
-## Design Goal
+# Design Goal
 The goal of DtCraft is to help you write simple, easy, and effective code at cluster scale. The example below demonstrates a simple application to run two programs on two machines sending each other a message.
 
 ```cpp
@@ -50,5 +50,11 @@ There are myriads of cluster computing frameworks such as Hadoop MapReduce, Apac
 
 - **Productivity**. DtCraft allows you to easily bring up a parallel and distributed workload in only a few lines of code. It takes only a few steps to set up a cluster to get things up and running.
 
-## Learn More about DtCraft
-Please visit the official <a href="http://dtcraft.web.engr.illinois.edu/">website</a> to learn more about DtCraft.
+# Learn More about DtCraft
++ <a href="http://dtcraft.web.engr.illinois.edu/">Official website</a>
++ <a href="http://dtcraft.web.engr.illinois.edu/papers/iccad17_paper.pdf">DtCraft ICCAD17 paper</a>
+
+# Get Involved in DtCraft
++ Ask questions on our mailing list 
++ Report bugs/issues by submitting a <a href="https://github.com/twhuang-uiuc/DtCraft/issues">GitHub issue</a>.
++ Submit contributions using <a href="https://github.com/twhuang-uiuc/DtCraft/pulls">pull requests<a>.
