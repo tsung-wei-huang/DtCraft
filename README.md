@@ -48,7 +48,7 @@ There are myriads of cluster computing frameworks such as Hadoop MapReduce, Apac
 
 - **Performance**. DtCraft is designed completely from the ground up using advanced software techniques in order to deliver the best performance. 
 
-- **Productivity**. DtCraft allows you to easily bring up a parallel and distributed workload in only a few lines of code. It takes only a few steps to set up a cluster and get things up and running.  
+- **Productivity**. DtCraft allows you to easily bring up a parallel and distributed workload in only a few lines of code. It takes only a few steps to set up a cluster to get things up and running.
 
 ## Learn More about DtCraft
 Please visit the official <a href="http://dtcraft.web.engr.illinois.edu/">website</a> to learn more about DtCraft.
