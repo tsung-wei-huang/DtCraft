@@ -13,6 +13,8 @@ Whether you are application developers or domain-specific engineers, you can use
 - Network programming
 - Data stream processing
 
+To get your first DtCraft program up and running, visit <a href="http://dtcraft.web.engr.illinois.edu/quickstart.html">QuickStart</a> and <a href="http://dtcraft.web.engr.illinois.edu/write_the_first_dtcraft_program.html">Write the First DtCraft Program</a>.
+
 # Design Goals
 The goal of DtCraft is to help you write simple, easy, and effective code at cluster scale. The example below demonstrates a simple application to run two programs on two machines sending each other a message.
 
