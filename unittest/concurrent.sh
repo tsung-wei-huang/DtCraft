@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/concurrent -d yes
+timeout 5m ./unittest/concurrent -d yes

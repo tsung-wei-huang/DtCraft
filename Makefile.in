@@ -793,11 +793,12 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/cell/feeder/socket.hpp include/dtc/cell/ml/dnn.hpp \
 	include/dtc/cell/operator.hpp include/dtc/cell/visitor.hpp \
 	include/dtc/event/reactor.hpp include/dtc/event/select.hpp \
-	include/dtc/event/epoll.hpp include/dtc/event/event.hpp \
-	include/dtc/ipc/notifier.hpp include/dtc/ipc/streambuf.hpp \
-	include/dtc/ipc/domain.hpp include/dtc/ipc/pipe.hpp \
-	include/dtc/ipc/fifo.hpp include/dtc/ipc/ipc.hpp \
-	include/dtc/ipc/shm.hpp include/dtc/ipc/socket.hpp \
+	include/dtc/event/demux.hpp include/dtc/event/epoll.hpp \
+	include/dtc/event/event.hpp include/dtc/ipc/notifier.hpp \
+	include/dtc/ipc/streambuf.hpp include/dtc/ipc/domain.hpp \
+	include/dtc/ipc/pipe.hpp include/dtc/ipc/fifo.hpp \
+	include/dtc/ipc/ipc.hpp include/dtc/ipc/shm.hpp \
+	include/dtc/ipc/ios.hpp include/dtc/ipc/socket.hpp \
 	include/dtc/headerdef.hpp include/dtc/utility/os.hpp \
 	include/dtc/utility/allocator.hpp \
 	include/dtc/utility/table.hpp \
@@ -808,7 +809,7 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/utility/hash.hpp include/dtc/utility/lambda.hpp \
 	include/dtc/utility/literals.hpp \
 	include/dtc/utility/lexical_cast.hpp \
-	include/dtc/utility/singleton.hpp \
+	include/dtc/utility/singleton.hpp include/dtc/utility/json.hpp \
 	include/dtc/utility/utility.hpp include/dtc/utility/ios.hpp \
 	include/dtc/utility/chrono.hpp include/dtc/utility/uuid.hpp \
 	include/dtc/utility/logger.hpp include/dtc/ml/mnist.hpp \
@@ -1127,13 +1128,13 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/Eigen/PaStiXSupport include/dtc/Eigen/SPQRSupport \
 	include/dtc/Eigen/QtAlignedMalloc \
 	include/dtc/Eigen/MetisSupport include/dtc/json/json.hpp \
-	include/dtc/macrodef.hpp include/dtc/kernel/executor.hpp \
-	include/dtc/kernel/manager.hpp include/dtc/kernel/vertex.hpp \
-	include/dtc/kernel/graph.hpp include/dtc/kernel/scheduler.hpp \
-	include/dtc/kernel/master.hpp include/dtc/kernel/container.hpp \
-	include/dtc/kernel/agent.hpp include/dtc/kernel/cgroup.hpp \
-	include/dtc/kernel/stream.hpp include/dtc/policy.hpp \
-	include/dtc/webui/webui.hpp
+	include/dtc/macrodef.hpp include/dtc/utility.hpp \
+	include/dtc/kernel/executor.hpp include/dtc/kernel/manager.hpp \
+	include/dtc/kernel/vertex.hpp include/dtc/kernel/graph.hpp \
+	include/dtc/kernel/scheduler.hpp include/dtc/kernel/master.hpp \
+	include/dtc/kernel/container.hpp include/dtc/kernel/agent.hpp \
+	include/dtc/kernel/cgroup.hpp include/dtc/kernel/stream.hpp \
+	include/dtc/policy.hpp include/dtc/webui/webui.hpp
 dist_bin_SCRIPTS = 
 dist_pkglibexec_SCRIPTS = 
 nobase_dist_pkgdata_DATA = 

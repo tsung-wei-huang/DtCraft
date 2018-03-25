@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/traits -d yes
+timeout 5m ./unittest/traits -d yes

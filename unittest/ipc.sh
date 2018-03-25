@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/ipc -d yes
+timeout 5m ./unittest/ipc -d yes

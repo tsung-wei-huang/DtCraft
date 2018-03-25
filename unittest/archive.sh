@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/archive -d yes
+timeout 5m ./unittest/archive -d yes

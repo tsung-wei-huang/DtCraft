@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/reactor -d yes
+timeout 5m ./unittest/reactor -d yes

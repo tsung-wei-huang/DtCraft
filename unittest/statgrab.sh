@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/statgrab -d yes
+timeout 5m ./unittest/statgrab -d yes

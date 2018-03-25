@@ -11,14 +11,11 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef DTC_IPC_DEVICE_HPP_
-#define DTC_IPC_DEVICE_HPP_
+#ifndef DTC_DEVICE_HPP_
+#define DTC_DEVICE_HPP_
 
-#include <unistd.h>
-#include <memory>
-#include <exception>
-#include <cassert>
-#include <dtc/utility/os.hpp>
+#include <dtc/headerdef.hpp>
+#include <dtc/utility/utility.hpp>
 #include <dtc/static/logger.hpp>
 
 namespace dtc {
@@ -45,9 +42,6 @@ class Device {
     std::streamsize purge(void*, std::streamsize) const;
     std::streamsize write(const void*, std::streamsize) const;
     std::streamsize flush(const void*, std::streamsize) const;
-    
-    void strong_read(void*, std::streamsize) const;
-    void strong_write(const void*, std::streamsize) const;
     
     inline int fd() const;
     

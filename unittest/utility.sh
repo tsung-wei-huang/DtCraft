@@ -1,3 +1,3 @@
 #!/bin/bash
 
-timeout 1m ./unittest/utility -d yes
+timeout 5m ./unittest/utility -d yes
