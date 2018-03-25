@@ -19,21 +19,42 @@
 
 namespace dtc {
 
+enum class SubsystemType : int {
+  BLKIO = 0,
+  CPU,
+  CPUACCT,
+  CPUSET,
+  DEVICES,
+  FREEZER,
+  MEMORY,
+  NET_CLS,
+  NET_PRIO,
+  NUM_SUBSYSTEMS
+};
+
+struct Subsystem {
+  Subsystem(const std::string& in_mount) : name {in_mount} {}
+  const std::string name;
+  std::filesystem::path mount;
+};
+
+std::array<Subsystem, static_cast<int>(SubsystemType::NUM_SUBSYSTEMS)>& __subsystems__();
+
+// ------------------------------------------------------------------------------------------------
+
 // Class: Container
 class Container {
 
   friend class Agent;
 
   struct ChildArgument {
-
     const pb::Topology& topology;
-    
-    int sync[2] = {-1, -1};
+    std::shared_ptr<Socket> sync[2];
   };
 
   public:
     
-    Container() = default;
+    Container(const std::filesystem::path&);
     Container(const Container&) = delete;
     Container(Container&&);
     
@@ -47,13 +68,17 @@ class Container {
     inline auto pid() const;
     inline auto status() const;
     
-    void memory_limit_in_bytes(const size_t) const;
-    void exec2(const pb::Topology&);
+    void spawn(const pb::Topology&);
     void kill();
-    void kill(std::error_code&) noexcept;
-    void exec(const pb::Topology&);
     void wait();
-    void wait(std::error_code&) noexcept;
+    void reap(bool);
+    void memory_limit_in_bytes(uintmax_t) const;
+    void memory_oom_control(bool) const;
+
+    uintmax_t cpuacct_usage() const;
+    uintmax_t memory_limit_in_bytes() const;
+		uintmax_t memory_usage_in_bytes() const;
+		uintmax_t memory_max_usage_in_bytes() const;
 
   private:
     
@@ -62,9 +87,12 @@ class Container {
 
     std::unique_ptr<char[]> _stack;
 
+    std::filesystem::path _cgroup;
+
     static int _entrypoint(void*);
 
     void _write(const std::filesystem::path&, std::string_view) const;
+    std::string _read(const std::filesystem::path&) const;
 };
 
 // Function: pid

@@ -23,8 +23,14 @@ namespace dtc::pb {
 struct TaskInfo {
 
   TaskID task_id;
+
   std::string agent;
-  int status;
+
+  int status {-1};
+
+  uintmax_t elapsed_time {0};
+  uintmax_t memory_limit {0};
+  uintmax_t memory_usage {0};
 
   TaskInfo(const TaskID&, std::string_view, int);
   TaskInfo() = default;
@@ -42,7 +48,7 @@ struct TaskInfo {
 
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT& ar) {
-    return ar(task_id, agent, status); 
+    return ar(task_id, agent, status, elapsed_time, memory_limit, memory_usage); 
   }
 
 };

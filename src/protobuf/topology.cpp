@@ -21,6 +21,45 @@ namespace dtc::pb {
 Topology::Container::Container(key_type in_key) : key {in_key} {
 } 
 
+// Procedure: host
+void Topology::Container::host(std::string h) {
+  configs["host"] = std::move(h);
+}
+
+// Procedure: preferred_host
+void Topology::Container::preferred_host(std::string h) {
+  configs["preferred_hosts"] += (std::move(h) + ' ');
+}
+
+// Function: host
+std::string Topology::Container::host() const {
+  if(auto itr = configs.find("host"); itr == configs.end()) {
+    return ""; 
+  }
+  else return itr->second;
+}
+
+// Function: preferred_host
+std::vector<std::string> Topology::Container::preferred_hosts() const {
+
+  std::vector<std::string> hosts;
+
+  if(auto itr = configs.find("preferred_hosts"); itr != configs.end()) {
+    
+    const static std::regex ws_re("\\s+|\\n+|\\t+"); 
+    
+    auto beg = std::sregex_token_iterator(itr->second.begin(), itr->second.end(), ws_re, -1);
+    auto end = std::sregex_token_iterator();
+    
+    while(beg != end) {
+      hosts.push_back(beg->str());
+      beg++;
+    }
+  }
+
+  return hosts;
+}
+
 //-------------------------------------------------------------------------------------------------
 
 // Constructor

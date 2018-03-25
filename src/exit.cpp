@@ -23,7 +23,19 @@ std::string status_to_string(int status) {
     switch(auto code = WEXITSTATUS(status); code) {
 
       case EXIT_SUCCESS:
-        return "exited successfully";
+        return "exited ok";
+      break;
+      
+      case EXIT_MASTER_FAILED:
+        return "failed to launch the master";
+      break;
+
+      case EXIT_AGENT_FAILED:
+        return "failed to launch the agent";
+      break;
+
+      case EXIT_EXECUTOR_FAILED:
+        return "failed to launch the executor";
       break;
 
       case EXIT_BROKEN_CONNECTION:
@@ -34,12 +46,12 @@ std::string status_to_string(int status) {
         return "critical stream reached";
       break;
       
-      case EXIT_CONTAINER_EXEC_FAILED:
-        return "container exec failed";
+      case EXIT_CONTAINER_SPAWN_FAILED:
+        return "container failed";
       break;
       
-      case EXIT_VERTEX_EXEC_FAILED:
-        return "vertex exec failed";
+      case EXIT_VERTEX_PROGRAM_FAILED:
+        return "vertex program failed";
       break;
 
       case EXIT_FAILURE:
@@ -52,10 +64,10 @@ std::string status_to_string(int status) {
     };
   }
   else if(WIFSIGNALED(status)) {
-    return "signaled "s + strsignal(WTERMSIG(status));
+    return ::strsignal(WTERMSIG(status));
   }
   else {
-    return "unknow status";
+    return "error";
   }
 }
 

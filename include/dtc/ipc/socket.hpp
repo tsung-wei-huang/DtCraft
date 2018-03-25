@@ -115,6 +115,7 @@ std::shared_ptr<Socket> make_socket_server(std::string_view);
 std::shared_ptr<Socket> make_socket_client(std::string_view, std::string_view);
 
 std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_socket_pair();
+std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_sync_socket_pair();
 std::tuple<int, int> make_socket_pair_raw();
 
 //void redirect_to_socket(int, std::string_view, std::string_view);

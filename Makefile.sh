@@ -175,6 +175,8 @@ echo "EXTRA_DIST += conf"
 echo "EXTRA_DIST += sbin"
 echo "EXTRA_DIST += webui"
 echo "EXTRA_DIST += benchmark"
+echo "EXTRA_DIST += README.md"
+echo "EXTRA_DIST += LICENSE"
 #echo "EXTRA_DIST += 3rd-party"
 echo ""
 

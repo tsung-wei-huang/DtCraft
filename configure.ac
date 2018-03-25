@@ -2,7 +2,7 @@
 #AC_PREREQ([2.68])
 
 # AC_INIT([package], [version], [bug-report], [tarname], [url])
-AC_INIT([DtCraft], [0.2.2], [dtcraft.engine@gmail.com],
+AC_INIT([DtCraft], [0.2.3], [dtcraft.engine@gmail.com],
         [DtCraft], [http://dtcraft.web.engr.illinois.edu/])
 
 # Project-specific macros.

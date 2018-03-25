@@ -84,18 +84,18 @@ TEST_CASE("Utility.literals") {
   using namespace dtc::literals;
   
   // Byte as baseline.
-  static_assert(1_KB == 1000);
-  static_assert(1_MB == 1000000);
-  static_assert(1_GB == 1000000000);
+  static_assert(1_KB == 1024);
+  static_assert(1_MB == 1024*1024);
+  static_assert(1_GB == 1024*1024*1024);
 
   // KB as baseline
-  static_assert(1000 == 1_KB);
-  static_assert(1_MB == 1000_KB);
-  static_assert(1_GB == 1000000_KB);
+  static_assert(1024 == 1_KB);
+  static_assert(1_MB == 1024_KB);
+  static_assert(1_GB == 1048576_KB);
 
   // MB as baseline
-  static_assert(1000000 == 1_MB);
-  static_assert(1_GB == 1000_MB);
+  static_assert(1048576 == 1_MB);
+  static_assert(1_GB == 1024_MB);
 
 }
 

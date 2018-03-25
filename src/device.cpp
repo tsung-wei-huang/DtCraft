@@ -17,7 +17,7 @@ namespace dtc {
 
 // Constructor.
 Device::Device(int fd) : _fd {fd} {
-  assert(is_fd_nonblocking(fd) && is_fd_close_on_exec(fd));
+  //assert(is_fd_nonblocking(fd) && is_fd_close_on_exec(fd));
 }
 
 // Destructor

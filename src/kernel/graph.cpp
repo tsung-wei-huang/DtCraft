@@ -163,39 +163,14 @@ ContainerBuilder& ContainerBuilder::cpu(uintmax_t n) {
 // Function: host
 ContainerBuilder& ContainerBuilder::host(std::string host) {
   _graph->_tasks.emplace_back(
-    [host=std::move(host), c=key] (pb::Topology* tpg) {
+    [host=std::move(host), c=key] (pb::Topology* tpg) mutable {
       if(tpg && tpg->topology == -1) {
-        tpg->containers.at(c).configs["host"] = host;
+        tpg->containers.at(c).host(std::move(host));
       }
     }
   );
   return *this;
 }
-
-// Function: preferred_host
-ContainerBuilder& ContainerBuilder::preferred_host(std::string host) {
-  _graph->_tasks.emplace_back(
-    [host=std::move(host), c=key] (pb::Topology* tpg) {
-      if(tpg && tpg->topology == -1) {
-        tpg->containers.at(c).configs["preferred_host"] += (host + ' ');
-      }
-    }
-  );
-  return *this;
-}
-
-//// Function: rootfs
-//ContainerBuilder& ContainerBuilder::rootfs(const std::filesystem::path& path) {
-//  _graph->_tasks.emplace_back(
-//    [path, c=key] (pb::Topology* tpg) {
-//      // We only initiate the resource container for submit mode.
-//      if(tpg && tpg->topology == -1) {
-//        tpg->containers.at(c).configs["rootfs"] = path;
-//      }
-//    }
-//  );
-//  return *this;
-//}
 
 //-------------------------------------------------------------------------------------------------
 // ProberBuilder

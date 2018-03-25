@@ -11,29 +11,15 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef DTC_EXIT_HPP_
-#define DTC_EXIT_HPP_
+#ifndef DTC_ML_NAIVE_BAYES_HPP_
+#define DTC_ML_NAIVE_BAYES_HPP_
 
-#include <iostream>
-#include <string>
-#include <cstring>
-#include <cstdio>
+#include <dtc/headerdef.hpp>
 
 namespace dtc {
 
-constexpr int EXIT_MASTER_FAILED = 100;
-constexpr int EXIT_AGENT_FAILED = 101;
-constexpr int EXIT_EXECUTOR_FAILED = 102;
-constexpr int EXIT_BROKEN_CONNECTION = 110;
-constexpr int EXIT_CRITICAL_STREAM = 111;
-constexpr int EXIT_CONTAINER_SPAWN_FAILED = 112;
-constexpr int EXIT_VERTEX_PROGRAM_FAILED = 113;
 
 
-std::string status_to_string(int);
-
-};  // End of namespace dtc. ----------------------------------------------------------------------
-
+};  // end of namespace dtc.
 
 #endif
-

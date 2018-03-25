@@ -70,7 +70,7 @@ void TableBuilder::_set_widths() {
 void TableBuilder::_set_alignments() {
   for(size_t i = 0; i < num_columns(); ++i) {
     if(_alignments.find(i) == _alignments.end()) {
-      _alignments[i] = Alignment::LEFT;
+      _alignments[i] = Alignment::RIGHT;
     }
   }
 }

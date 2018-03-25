@@ -3,12 +3,119 @@
 
 namespace dtc {
 
+// Cgroup utility
+std::array<Subsystem, static_cast<int>(SubsystemType::NUM_SUBSYSTEMS)>& __subsystems__() {
+
+  static std::array<Subsystem, static_cast<int>(SubsystemType::NUM_SUBSYSTEMS)> __subsystems {
+    Subsystem("blkio"),
+    Subsystem("cpu"),
+    Subsystem("cpuacct"),
+    Subsystem("cpuset"),
+    Subsystem("devices"),
+    Subsystem("freezer"),
+    Subsystem("memory"),
+    Subsystem("net_cls"),
+    Subsystem("net_prio")
+  };
+
+  static std::once_flag _once_flag;
+  
+  // Initialize the control group data structures.
+  std::call_once(_once_flag, [] () {
+
+    // Assertion
+    if(!std::filesystem::exists("/proc/mounts")) {
+      LOGF("/proc/mounts not found.");
+    }
+
+    // Extract all mounted paths.
+    auto mifs = fopen("/proc/mounts", "re");
+    
+    struct mntent mntent;
+    struct mntent* mptr {nullptr};
+    char mntent_buffer[4*FILENAME_MAX];
+    
+    while ((mptr = getmntent_r(mifs, &mntent, mntent_buffer, sizeof(mntent_buffer)))) {
+
+      if(strcmp(mptr->mnt_type, "cgroup")) {
+        continue;
+      }
+
+      if(hasmntopt(mptr, "blkio")) {
+        __subsystems[static_cast<int>(SubsystemType::BLKIO)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "cpu")) {
+        __subsystems[static_cast<int>(SubsystemType::CPU)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "cpuacct")) {
+        __subsystems[static_cast<int>(SubsystemType::CPUACCT)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "cpuset")) {  
+        __subsystems[static_cast<int>(SubsystemType::CPUSET)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "devices")) {
+        __subsystems[static_cast<int>(SubsystemType::DEVICES)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "freezer")) {
+        __subsystems[static_cast<int>(SubsystemType::FREEZER)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "memory")) {
+        __subsystems[static_cast<int>(SubsystemType::MEMORY)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "net_cls")) {
+        __subsystems[static_cast<int>(SubsystemType::NET_CLS)].mount = mptr->mnt_dir;
+      }
+
+      if(hasmntopt(mptr, "net_prio")) {
+        __subsystems[static_cast<int>(SubsystemType::NET_PRIO)].mount = mptr->mnt_dir;
+      }
+    }
+		
+    fclose(mifs);
+  });
+
+  return __subsystems;
+}
+
+
 // ------------------------------------------------------------------------------------------------
+
+// Procedure: mount_cgroup
+Container::Container(const std::filesystem::path& cgroup) : 
+  _cgroup {cgroup} {
+
+  for(const auto& s : __subsystems__()) {
+    if(std::filesystem::exists(s.mount / _cgroup)) {
+      std::filesystem::remove(s.mount / _cgroup); 
+    }
+    std::filesystem::create_directories(s.mount / _cgroup);
+  }
+}
+
 
 // Destructor
 Container::~Container() {
-  if(_pid != -1) {
-    LOGF("Destructing container while process ", _pid, " is running");
+
+  assert(_pid == -1);
+
+  if(!_cgroup.empty()) {
+    try {
+      for(const auto& s : __subsystems__()) {
+        if(std::filesystem::exists(s.mount / _cgroup)) {
+          std::filesystem::remove(s.mount / _cgroup); 
+        }
+      }
+    }
+    catch(const std::exception& e) {
+      LOGE("Failed to destroy container (", e.what(), ")");
+    }
   }
 }
 
@@ -16,7 +123,8 @@ Container::~Container() {
 Container::Container(Container&& rhs) :
   _pid    {rhs._pid},
   _status {rhs._status},
-  _stack  {std::move(rhs._stack)} {
+  _stack  {std::move(rhs._stack)},
+  _cgroup {std::move(rhs._cgroup)} {
   
   rhs._pid = -1;
   rhs._status = -1;
@@ -36,32 +144,45 @@ Container& Container::operator = (Container&& rhs) {
   // Stack
   _stack = std::move(rhs._stack);
 
+  // Cgroup
+  _cgroup = std::move(rhs._cgroup);
+
   return *this;
 }
 
 // Function: _entrypoint
 int Container::_entrypoint(void* arg) {
 
-  const auto& C = *(static_cast<ChildArgument*>(arg)); 
+  auto& C = *(static_cast<ChildArgument*>(arg)); 
   
   // Close the parent-side communication.
-  ::close(C.sync[0]);
+  C.sync[0].reset();
       
   //printf("Child waiting for parent to finish uid/gid mapping\n");
-  //if(int i=0; ::read(C.sync[1], &i, sizeof(int)) != sizeof(int)) {
-  //  ::close(C.sync[1]);
-  //  throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the parent");
-  //}
+  if(int i=0; ::read(C.sync[1]->fd(), &i, sizeof(int)) != sizeof(int)) {
+    LOGE("Failed to sync with the parent (", strerror(errno), ")");
+    return EXIT_CONTAINER_SPAWN_FAILED;
+  }
   
   // Here we must check whether pid/uid is set correctly by the master program.
   //std::cout << getuid() << " ----------------------- " << getgid() << " ---------- " << getpid() << '\n';
   //assert(geteuid() == 0 && getegid() == 0);
 
-  // TODO (Chun-Xun)
   //printf("ready to execve\n");
-  ::mount(nullptr, "/proc", "proc", 0, nullptr);
-  ::mount(nullptr, "/sys", "sysfs", 0, nullptr);
-  ::mount(nullptr, std::filesystem::temp_directory_path().c_str(), "tmpfs", 0, nullptr);
+  if(::mount(nullptr, "/proc", "proc", 0, nullptr) == -1) {
+    LOGE("Failed to cmount /proc (", strerror(errno), ")");
+    return EXIT_CONTAINER_SPAWN_FAILED;
+  }
+
+  if(::mount(nullptr, "/sys", "sysfs", 0, nullptr) == -1) {
+    LOGE("Failed to cmount /sys (", strerror(errno), ")");
+    return EXIT_CONTAINER_SPAWN_FAILED;
+  }
+
+  if(::mount(nullptr, std::filesystem::temp_directory_path().c_str(), "tmpfs", 0, nullptr) == -1) {
+    LOGE("Failed to mount ", std::filesystem::temp_directory_path(), "(", strerror(errno), ")");
+    return EXIT_CONTAINER_SPAWN_FAILED;
+  }
 
   // Initialize container attributes.
   ::execve(
@@ -70,25 +191,12 @@ int Container::_entrypoint(void* arg) {
     C.topology.runtime.c_envp().get()
   );  
       
-  if(int e=errno; ::write(C.sync[1], &e, sizeof(e)) != sizeof(e)) {
-    ::close(C.sync[1]);
-    throw std::system_error(make_posix_error_code(e), "Child failed to exec");
+  if(int e=errno; ::write(C.sync[1]->fd(), &e, sizeof(e)) != sizeof(e)) {
+    LOGE("Failed to exec (", strerror(e), ")");
+    return EXIT_CONTAINER_SPAWN_FAILED;
   }
 
-  ::close(C.sync[1]);
-
-  return EXIT_CONTAINER_EXEC_FAILED;
-}
-
-// Function: _write
-void Container::_write(const std::filesystem::path& path, std::string_view value) const {
-  if(std::ofstream ofs(path); ofs.good()) {
-    // Notice that the cgroup file doesn't allow std::endl.
-    ofs << value;
-  }
-  else {
-    LOGE("Container failed to write ", value, " to ", path);
-  }
+  return EXIT_CONTAINER_SPAWN_FAILED;
 }
 
 // Function: alive
@@ -100,18 +208,16 @@ bool Container::alive() const {
   return ::kill(_pid, 0) == 0 || errno == EPERM;
 }
 
-// Procedure: exec2
-void Container::exec2(const pb::Topology& tpg) {
+// Procedure: spawn
+void Container::spawn(const pb::Topology& tpg) {
   
   if(_pid != -1) {
-    throw std::system_error(make_posix_error_code(EAGAIN), "Double forked");
+    DTC_THROW("Container already spawned");
   }
 
   ChildArgument C{tpg};
 
-  if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, C.sync) == -1) {
-    throw std::system_error(make_posix_error_code(errno), "Container failed to creatd socket pair");
-  }
+  std::tie(C.sync[0], C.sync[1]) = make_sync_socket_pair();
   
   constexpr size_t STACK_SIZE = 1024*1024;
 
@@ -125,12 +231,18 @@ void Container::exec2(const pb::Topology& tpg) {
   );
     
   // Close the child side communication channel.
-  ::close(C.sync[1]);
+  C.sync[1].reset();
+  //::close(C.sync[1]);
 
   // Clone failed.
   if(_pid == -1) {
-    ::close(C.sync[0]);
+    //::close(C.sync[0]);
     throw std::system_error(make_posix_error_code(errno), "Clone failed");
+  }
+
+  // Enable the cgroup.
+  for(const auto& s : __subsystems__()) {
+    _write(s.mount / _cgroup / "tasks", std::to_string(_pid));
   }
   
   // Write uid and gid mapping.
@@ -139,30 +251,21 @@ void Container::exec2(const pb::Topology& tpg) {
   //_write(path / "uid_map", "0 0 1");
   //_write(path / "gid_map", "0 0 1");
 
-  //// Move the process to control group.
-  //_group(_pid);
-
   // Synchronize with child
   //printf("parent done with uid/gid mapping, synchronizing with child %d\n", _pid);
-  //if(int i=0; ::write(C.sync[0], &i, sizeof(int)) != sizeof(int)) {
-  //  ::close(C.sync[0]);
-  //  throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the child");
-  //}
+  if(int i=0; ::write(C.sync[0]->fd(), &i, sizeof(int)) != sizeof(int)) {
+    throw std::system_error(make_posix_error_code(errno), "Failed to synchronize with the child");
+  }
 
   //printf("parent synchronize with child exec %d\n", _pid);
-  if(int e=0; ::read(C.sync[0], &e, sizeof(e)) != 0) {
-    ::close(C.sync[0]);
+  if(int e=0; ::read(C.sync[0]->fd(), &e, sizeof(e)) != 0) {
     assert(::waitpid(_pid, &_status, 0) == _pid);
     _pid = -1;
     throw std::system_error(make_posix_error_code(e), "Exec failed");
   }
-  
-  //printf("Done exec %d\n", _pid);
-
-  ::close(C.sync[0]);
 }
 
-// Procedure: exec
+/*// Procedure: exec
 void Container::exec(const pb::Topology& tpg) {
 
   if(_pid != -1) {
@@ -185,7 +288,7 @@ void Container::exec(const pb::Topology& tpg) {
       ::execve(tpg.runtime.c_file().get(), tpg.runtime.c_argv().get(), tpg.runtime.c_envp().get());
       int e = errno;
       assert(::write(fd[1], &e, sizeof(e)) == sizeof(e));
-      std::exit(EXIT_CONTAINER_EXEC_FAILED);
+      std::exit(EXIT_CONTAINER_SPAWN_FAILED);
     }
     // Case 3: parent (parent scope)
     else {
@@ -199,7 +302,7 @@ void Container::exec(const pb::Topology& tpg) {
       ::close(fd[0]);
     }
   }
-}
+}*/
 
 // Function: wait a process
 void Container::wait() {
@@ -210,7 +313,7 @@ void Container::wait() {
   }
   
   // Reap the process.
-  int r;
+  int r {-1};
 
   do {
     r = ::waitpid(_pid, &_status, 0);
@@ -229,6 +332,74 @@ void Container::kill() {
   if(_pid != -1 && ::kill(_pid, SIGKILL) == -1) {
     throw std::system_error(make_posix_error_code(errno), "Failed to kill");
   }
+}
+
+// Function: _write
+void Container::_write(const std::filesystem::path& path, std::string_view value) const {
+  if(std::ofstream ofs(path); ofs.good()) {
+    // Notice that the cgroup file doesn't allow std::endl.
+    ofs << value;
+  }
+  else {
+    LOGE("Container failed to write ", value, " to ", path);
+  }
+}
+
+// Function: _read
+std::string Container::_read(const std::filesystem::path& path) const {
+	if(std::ifstream ifs(path); ifs.good()) {
+    std::ostringstream oss;
+    oss << ifs.rdbuf();
+    return oss.str();
+  }
+	else {
+    LOGE("Failed to open ", path);
+    return "";
+	}
+}
+
+// Function: memory_oom_control
+void Container::memory_oom_control(bool value) const {
+  _write(
+    __subsystems__()[static_cast<int>(SubsystemType::MEMORY)].mount / _cgroup / "memory.oom_control", 
+    value ? "1" : "0"
+  );
+}
+
+// Function: memory_limit_in_bytes
+void Container::memory_limit_in_bytes(uintmax_t value) const {
+  _write(
+    __subsystems__()[static_cast<int>(SubsystemType::MEMORY)].mount / _cgroup / "memory.limit_in_bytes", 
+    std::to_string(value)
+  );
+}
+
+// Function: memory_limit_in_bytes
+uintmax_t Container::memory_limit_in_bytes() const {
+	return std::stoull(_read(
+    __subsystems__()[static_cast<int>(SubsystemType::MEMORY)].mount / _cgroup / "memory.limit_in_bytes"
+  ));
+}
+
+// Function: memory_usage_in_bytes
+uintmax_t Container::memory_usage_in_bytes() const {
+	return std::stoull(_read(
+    __subsystems__()[static_cast<int>(SubsystemType::MEMORY)].mount / _cgroup / "memory.usage_in_bytes"
+  ));
+}
+
+// Function: memory_max_usage_in_bytes
+uintmax_t Container::memory_max_usage_in_bytes() const {
+	return std::stoull(_read(
+    __subsystems__()[static_cast<int>(SubsystemType::MEMORY)].mount / _cgroup / "memory.max_usage_in_bytes"
+  ));
+}
+
+// Function: cpuacct_usage
+uintmax_t Container::cpuacct_usage() const {
+	return std::stoull(_read(
+    __subsystems__()[static_cast<int>(SubsystemType::CPUACCT)].mount / _cgroup / "cpuacct.usage"
+  ));
 }
 
 //-------------------------------------------------------------------------------------------------

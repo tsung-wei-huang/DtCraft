@@ -84,7 +84,7 @@ void online() {
 
   src.duration(1ms).frequency(1000);
 
-  auto dnn = G.insert<dtc::cell::Visitor2x1>(
+  auto dnn = G.insert<dtc::cell::Visitor1x1>(
     [] (dtc::ml::DnnClassifier& c) {
       dtc::cout("Creating a dnn classifier [784x30x10]\n").flush();
       c.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
@@ -98,13 +98,10 @@ void online() {
         ((labels-c.infer(images)).array() == 0).count() / static_cast<float>(images.rows()), '\n'
       ).flush();
       c.train(images, labels, 10, 64, 0.01f, [](){});
-    },
-    [] (dtc::ml::DnnClassifier& c, int) {
-
     }
   );
   
-  dnn.in1(src.out());
+  dnn.in(src.out());
 
   G.container().add(dnn);
   G.container().add(src);

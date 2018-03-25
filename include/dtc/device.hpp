@@ -46,6 +46,9 @@ class Device {
     std::streamsize write(const void*, std::streamsize) const;
     std::streamsize flush(const void*, std::streamsize) const;
     
+    void strong_read(void*, std::streamsize) const;
+    void strong_write(const void*, std::streamsize) const;
+    
     inline int fd() const;
     
     Device(const Device&) = delete;

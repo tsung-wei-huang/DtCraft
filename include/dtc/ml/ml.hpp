@@ -16,6 +16,7 @@
 
 #include <dtc/ml/linear.hpp>
 #include <dtc/ml/dnn.hpp>
+#include <dtc/ml/naive_bayes.hpp>
 #include <dtc/ml/mnist.hpp>
 
 #endif

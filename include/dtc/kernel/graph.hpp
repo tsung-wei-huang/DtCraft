@@ -61,7 +61,7 @@ class Graph {
     
     VertexBuilder vertex();
     StreamBuilder stream(key_type, key_type);
-		StreamBuilder stream(PlaceHolder&, key_type);
+    StreamBuilder stream(PlaceHolder&, key_type);
     StreamBuilder stream(key_type, PlaceHolder&);
     ContainerBuilder container();
     ProberBuilder prober(key_type);
@@ -215,8 +215,7 @@ class ContainerBuilder {
     ContainerBuilder& memory(uintmax_t);
     ContainerBuilder& space(uintmax_t);
     ContainerBuilder& host(std::string);
-    ContainerBuilder& preferred_host(std::string);
-    ContainerBuilder& preferred_hosts(auto&&... hosts);
+    ContainerBuilder& preferred_hosts(auto&&... ts);
 };
 
 // Implicit coversion.
@@ -224,9 +223,15 @@ inline ContainerBuilder::operator key_type() const {
   return key;
 }
 
-// Function: preferred_hosts
-ContainerBuilder& ContainerBuilder::preferred_hosts(auto&&... hosts) {
-  (preferred_host(hosts), ...);
+// Function: preferred_host
+ContainerBuilder& ContainerBuilder::preferred_hosts(auto&&... ts) {
+  _graph->_tasks.emplace_back(
+    [ts..., c=key] (pb::Topology* tpg) mutable {
+      if(tpg && tpg->topology == -1) {
+        tpg->containers.at(c).preferred_hosts(std::move(ts)...);
+      }
+    }
+  );
   return *this;
 }
 

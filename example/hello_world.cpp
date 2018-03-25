@@ -14,27 +14,6 @@ int main(int argc, char* argv[]) {
 
   dtc::Graph G;
 
-  auto A = G.vertex().on([](dtc::Vertex& v) { std::cout << "ready for ls\n"; }).program("/bin/ls / -al");
-  auto B = G.vertex().on([](dtc::Vertex& v) { std::cout << "ready for ls\n"; }).program("/usr/bin/gcc -v");
-
-  //auto B = G.vertex().on(
-  //  [] (dtc::Vertex& v) {
-  //    std::cout << "hi\n";
-  //    std::this_thread::sleep_for(std::chrono::seconds(2));
-  //  }
-  //);
-
-  G.stream(A, B).tag("123");
-
-  G.container().add(A).add(B);
-  //G.container().add(B);
-
-  dtc::Executor(G).run();
-
-  return 0;
-
-  /*dtc::Graph G;
-
   auto A = G.vertex();
   auto B = G.vertex();
 
@@ -80,7 +59,7 @@ int main(int argc, char* argv[]) {
 
   dtc::Executor(G).run(); 
 
-  return 0; */
+  return 0;
 };
 
 

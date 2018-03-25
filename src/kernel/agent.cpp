@@ -18,38 +18,31 @@ namespace dtc {
 // ------------------------------------------------------------------------------------------------
 
 // Constructor
+Agent::Executor::Executor(const std::filesystem::path& cgroup) :
+  container {cgroup} {
+}
+
+// ------------------------------------------------------------------------------------------------
+
+// Constructor
 Agent::Task::Task(pb::Topology&& tpg) : 
-  topology{std::move(tpg)} {
+  key       {tpg.task_id()},
+  topology  {std::move(tpg)} {
 
-  auto& h = std::get<Hatchery>(handle);
-
-  h.num_inter_streams = topology.num_inter_streams();
+  hatchery().num_inter_streams = topology.num_inter_streams();
   
   // Set up the execution mode.
-  //topology.runtime["DTC_EXECUTION_MODE"] = "distributed";
   topology.runtime.execution_mode(ExecutionMode::DISTRIBUTED);
 
-  // Create two connectors for stdout and stderr.
-  //h.stdout = make_socket_client(
-  //  topology.runtime.at("DTC_THIS_HOST"), topology.runtime.at("DTC_STDOUT_LISTENER_PORT")
-  //);
-  //topology.runtime["DTC_STDOUT_FD"] = std::to_string(h.stdout->fd());
-
-  //h.stderr = make_socket_client(
-  //  topology.runtime.at("DTC_THIS_HOST"), topology.runtime.at("DTC_STDERR_LISTENER_PORT")
-  //);
-  //topology.runtime["DTC_STDERR_FD"] = std::to_string(h.stderr->fd());
-  
-  h.stdout = make_socket_client(
+  hatchery().stdout = make_socket_client(
     topology.runtime.this_host(), topology.runtime.stdout_listener_port()
   );
-  topology.runtime.stdout_fd(h.stdout->fd());
+  topology.runtime.stdout_fd(hatchery().stdout->fd());
 
-  h.stderr = make_socket_client(
+  hatchery().stderr = make_socket_client(
     topology.runtime.this_host(), topology.runtime.stderr_listener_port()
   );
-  topology.runtime.stderr_fd(h.stderr->fd());
-
+  topology.runtime.stderr_fd(hatchery().stderr->fd());
 
   const auto vhosts = topology.runtime.vertex_hosts();
   
@@ -75,7 +68,7 @@ Agent::Task::Task(pb::Topology&& tpg) :
 
     LOGI("Frontier written key/fd=", ftr.stream, "/", ftr.socket->fd());
     
-    h.frontiers.push_back(std::move(ftr));
+    hatchery().frontiers.push_back(std::move(ftr));
   }
 }
 
@@ -116,6 +109,17 @@ Agent::Agent() : KernelBase{env::agent_num_threads()} {
 
   // Logging
   LOGI("Agent @", env::this_host(), " [frontier:", env::frontier_listener_port(), "]");
+
+  // Cgroup
+  for(const auto& subsystem : __subsystems__()) {
+    if(subsystem.mount.empty()) {
+      LOGE("subsystem ", subsystem.name, " not found in cgroup mounts");
+      std::exit(EXIT_AGENT_FAILED);
+    }
+    else {
+      LOGI("cg-subsys [", subsystem.name, ": ", subsystem.mount, "]");
+    }
+  }
 }
 
 // Procedure: _make_master
@@ -141,7 +145,7 @@ void Agent::_make_master() {
       remove_task(s.task_id, true); 
     }
   );
-  
+
   // Write the resource
   (*_master->ostream)(pb::Protobuf(pb::Resource().update()));
 }
@@ -192,7 +196,7 @@ void Agent::_insert_frontier(Frontier& ftr) {
   else {
     itr->second.hatchery().frontiers.push_back(std::move(ftr));
     if(itr->second.ready() && !_deploy(itr->second)) {
-      _remove_task(itr->first, false);
+      _remove_task(itr->first, true);
     }
   }
 }
@@ -216,19 +220,14 @@ bool Agent::_insert_task(Task& task) {
     return true;
   }
   else {
-    (*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), -1}));
+    _remove_task(task, true);
     return false;
   }
 }
 
-// Function: schedule
-// Schedule a given topology. The agent initiate a ostream event for every ostream side of the
-// inter stream and maintains a list of topology. Then the agent check whether the topology
-// is ready based on the list of frontiers. A ready topology will be deployed to an task
-// for further execution.
+// Function: insert_task
+// Prepare a task hatchery for a give topology.
 std::future<bool> Agent::insert_task(pb::Topology&& tpg) {
-
-  const auto key = tpg.task_id();
 
   try {
     return promise(
@@ -238,6 +237,7 @@ std::future<bool> Agent::insert_task(pb::Topology&& tpg) {
     );
   }
   catch(const std::exception& e) {
+    const auto key = tpg.task_id();
     LOGE("Failed to insert task ", key, " (", e.what(), ')');
     (*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), -1}));
     return std::async(std::launch::deferred, [](){ return false; });
@@ -249,14 +249,11 @@ bool Agent::_deploy(Task& task) {
 
   assert(is_owner());
 
-  const auto key = task.topology.task_id();
-
   try {
     LOGI("Deploying task ", task.topology.task_id(), " ...");
     //LOGI("DTC_VERTEX_HOSTS=", task.topology.runtime.at("DTC_VERTEX_HOSTS"));
     
     // Create the frontier lists.
-    //task.topology.runtime["DTC_FRONTIERS"] = task.frontiers_to_string();
     //LOGI("FRONTIERS=", task.topology.runtime["DTC_FRONTIERS"]);
     task.topology.runtime.frontiers(task.frontiers_to_string());
 
@@ -276,66 +273,110 @@ bool Agent::_deploy(Task& task) {
     devices.emplace_back(std::move(task.hatchery().stdout));
 
     // Hatch into the executor.
-    auto& executor = task.handle.emplace<Task::Executor>();
-    executor.container.exec2(task.topology);
+    auto& executor = task.handle.emplace<Executor>(std::filesystem::path("dtc") / task.key.to_string());
+
+    // Set up the resource limit.
+    assert(task.topology.containers.size() == 1);
+    auto resource = task.topology.resource();
+    executor.container.memory_limit_in_bytes(resource.memory_limit_in_bytes);
+    
+    // Spawn the container.
+    executor.container.spawn(task.topology);
+
+    // Build up the communication channel.
     std::tie(executor.istream, executor.ostream) = insert_channel(std::move(askt))(
-      [this, key] (pb::BrokenIO&) { remove_task(key, false); }
+      [this, key=task.key] (pb::BrokenIO&) { remove_task(key, false); }
     );
+
+    // Send the topology to the executor.
     (*(executor.ostream))(pb::Protobuf(task.topology));
 
-    LOGI("Successfully deployed task ", key);
+    LOGI("Task ", task.key, " successfully deployed [pid=", executor.container.pid(), "]");
     return true;
   }
   catch (const std::exception& e) {
-    LOGE("Failed to deploy task ", key, " (", e.what(), ")");
+    LOGE("Failed to deploy task ", task.key, " (", e.what(), ")");
     return false;
   }
+}
+
+// Procedure: _remove_taks
+void Agent::_remove_task(Task& task, bool kill) {
+  
+  assert(is_owner() && _tasks.find(task.key) == _tasks.end());
+  
+  pb::TaskInfo taskinfo {task.key, env::this_host(), -1};
+  
+  // Here we use get_if because task might be valueless.
+  if(auto eptr = std::get_if<Executor>(&task.handle)) {
+    if(eptr->container.pid() != -1) {
+      if(kill) {
+        eptr->container.kill();
+      }
+      eptr->container.wait();
+    }  
+    remove(std::move(eptr->istream), std::move(eptr->ostream));
+
+    taskinfo.status = eptr->container.status();
+    taskinfo.memory_limit = eptr->container.memory_limit_in_bytes();
+    taskinfo.memory_usage = eptr->container.memory_usage_in_bytes();
+  }    
+  
+  // Measure the elapsed time.
+  taskinfo.elapsed_time = task.elapsed_time<std::chrono::nanoseconds>().count();
+ 
+  // Send master the task information.
+  (*_master->ostream)(pb::Protobuf{std::move(taskinfo)});
+  
+  LOGI("Task ", task.key, " is removed");
 }
 
 // Function: _remove_task
 // Remove a given task from the agent. Upon removal the agent sends master a taskinfo 
 // associated with the task.
-bool Agent::_remove_task(const TaskID& key, bool kill) {
+void Agent::_remove_task(const TaskID& key, bool kill) {
 
   assert(is_owner());
 
-  if(auto titr = _tasks.find(key); titr != _tasks.end()) {
-
-    auto status = std::visit(Functors{
-      // Task is being incubated.
-      [&] (Task::Hatchery& h) {
-        return -1;
-      },
-      // Task is deployed.
-      [&] (Task::Executor& e) {
-        if(e.container.pid() != -1) {
-          if(kill) {
-            e.container.kill();
-          }
-          e.container.wait();
-        }
-        remove(std::move(e.istream), std::move(e.ostream));
-        return e.container.status();
-      }
-    }, titr->second.handle);
-    
-    _tasks.erase(titr);
-    LOGI("Task ", key, " is removed (status=", status, ")");
-
-    (*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), status}));
-
-    return true;
+  if(auto node = _tasks.extract(key); node) {
+    _remove_task(node.mapped(), kill);
   }
 
-  return false;
+  //if(auto titr = _tasks.find(key); titr != _tasks.end()) {
+
+  //  _remove_task(titr->second, kill);
+
+  //  //auto status = std::visit(Functors{
+  //  //  // Task is being incubated.
+  //  //  [&] (Hatchery& h) {
+  //  //    return -1;
+  //  //  },
+  //  //  // Task is deployed.
+  //  //  [&] (Executor& e) {
+  //  //    if(e.container.pid() != -1) {
+  //  //      if(kill) {
+  //  //        e.container.kill();
+  //  //      }
+  //  //      e.container.wait();
+  //  //    }
+  //  //    remove(std::move(e.istream), std::move(e.ostream));
+  //  //    return e.container.status();
+  //  //  }
+  //  //}, titr->second.handle);
+  //  //
+  //  //_tasks.erase(titr);
+  //  //LOGI("Task ", key, " is removed (status=", status, ")");
+
+  //  //(*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), status}));
+  //}
 }
 
 // Function: remove_task
 // The public wrapper of remove task function.
-std::future<bool> Agent::remove_task(const TaskID& key, bool kill) {
+std::future<void> Agent::remove_task(const TaskID& key, bool kill) {
   return promise(
     [this, key, kill] () mutable { 
-      return _remove_task(key, kill); 
+      _remove_task(key, kill); 
     }
   );
 }

@@ -110,6 +110,7 @@ nobase_pkginclude_HEADERS += include/dtc/ml/linear.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/loss.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/dnn.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/optimizer.hpp
+nobase_pkginclude_HEADERS += include/dtc/ml/naive_bayes.hpp
 nobase_pkginclude_HEADERS += include/dtc/stamp-h1
 nobase_pkginclude_HEADERS += include/dtc/config.hpp
 nobase_pkginclude_HEADERS += include/dtc/config.hpp.in~
@@ -474,6 +475,7 @@ lib_libDtCraft_la_SOURCES += src/ipc/streambuf.cpp
 lib_libDtCraft_la_SOURCES += src/utility/os.cpp
 lib_libDtCraft_la_SOURCES += src/utility/http_parser.cpp
 lib_libDtCraft_la_SOURCES += src/utility/table.cpp
+lib_libDtCraft_la_SOURCES += src/ml/naive_bayes.cpp
 lib_libDtCraft_la_SOURCES += src/ml/linear.cpp
 lib_libDtCraft_la_SOURCES += src/ml/optimizer.cpp
 lib_libDtCraft_la_SOURCES += src/ml/dnn.cpp
@@ -655,6 +657,8 @@ EXTRA_DIST += conf
 EXTRA_DIST += sbin
 EXTRA_DIST += webui
 EXTRA_DIST += benchmark
+EXTRA_DIST += README.md
+EXTRA_DIST += LICENSE
 
 # Regression 
 regression: all-am

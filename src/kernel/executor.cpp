@@ -279,38 +279,6 @@ void Executor::_make_graph(pb::Topology* tpg) {
 // Procedure: _insert_vertices
 void Executor::_insert_vertices(pb::Topology* tpg) {
 
-  /*std::vector< std::future<std::optional<Vertex::Program>> > _futures;
-    
-  for(auto& kvp : _graph._vertices) {
-
-    auto& v = kvp.second;
-    
-    // Assign the executor pointer.
-    v._executor = this;
-
-    // External vertex.
-    if(v.program()) {
-      _futures.push_back(async([&v=v] () { 
-        v();
-        return std::make_optional(v._prespawn());
-      }));
-    }
-    // Internal vertex
-    else {
-      _futures.push_back(async([&v=v] () { 
-        v(); 
-        return std::optional<Vertex::Program>(std::nullopt);
-      }));
-    }
-  }
-  
-  // Synchronize with all futures
-  for(auto& fu : _futures) {
-    if(auto program = fu.get(); program) {
-      _spawn(*program);
-    }
-  }*/
-
   for(auto& kvp : _graph._vertices) {
     
     // Assign the executor pointer.
@@ -366,7 +334,7 @@ void Executor::_spawn(Vertex::Program& program) {
   }
   catch(std::exception& e) {
     LOGE("Failed to spawn vertex program ", program.vertex, " (", e.what(), ")");
-    std::exit(EXIT_VERTEX_EXEC_FAILED);
+    std::exit(EXIT_VERTEX_PROGRAM_FAILED);
   }
 }
 

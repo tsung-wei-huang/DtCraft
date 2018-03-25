@@ -150,11 +150,20 @@ std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_socket_pair() 
   return {std::make_shared<dtc::Socket>(fd[0]), std::make_shared<dtc::Socket>(fd[1])};
 }
 
+// Function: make_sync_socket_pair
+std::tuple<std::shared_ptr<Socket>, std::shared_ptr<Socket>> make_sync_socket_pair() {
+  int fd[2];
+  if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, fd) == -1) {
+    throw std::system_error(make_posix_error_code(errno), "Failed to create sync socketpair");
+	}
+  return {std::make_shared<dtc::Socket>(fd[0]), std::make_shared<dtc::Socket>(fd[1])};
+}
+
 // Function: make_socket_pair_raw
 std::tuple<int, int> make_socket_pair_raw() {
   int fd[2];
   if(::socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0, fd) == -1) {
-    throw std::system_error(make_posix_error_code(errno), "Failed to create socketpair");
+    throw std::system_error(make_posix_error_code(errno), "Failed to create raw socketpair");
   }
   return std::make_tuple(fd[0], fd[1]);
 }

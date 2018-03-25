@@ -37,7 +37,9 @@ TaskInfo::TaskInfo(const TaskID& k, std::string_view h, int s) :
 
 // Function: has_error
 bool TaskInfo::has_error() const {
-  return (WIFEXITED(status) && WEXITSTATUS(status) != EXIT_SUCCESS) || WIFSIGNALED(status);
+  return status == -1 ||
+         (WIFEXITED(status) && WEXITSTATUS(status) != EXIT_SUCCESS) || 
+         WIFSIGNALED(status);
 }
 
 //// Function: exited

@@ -20,17 +20,17 @@ inline namespace literals {
 
 // Literal: KB
 constexpr uintmax_t operator"" _KB (unsigned long long v) {
-  return v*1000;
+  return v*1024;
 }
 
 // Literal: MB
 constexpr uintmax_t operator"" _MB (unsigned long long v) {
-  return v*1000000;
+  return v*1024*1024;
 }
 
 // Literal: GB
 constexpr uintmax_t operator"" _GB (unsigned long long v) {
-  return v*1000000000;
+  return v*1024*1024*1024;
 }
 
 
