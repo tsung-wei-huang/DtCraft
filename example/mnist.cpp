@@ -9,10 +9,13 @@ constexpr auto mnist_label_file = DTC_HOME "/benchmark/mnist/train-labels.idx1-u
 
 // Procedure: offline
 void offline() {
+  
+  using namespace std::literals;
+  using namespace dtc::literals;
 
   dtc::Graph G;
 
-  G.vertex().on([] (dtc::Vertex& v) {
+  auto v = G.vertex().on([] (dtc::Vertex& v) {
 
     Eigen::MatrixXf images = dtc::ml::read_mnist_image<Eigen::MatrixXf>(mnist_image_file) / 255.0;
     Eigen::VectorXi labels = dtc::ml::read_mnist_label<Eigen::VectorXi>(mnist_label_file);
@@ -60,6 +63,8 @@ void offline() {
     ); 
 
   });
+
+  G.container().add(v).memory(256_MB);
 
   dtc::Executor(G).run();
 }

@@ -14,33 +14,11 @@
 #ifndef DTC_KERNEL_CONTAINER_HPP_
 #define DTC_KERNEL_CONTAINER_HPP_
 
+#include <dtc/kernel/cgroup.hpp>
 #include <dtc/ipc/ipc.hpp>
 #include <dtc/protobuf/protobuf.hpp>
 
 namespace dtc {
-
-enum class SubsystemType : int {
-  BLKIO = 0,
-  CPU,
-  CPUACCT,
-  CPUSET,
-  DEVICES,
-  FREEZER,
-  MEMORY,
-  NET_CLS,
-  NET_PRIO,
-  NUM_SUBSYSTEMS
-};
-
-struct Subsystem {
-  Subsystem(const std::string& in_mount) : name {in_mount} {}
-  const std::string name;
-  std::filesystem::path mount;
-};
-
-std::array<Subsystem, static_cast<int>(SubsystemType::NUM_SUBSYSTEMS)>& __subsystems__();
-
-// ------------------------------------------------------------------------------------------------
 
 // Class: Container
 class Container {
@@ -65,44 +43,40 @@ class Container {
 
     bool alive() const;
 
-    inline auto pid() const;
-    inline auto status() const;
+    inline pid_t pid() const;
+    inline int status() const;
+    inline const cg::ControlGroup& cgroup() const;
     
     void spawn(const pb::Topology&);
     void kill();
     void wait();
-    void reap(bool);
-    void memory_limit_in_bytes(uintmax_t) const;
-    void memory_oom_control(bool) const;
-
-    uintmax_t cpuacct_usage() const;
-    uintmax_t memory_limit_in_bytes() const;
-		uintmax_t memory_usage_in_bytes() const;
-		uintmax_t memory_max_usage_in_bytes() const;
 
   private:
     
     pid_t _pid {-1};
+
     int _status {-1};
 
     std::unique_ptr<char[]> _stack;
 
-    std::filesystem::path _cgroup;
+    cg::ControlGroup _cgroup;
 
     static int _entrypoint(void*);
-
-    void _write(const std::filesystem::path&, std::string_view) const;
-    std::string _read(const std::filesystem::path&) const;
 };
 
 // Function: pid
-inline auto Container::pid() const {
+inline pid_t Container::pid() const {
   return _pid;
 }
 
 // Function: status
-inline auto Container::status() const {
+inline int Container::status() const {
   return _status;
+}
+
+// Function: cgroup
+inline const cg::ControlGroup& Container::cgroup() const {
+  return _cgroup;
 }
 
 //-------------------------------------------------------------------------------------------------

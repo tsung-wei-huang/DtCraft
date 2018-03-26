@@ -35,14 +35,14 @@ std::string Solution::to_string() const {
   os << "[Graph " << graph << "]\n";
 
   //table.add("Task (graph-topology) information").end_of_row();
-  table.add("Task", "Agent", "Status", "Elapsed (s)", "Memory (use/max)").end_of_row();
+  table.add("Task", "Agent", "Status", "Elapsed (s)", "Memory (peek/limit)").end_of_row();
 
   for(const auto& t : taskinfos) {
     table.add(t.task_id.to_string())
          .add(t.agent)
          .add(status_to_string(t.status))
          .add(std::to_string(t.elapsed_time / 1e9f))
-         .add(std::to_string(t.memory_usage) + "/" + std::to_string(t.memory_limit))
+         .add(std::to_string(t.memory_max_usage_in_bytes) + "/" + std::to_string(t.memory_limit_in_bytes))
          .end_of_row();
   }
   

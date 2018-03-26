@@ -62,6 +62,8 @@ class Executor : public KernelBase {
     void _spawn(Vertex::Program&);
 
   public:
+    
+    const ExecutionMode mode {env::execution_mode()};
 
     Executor(Graph&);
     ~Executor();

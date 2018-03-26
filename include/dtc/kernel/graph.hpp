@@ -213,6 +213,7 @@ class ContainerBuilder {
     ContainerBuilder& add(key_type);
     ContainerBuilder& cpu(uintmax_t);
     ContainerBuilder& memory(uintmax_t);
+    ContainerBuilder& memory_limit_in_bytes(uintmax_t);
     ContainerBuilder& space(uintmax_t);
     ContainerBuilder& host(std::string);
     ContainerBuilder& preferred_hosts(auto&&... ts);

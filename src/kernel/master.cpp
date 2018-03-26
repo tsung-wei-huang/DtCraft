@@ -119,11 +119,6 @@ std::future<bool> Master::remove_graph(key_type key) {
 }
 
 // Function: _insert_graph
-// Create an IO communication for an incoming connection from the user. Once connected, the
-// first protobuf arrives should be the graph in the form of a topology defined by the user.
-// We assign a uuid of type key_type to each arrived graph. The uuid is also used for indexing
-// the graph through the dictionary that stores the mapping between uuid and the data structure
-// to store the graph.
 key_type Master::_insert_graph(std::shared_ptr<Socket> socket) {
 
   // Create a pseudo uuid for the graph.

@@ -102,38 +102,69 @@ std::string Agent::Task::frontiers_to_string() const {
 // ------------------------------------------------------------------------------------------------
 
 // Constructor
-Agent::Agent() : KernelBase{env::agent_num_threads()} {
+Agent::Agent() : 
+  KernelBase {env::agent_num_threads()},
+  _cgroup    {_make_cgroup()},
+  _placer    {_make_placer()},
+  _master    {_make_master()} {
   
-  _make_master();
   _make_frontier_listener();
 
   // Logging
   LOGI("Agent @", env::this_host(), " [frontier:", env::frontier_listener_port(), "]");
 
-  // Cgroup
-  for(const auto& subsystem : __subsystems__()) {
-    if(subsystem.mount.empty()) {
-      LOGE("subsystem ", subsystem.name, " not found in cgroup mounts");
-      std::exit(EXIT_AGENT_FAILED);
-    }
-    else {
-      LOGI("cg-subsys [", subsystem.name, ": ", subsystem.mount, "]");
-    }
-  }
+  // Control group
+  LOGI("cg-subsys.memory ", _cgroup.memory_mount());
+  LOGI("cg-subsys.cpuset ", _cgroup.cpuset_mount());
+}
+
+// Destructor
+Agent::~Agent() {
+}
+
+// Procedure: _make_cgroup
+Agent::CGroup Agent::_make_cgroup() {
+  
+  CGroup cgroup(env::agent_cgroup());
+
+  // Set up the memory limit.
+  cgroup.memory_limit_in_bytes(std::min(
+    cgroup.memory_limit_in_bytes(), Statgrab::get().memory_limit_in_bytes()
+  ));
+
+  //// Set up the cpu
+  //auto cpus = _cgroup.cpuset_cpus();
+  //for(const auto& c : cpus) {
+  //  _buckets.emplace_back(Bucket{c, {}});
+  //}
+   
+  // Group this process.
+  cgroup.add(::getpid());
+
+  return cgroup;
+}
+
+// Procedure: _make_placer
+Placer Agent::_make_placer() {
+
+  Placer placer;
+
+
+  return placer;
 }
 
 // Procedure: _make_master
 // The procedure connects to the master and initiate I/O events to communicate with the master.
-void Agent::_make_master() {
+Agent::Master Agent::_make_master() {
 
   assert(is_owner());
 
   // Connect to the master
   auto M = make_socket_client(env::master_host(), env::agent_listener_port());
   
-  _master = std::make_optional<Master>();
+  Master master;
 
-  std::tie(_master->istream, _master->ostream) = insert_channel(std::move(M))(
+  std::tie(master.istream, master.ostream) = insert_channel(std::move(M))(
     [this] (pb::BrokenIO& b) { 
       LOGE("Error on the master IO (", b.errc.message(), ")"); 
       std::exit(EXIT_BROKEN_CONNECTION);
@@ -146,8 +177,15 @@ void Agent::_make_master() {
     }
   );
 
-  // Write the resource
-  (*_master->ostream)(pb::Protobuf(pb::Resource().update()));
+  // Write the resource to the master
+  pb::Resource resource;
+  resource.num_cpus = _cgroup.cpuset_cpus().size();
+  resource.memory_limit_in_bytes = _cgroup.memory_limit_in_bytes();
+  resource.space_limit_in_bytes = Statgrab::get().space_limit_in_bytes();
+
+  (*master.ostream)(pb::Protobuf(std::move(resource)));
+
+  return master;
 }
 
 // Procedure: _make_frontier_listener
@@ -239,7 +277,7 @@ std::future<bool> Agent::insert_task(pb::Topology&& tpg) {
   catch(const std::exception& e) {
     const auto key = tpg.task_id();
     LOGE("Failed to insert task ", key, " (", e.what(), ')');
-    (*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), -1}));
+    (*_master.ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), -1}));
     return std::async(std::launch::deferred, [](){ return false; });
   }
 }
@@ -273,12 +311,16 @@ bool Agent::_deploy(Task& task) {
     devices.emplace_back(std::move(task.hatchery().stdout));
 
     // Hatch into the executor.
-    auto& executor = task.handle.emplace<Executor>(std::filesystem::path("dtc") / task.key.to_string());
+    auto& executor = task.handle.emplace<Executor>(_cgroup.path() / task.key.to_string());
 
-    // Set up the resource limit.
+    // Extract the resource request.
     assert(task.topology.containers.size() == 1);
     auto resource = task.topology.resource();
-    executor.container.memory_limit_in_bytes(resource.memory_limit_in_bytes);
+    
+    // Set up the memory
+    executor.container.cgroup().memory_limit_in_bytes(resource.memory_limit_in_bytes);
+
+    // Set up the cpu
     
     // Spawn the container.
     executor.container.spawn(task.topology);
@@ -318,15 +360,15 @@ void Agent::_remove_task(Task& task, bool kill) {
     remove(std::move(eptr->istream), std::move(eptr->ostream));
 
     taskinfo.status = eptr->container.status();
-    taskinfo.memory_limit = eptr->container.memory_limit_in_bytes();
-    taskinfo.memory_usage = eptr->container.memory_usage_in_bytes();
+    taskinfo.memory_limit_in_bytes = eptr->container.cgroup().memory_limit_in_bytes();
+    taskinfo.memory_max_usage_in_bytes = eptr->container.cgroup().memory_max_usage_in_bytes();
   }    
   
   // Measure the elapsed time.
   taskinfo.elapsed_time = task.elapsed_time<std::chrono::nanoseconds>().count();
  
   // Send master the task information.
-  (*_master->ostream)(pb::Protobuf{std::move(taskinfo)});
+  (*_master.ostream)(pb::Protobuf{std::move(taskinfo)});
   
   LOGI("Task ", task.key, " is removed");
 }
@@ -341,34 +383,6 @@ void Agent::_remove_task(const TaskID& key, bool kill) {
   if(auto node = _tasks.extract(key); node) {
     _remove_task(node.mapped(), kill);
   }
-
-  //if(auto titr = _tasks.find(key); titr != _tasks.end()) {
-
-  //  _remove_task(titr->second, kill);
-
-  //  //auto status = std::visit(Functors{
-  //  //  // Task is being incubated.
-  //  //  [&] (Hatchery& h) {
-  //  //    return -1;
-  //  //  },
-  //  //  // Task is deployed.
-  //  //  [&] (Executor& e) {
-  //  //    if(e.container.pid() != -1) {
-  //  //      if(kill) {
-  //  //        e.container.kill();
-  //  //      }
-  //  //      e.container.wait();
-  //  //    }
-  //  //    remove(std::move(e.istream), std::move(e.ostream));
-  //  //    return e.container.status();
-  //  //  }
-  //  //}, titr->second.handle);
-  //  //
-  //  //_tasks.erase(titr);
-  //  //LOGI("Task ", key, " is removed (status=", status, ")");
-
-  //  //(*_master->ostream)(pb::Protobuf(pb::TaskInfo{key, env::this_host(), status}));
-  //}
 }
 
 // Function: remove_task

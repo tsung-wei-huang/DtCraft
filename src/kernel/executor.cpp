@@ -29,7 +29,7 @@ Executor::~Executor() {
 // Procedure: run
 void Executor::run() {
 
-  switch(env::execution_mode()) {
+  switch(mode) {
     case ExecutionMode::LOCAL:
       _setup_local();
     break;
@@ -45,7 +45,7 @@ void Executor::run() {
 
   dispatch();
 
-  switch(env::execution_mode()) {
+  switch(mode) {
     case ExecutionMode::LOCAL:
       _teardown_local();
     break;
@@ -271,7 +271,8 @@ void Executor::_make_graph(pb::Topology* tpg) {
   _insert_vertices(tpg);
   
   // Stop the executor when the event count is fewer than two.
-  if(tpg) {
+  if(mode == ExecutionMode::DISTRIBUTED) {
+    assert(tpg != nullptr);
     threshold(2);
   }
 }

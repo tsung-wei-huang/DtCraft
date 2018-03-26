@@ -19,8 +19,44 @@
 
 namespace dtc {
 
+// Placer
+class Placer {
+
+  friend class Agent;
+
+  // Bucket
+  struct Bucket {
+    unsigned cpu;
+    std::unordered_set<TaskID> tasks;
+  };
+
+  public:
+
+    Placer() = default;
+    Placer(const Placer&) = delete;
+    Placer(Placer&&) = default;
+
+    Placer& operator = (const Placer&) = delete;
+    Placer& operator = (Placer&&) = default;
+
+    inline size_t num_buckets() const;
+
+  private:
+
+    std::vector<Bucket> _buckets;
+};
+
+// Function: num_buckets
+inline size_t Placer::num_buckets() const {
+  return _buckets.size();
+}
+
+// ------------------------------------------------------------------------------------------------
+
 // Class: Agent
 class Agent : public KernelBase {
+
+  using CGroup = cg::ControlGroup;
   
   // ---- Internal data structure ---------------
 
@@ -85,7 +121,9 @@ class Agent : public KernelBase {
 
   private:
 
-    std::optional<Master> _master;
+    CGroup _cgroup;
+    Placer _placer;
+    Master _master;
 
     std::unordered_map<TaskID, Task> _tasks;
 
@@ -93,18 +131,21 @@ class Agent : public KernelBase {
     
     void _remove_task(Task&, bool);
     void _remove_task(const TaskID&, bool);
-    bool _deploy(Task&);
-    bool _insert_task(Task&);
-
-    void _make_master();
     void _insert_frontier(Frontier&);
     void _make_frontier_listener();
 
-  public:
-
-    Agent();
-    ~Agent() = default;
+    bool _deploy(Task&);
+    bool _insert_task(Task&);
     
+    CGroup _make_cgroup();
+    Placer _make_placer();
+    Master _make_master();
+
+  public:
+    
+    Agent();
+    ~Agent();
+
     std::future<bool> insert_task(pb::Topology&&);
     std::future<void> remove_task(const TaskID&, bool);
     std::future<void> insert_frontier(Frontier&&);

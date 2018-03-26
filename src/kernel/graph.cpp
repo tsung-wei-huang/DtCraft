@@ -122,7 +122,7 @@ ContainerBuilder& ContainerBuilder::add(key_type v) {
 }
 
 // Function: memory_limit_in_bytes
-ContainerBuilder& ContainerBuilder::memory(uintmax_t l) {
+ContainerBuilder& ContainerBuilder::memory_limit_in_bytes(uintmax_t l) {
   _graph->_tasks.emplace_back(
     [l, c=key] (pb::Topology* tpg) {
       // We only initiate the resource container for submit mode.
@@ -132,6 +132,11 @@ ContainerBuilder& ContainerBuilder::memory(uintmax_t l) {
     }
   );
   return *this;
+}
+
+// Function: memory
+ContainerBuilder& ContainerBuilder::memory(uintmax_t l) {
+  return memory_limit_in_bytes(l);
 }
 
 // Function: space
@@ -409,7 +414,7 @@ pb::Topology Graph::_topologize() {
     }
     // Memory field
     if(c.second.resource.memory_limit_in_bytes == 0) {
-      c.second.resource.memory_limit_in_bytes = 128_MB;
+      c.second.resource.memory_limit_in_bytes = 1_GB;
     }
     // Disk field
     if(c.second.resource.space_limit_in_bytes == 0) {
