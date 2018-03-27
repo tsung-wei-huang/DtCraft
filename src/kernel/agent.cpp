@@ -99,72 +99,75 @@ std::string Agent::Task::frontiers_to_string() const {
   return oss.str();
 }
 
+// Function: hatchery
+inline Agent::Hatchery& Agent::Task::hatchery() { 
+  return std::get<Hatchery>(handle); 
+}
+
+// Function: executor
+inline Agent::Executor& Agent::Task::executor() { 
+  return std::get<Executor>(handle); 
+}
+
+// Function: hatchery
+inline const Agent::Hatchery& Agent::Task::hatchery() const { 
+  return std::get<Hatchery>(handle); 
+}
+
+// Function: executor
+inline const Agent::Executor& Agent::Task::executor() const { 
+  return std::get<Executor>(handle); 
+}
+
 // ------------------------------------------------------------------------------------------------
 
 // Constructor
 Agent::Agent() : 
   KernelBase {env::agent_num_threads()},
-  _cgroup    {_make_cgroup()},
-  _placer    {_make_placer()},
-  _master    {_make_master()} {
+  _cgroup    {env::agent_cgroup()} {
   
-  _make_frontier_listener();
+  // Initialization
+  _init_cgroup();
+  _init_frontier_listener();
+  _init_master();
 
   // Logging
   LOGI("Agent @", env::this_host(), " [frontier:", env::frontier_listener_port(), "]");
 
   // Control group
-  LOGI("cg-subsys.memory ", _cgroup.memory_mount());
-  LOGI("cg-subsys.cpuset ", _cgroup.cpuset_mount());
+  LOGI("cg-subsys.memory ", _cgroup.memory_mount(), "[limit:", _cgroup.memory_limit_in_bytes(), "]");
+  LOGI("cg-subsys.cpuset ", _cgroup.cpuset_mount(), "[#cpus:", _cpuset.size(), "]");
 }
 
 // Destructor
 Agent::~Agent() {
 }
 
-// Procedure: _make_cgroup
-Agent::CGroup Agent::_make_cgroup() {
-  
-  CGroup cgroup(env::agent_cgroup());
+// Procedure: _init_cgroup
+void Agent::_init_cgroup() {
 
   // Set up the memory limit.
-  cgroup.memory_limit_in_bytes(std::min(
-    cgroup.memory_limit_in_bytes(), Statgrab::get().memory_limit_in_bytes()
-  ));
+  _cgroup.memory_limit_in_bytes(
+    std::min(_cgroup.memory_limit_in_bytes(), Statgrab::get().memory_limit_in_bytes())
+  );
 
-  //// Set up the cpu
-  //auto cpus = _cgroup.cpuset_cpus();
-  //for(const auto& c : cpus) {
-  //  _buckets.emplace_back(Bucket{c, {}});
-  //}
-   
+  // Set up the cpus
+  _cpuset = _cgroup.cpuset_cpus();
+
   // Group this process.
-  cgroup.add(::getpid());
-
-  return cgroup;
+  _cgroup.add(::getpid());
 }
 
-// Procedure: _make_placer
-Placer Agent::_make_placer() {
-
-  Placer placer;
-
-
-  return placer;
-}
-
-// Procedure: _make_master
+// Procedure: _init_master
 // The procedure connects to the master and initiate I/O events to communicate with the master.
-Agent::Master Agent::_make_master() {
+void Agent::_init_master() {
 
   assert(is_owner());
 
   // Connect to the master
   auto M = make_socket_client(env::master_host(), env::agent_listener_port());
   
-  Master master;
-
-  std::tie(master.istream, master.ostream) = insert_channel(std::move(M))(
+  std::tie(_master.istream, _master.ostream) = insert_channel(std::move(M))(
     [this] (pb::BrokenIO& b) { 
       LOGE("Error on the master IO (", b.errc.message(), ")"); 
       std::exit(EXIT_BROKEN_CONNECTION);
@@ -179,22 +182,20 @@ Agent::Master Agent::_make_master() {
 
   // Write the resource to the master
   pb::Resource resource;
-  resource.num_cpus = _cgroup.cpuset_cpus().size();
+  resource.num_cpus = _cpuset.size();
   resource.memory_limit_in_bytes = _cgroup.memory_limit_in_bytes();
   resource.space_limit_in_bytes = Statgrab::get().space_limit_in_bytes();
 
-  (*master.ostream)(pb::Protobuf(std::move(resource)));
-
-  return master;
+  (*_master.ostream)(pb::Protobuf(std::move(resource)));
 }
 
-// Procedure: _make_frontier_listener
+// Procedure: _init_frontier_listener
 // Creates a socket server listenering to any in-coming frontiers for the inter stream
 // communication. By default, the write end of an inter stream initiates a socket connection
 // and the read end of the inter stream waits for receiving the connection. Once the connection
 // is established, the read end will receive a frontier message indicating the information of
 // the inter stream.
-void Agent::_make_frontier_listener() {
+void Agent::_init_frontier_listener() {
 
   assert(is_owner());
   
@@ -365,7 +366,7 @@ void Agent::_remove_task(Task& task, bool kill) {
   }    
   
   // Measure the elapsed time.
-  taskinfo.elapsed_time = task.elapsed_time<std::chrono::nanoseconds>().count();
+  taskinfo.elapsed_time = task.clock.elapsed_time_in_nanoseconds();
  
   // Send master the task information.
   (*_master.ostream)(pb::Protobuf{std::move(taskinfo)});

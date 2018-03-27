@@ -89,7 +89,7 @@ std::array<Subsystem, NUM_SUBSYSTEMS>& __subsystems__() {
         __subsystems[NET_PRIO].mount = mptr->mnt_dir;
       }
     }
-		
+    
     fclose(mifs);
   
     for(const auto& s : __subsystems) {
@@ -113,21 +113,21 @@ static void __set(const std::filesystem::path& path, std::string_view value) {
     ofs << value;
   }
   else {
-    LOGE("Failed to write ", value, " to ", path);
+    LOGE("Failed to write ", value, " to ", path, " (", strerror(errno), ")");
   }
 }
 
 // Function: __get
 static std::string __get(const std::filesystem::path& path) {
-	if(std::ifstream ifs(path); ifs.good()) {
+  if(std::ifstream ifs(path); ifs.good()) {
     std::ostringstream oss;
     oss << ifs.rdbuf();
     return oss.str();
   }
-	else {
-    LOGE("Failed to open ", path);
+  else {
+    LOGE("Failed to open ", path, " (", strerror(errno), ")");
     return "";
-	}
+  }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -195,107 +195,121 @@ void ControlGroup::cpuset_cpus(std::string_view value) const {
 
 // Function: memory_limit_in_bytes
 uintmax_t ControlGroup::memory_limit_in_bytes() const {
-	return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.limit_in_bytes"));
+  return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.limit_in_bytes"));
 }
 
 // Function: memory_usage_in_bytes
 uintmax_t ControlGroup::memory_usage_in_bytes() const {
-	return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.usage_in_bytes"));
+  return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.usage_in_bytes"));
 }
 
 // Function: memory_max_usage_in_bytes
 uintmax_t ControlGroup::memory_max_usage_in_bytes() const {
-	return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.max_usage_in_bytes"));
+  return std::stoull(__get(__subsystems__()[MEMORY].mount / _path / "memory.max_usage_in_bytes"));
 }
 
 // Function: cpuacct_usage
 uintmax_t ControlGroup::cpuacct_usage() const {
-	return std::stoull(__get(__subsystems__()[CPUACCT].mount / _path / "cpuacct.usage"));
+  return std::stoull(__get(__subsystems__()[CPUACCT].mount / _path / "cpuacct.usage"));
 }
 
 // Function: swappiness
 int ControlGroup::swappiness() const {
-	return std::stoi(__get(__subsystems__()[MEMORY].mount / _path / "memory.swappiness"));
+  return std::stoi(__get(__subsystems__()[MEMORY].mount / _path / "memory.swappiness"));
 }
 
 // Function: cpuset_cpus
-std::unordered_set<unsigned> ControlGroup::cpuset_cpus() const {
+std::vector<int> ControlGroup::cpuset_cpus() const {
 
-	constexpr auto nexttoken = [] (const char *q,  int sep) {
-	  if (q)
-		  q = ::strchr(q, sep);
-	  if (q)
-		  q++;
-	  return q;
+  constexpr auto nexttoken = [] (const char *q,  int sep) {
+    if (q)
+      q = ::strchr(q, sep);
+    if (q)
+      q++;
+    return q;
   };
 
   auto str = __get(__subsystems__()[CPUSET].mount / _path / "cpuset.cpus");
-
+  
   str.erase(std::remove_if(
     str.begin(), 
     str.end(), 
     [] (const char c) { return c == ' ' || c == '\n' || c == '\r'; }
   ), str.end());
 
-  std::unordered_set<unsigned> set;
-	const char *p {nullptr};
+  std::vector<int> cpus;
+  const char *p {nullptr};
   const char *q {nullptr};
-	int r = 0;
+  int r = 0;
 
-	q = str.c_str();
+  q = str.c_str();
 
-	while (p = q, q = nexttoken(q, ','), p) {
+  while (1) {
 
-		unsigned int a;	 // beg range
-		unsigned int b;	 // end range
-		unsigned int s;	 // stride
-		const char *c1, *c2;
-		char c;
+    p = q;
+    q = nexttoken(q, ',');
 
-		if ((r = ::sscanf(p, "%u%c", &a, &c)) < 1) {
-      goto failure;
+    if(!p) break;
+
+    int a;   // beg range
+    int b;   // end range
+    int s;   // stride
+    const char *c1, *c2;
+    char c;
+
+    if ((r = ::sscanf(p, "%u%c", &a, &c)) < 1) {
+      //goto failure;
+      //break;
+      DTC_THROW("cpuset.cpus format error: ", str);
     }
 
-		b = a;
-		s = 1;
+    b = a;
+    s = 1;
 
-		c1 = nexttoken(p, '-');
-		c2 = nexttoken(p, ',');
-		if (c1 != nullptr && (c2 == nullptr || c1 < c2)) {
-			if ((r = ::sscanf(c1, "%u%c", &b, &c)) < 1) {
-        goto failure;
+    c1 = nexttoken(p, '-');
+    c2 = nexttoken(p, ',');
+    if (c1 != nullptr && (c2 == nullptr || c1 < c2)) {
+      if ((r = ::sscanf(c1, "%u%c", &b, &c)) < 1) {
+        //goto failure;
+        //break;
+        DTC_THROW("cpuset.cpus format error: ", str);
       }
-			c1 = nexttoken(c1, ':');
-			if (c1 != nullptr && (c2 == nullptr || c1 < c2)) {
-				if ((r = sscanf(c1, "%u%c", &s, &c)) < 1) {
-          goto failure;
+      c1 = nexttoken(c1, ':');
+      if (c1 != nullptr && (c2 == nullptr || c1 < c2)) {
+        if ((r = sscanf(c1, "%u%c", &s, &c)) < 1) {
+          //goto failure;
+          //break;
+          DTC_THROW("cpuset.cpus format error: ", str);
         }
-				if (s == 0) {
-          goto failure;
+        if (s == 0) {
+          //goto failure;
+          //break;
+          DTC_THROW("cpuset.cpus format error: ", str);
         }
-			}
-		}
-
-		if (!(a <= b)) {
-      goto failure;
+      }
     }
 
-		while (a <= b) {
-      set.insert(a);
-			a += s;
-		}
-	}
+    if (!(a <= b)) {
+      DTC_THROW("cpuset.cpus format error: ", str);
+      //goto failure;
+      //break;
+    }
 
-	if (r == 2) {
-    goto failure;
+    while (a <= b) {
+      cpus.push_back(a);
+      a += s;
+    }
   }
 
-  return set;
+  if (r == 2) {
+    DTC_THROW("cpuset.cpus format error: ", str);
+    //goto failure;
+  }
 
-  failure:
-  DTC_THROW("cpuset.cpus format error: ", str);
+  std::sort(cpus.begin(), cpus.end());
+  cpus.erase(std::unique(cpus.begin(), cpus.end()), cpus.end());
 
-  return {};
+  return cpus;
 }
 
 };  // end of namespace dtc::cg. ------------------------------------------------------------------

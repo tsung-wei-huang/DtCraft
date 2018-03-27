@@ -19,39 +19,53 @@
 
 namespace dtc {
 
-// Placer
-class Placer {
-
-  friend class Agent;
-
-  // Bucket
-  struct Bucket {
-    unsigned cpu;
-    std::unordered_set<TaskID> tasks;
-  };
-
+// Class: Clock
+class Clock {
+  
   public:
 
-    Placer() = default;
-    Placer(const Placer&) = delete;
-    Placer(Placer&&) = default;
+    Clock() = default;
 
-    Placer& operator = (const Placer&) = delete;
-    Placer& operator = (Placer&&) = default;
+    template <typename D>
+    D elapsed_time() const;
 
-    inline size_t num_buckets() const;
+    inline auto elapsed_time_in_seconds() const;
+    inline auto elapsed_time_in_milliseconds() const;
+    inline auto elapsed_time_in_microseconds() const;
+    inline auto elapsed_time_in_nanoseconds() const;
 
   private:
 
-    std::vector<Bucket> _buckets;
+    std::chrono::steady_clock::time_point _boot {std::chrono::steady_clock::now()};
 };
 
-// Function: num_buckets
-inline size_t Placer::num_buckets() const {
-  return _buckets.size();
+// Function: elapsed_time
+template <typename D>
+D Clock::elapsed_time() const {
+  return std::chrono::duration_cast<D>(std::chrono::steady_clock::now() - _boot);
 }
 
-// ------------------------------------------------------------------------------------------------
+// Function: elapsed_time_in_seconds
+inline auto Clock::elapsed_time_in_seconds() const { 
+  return elapsed_time<std::chrono::seconds>().count();
+}
+
+// Function: elapsed_time_in_milliseconds
+inline auto Clock::elapsed_time_in_milliseconds() const {
+  return elapsed_time<std::chrono::milliseconds>().count();
+}
+
+// Function: elapsed_time_in_microseconds
+inline auto Clock::elapsed_time_in_microseconds() const {
+  return elapsed_time<std::chrono::microseconds>().count();
+}
+
+// Function: elapsed_time_in_nanoseconds
+inline auto Clock::elapsed_time_in_nanoseconds() const {
+  return elapsed_time<std::chrono::nanoseconds>().count();
+}
+
+//-------------------------------------------------------------------------------------------------
 
 // Class: Agent
 class Agent : public KernelBase {
@@ -88,7 +102,7 @@ class Agent : public KernelBase {
   struct Task {
     TaskID key;
     pb::Topology topology;
-    std::chrono::steady_clock::time_point boot {std::chrono::steady_clock::now()};
+    Clock clock;
     std::variant<Hatchery, Executor> handle;
 
     Task(pb::Topology&&);
@@ -104,13 +118,10 @@ class Agent : public KernelBase {
     
     void splice_frontiers(std::list<Frontier>&);
 
-    template <typename D>
-    D elapsed_time();
-
-    inline auto& hatchery() { return std::get<Hatchery>(handle); }
-    inline auto& executor() { return std::get<Executor>(handle); }
-    inline const auto& hatchery() const { return std::get<Hatchery>(handle); }
-    inline const auto& executor() const { return std::get<Executor>(handle); }
+    Hatchery& hatchery();
+    Executor& executor();
+    const Hatchery& hatchery() const; 
+    const Executor& executor() const; 
   };
   
   // Mater channel.
@@ -122,9 +133,9 @@ class Agent : public KernelBase {
   private:
 
     CGroup _cgroup;
-    Placer _placer;
     Master _master;
-
+    
+    std::vector<int> _cpuset;
     std::unordered_map<TaskID, Task> _tasks;
 
     std::list<Frontier> _frontiers;
@@ -132,14 +143,13 @@ class Agent : public KernelBase {
     void _remove_task(Task&, bool);
     void _remove_task(const TaskID&, bool);
     void _insert_frontier(Frontier&);
-    void _make_frontier_listener();
+    void _init_frontier_listener();
 
     bool _deploy(Task&);
     bool _insert_task(Task&);
     
-    CGroup _make_cgroup();
-    Placer _make_placer();
-    Master _make_master();
+    void _init_cgroup();
+    void _init_master();
 
   public:
     
@@ -152,12 +162,6 @@ class Agent : public KernelBase {
 };
     
  
-// Function: elapsed_time
-template <typename D>
-D Agent::Task::elapsed_time() {
-  return std::chrono::duration_cast<D>(std::chrono::steady_clock::now() - boot);
-}
-
 };  // End of namespace dtc. --------------------------------------------------------------
 
 

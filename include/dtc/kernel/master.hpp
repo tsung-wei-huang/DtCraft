@@ -100,6 +100,11 @@ class Master : public KernelBase {
     WebUI(key_type k) : key {k} {}
   };
 
+  // Task
+  struct Task {
+
+  };
+
     bool _enqueue(Graph&);
     bool _remove_agent(key_type);
     bool _remove_graph(key_type);
