@@ -128,6 +128,8 @@ bool Master::_try_dequeue(Graph& graph) {
       return std::make_tuple(a, tpg);
     }));
   }
+
+  assert(graph.placement.empty());
   
   // Synchronize all tasks.
   for(auto& fu : futures) {
@@ -136,12 +138,20 @@ bool Master::_try_dequeue(Graph& graph) {
     auto [akey, tpg] = fu.get();
     const auto task_id = tpg.task_id(); 
 
-    // Set up the graph data structure.
-    graph.taskmeta.try_emplace(task_id, akey);
+    // Set up the graph data structure. 
+    // TODO: change the bin key
+    //_tasks.try_emplace(task_id, Task{task_id, std::move(tpg), akey, 0});
     
-    // Set up the agent data structure.
-    auto& agent = _agents.at(akey);
-    agent.taskmeta.try_emplace(task_id, std::move(tpg));
+    // Set up the graph taskmeta.
+    //graph.tasks.insert(task_id);
+    graph.placement[task_id] = akey;
+    
+    // Set up the agent taskmeta.
+    _agents.at(akey).cpu_bins[0].tasks.insert(task_id);
+    _agents.at(akey).tasks.try_emplace(task_id, Agent::Task{std::move(tpg), {0}});
+
+    //auto& agent = _agents.at(akey);
+    //agent.taskmeta.try_emplace(task_id, std::move(tpg));
   }
 
   return true;

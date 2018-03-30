@@ -489,7 +489,8 @@ example/prime.o: example/prime.cpp /usr/include/stdc-predef.h \
  include/dtc/protobuf/killtask.hpp include/dtc/protobuf/common.hpp \
  include/dtc/protobuf/topology.hpp include/dtc/protobuf/frontier.hpp \
  include/dtc/protobuf/taskinfo.hpp include/dtc/protobuf/solution.hpp \
- include/dtc/protobuf/brokenio.hpp include/dtc/webui/webui.hpp \
+ include/dtc/protobuf/brokenio.hpp include/dtc/protobuf/loadinfo.hpp \
+ include/dtc/headerdef.hpp include/dtc/webui/webui.hpp \
  include/dtc/kernel/agent.hpp include/dtc/kernel/graph.hpp \
  include/dtc/kernel/vertex.hpp include/dtc/kernel/stream.hpp \
  include/dtc/kernel/executor.hpp include/dtc/cell/cell.hpp \
@@ -1779,6 +1780,10 @@ include/dtc/protobuf/taskinfo.hpp:
 include/dtc/protobuf/solution.hpp:
 
 include/dtc/protobuf/brokenio.hpp:
+
+include/dtc/protobuf/loadinfo.hpp:
+
+include/dtc/headerdef.hpp:
 
 include/dtc/webui/webui.hpp:
 

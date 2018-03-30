@@ -31,12 +31,25 @@ void Topology::Container::preferred_host(std::string h) {
   configs["preferred_hosts"] += (std::move(h) + ' ');
 }
 
-// Function: host
-std::string Topology::Container::host() const {
-  if(auto itr = configs.find("host"); itr == configs.end()) {
-    return ""; 
+// Function: hosts
+std::vector<std::string> Topology::Container::hosts() const {
+  
+  std::vector<std::string> hosts;
+
+  if(auto itr = configs.find("hosts"); itr != configs.end()) {
+    
+    const static std::regex ws_re("\\s+|\\n+|\\t+"); 
+    
+    auto beg = std::sregex_token_iterator(itr->second.begin(), itr->second.end(), ws_re, -1);
+    auto end = std::sregex_token_iterator();
+    
+    while(beg != end) {
+      hosts.push_back(beg->str());
+      beg++;
+    }
   }
-  else return itr->second;
+
+  return hosts;
 }
 
 // Function: preferred_host

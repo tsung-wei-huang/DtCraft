@@ -21,6 +21,7 @@
 #include <dtc/protobuf/taskinfo.hpp>
 #include <dtc/protobuf/solution.hpp>
 #include <dtc/protobuf/brokenio.hpp>
+#include <dtc/protobuf/loadinfo.hpp>
 
 namespace dtc::pb { 
 
@@ -30,6 +31,7 @@ using Protobuf = std::variant<
   BrokenIO,
   Topology, 
   Resource, 
+  LoadInfo,
   TaskInfo, 
   Solution
 >;

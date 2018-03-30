@@ -15,6 +15,36 @@
 
 namespace dtc {
 
+// Procedure: update
+void Master::Graph::update(const pb::TaskInfo& info) {
+  if(auto itr=placement.find(info.task_id); itr != placement.end()) {
+    placement.erase(itr);
+    solution->taskinfos.emplace_back(info);
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+
+// Procedure: remove
+void Master::Agent::remove(const TaskID& tkey) {
+  if(auto titr = tasks.find(tkey); titr != tasks.end()) {
+    for(const auto b : titr->second.cpu_bins) {
+      cpu_bins[b].tasks.erase(tkey);
+    }
+    *released += titr->second.topology.resource();
+    tasks.erase(titr);
+  }
+}
+
+// Procedure: kill
+void Master::Agent::kill(const TaskID& tkey) {
+  if(auto titr = tasks.find(tkey); titr != tasks.end()) {
+    (*ostream)(pb::Protobuf(pb::KillTask{tkey}));
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+
 // Function: num_agents
 // Query the number of the agents.
 size_t Master::num_agents() const {
@@ -23,28 +53,30 @@ size_t Master::num_agents() const {
 
 // Function: remove_agent
 // The public wrapper of the function to remove an egent.
-std::future<bool> Master::remove_agent(key_type key) {
-  return promise([this, key](){ return _remove_agent(key);});
+std::future<void> Master::remove_agent(key_type key) {
+  return promise([this, key](){ _remove_agent(key);});
 }
 
 // Function: _remove_agent
-bool Master::_remove_agent(key_type key) {
+void Master::_remove_agent(key_type key) {
 
   assert(is_owner());
 
   if(auto aitr = _agents.find(key); aitr != _agents.end()) {
-    auto& A = aitr->second;
-    for(auto& t : A.taskmeta) {
-      _remove_graph(t.second.topology.graph);
+
+    auto& [akey, agent] = *aitr;
+    
+    // TODO: Reschedule the graph due to failure.
+    for(auto& t : agent.tasks) {
+      _remove_graph(t.first.graph);
     }
-    remove(std::move(A.istream), std::move(A.ostream));
+
+    remove(std::move(agent.istream), std::move(agent.ostream));
+
     _agents.erase(aitr);
-    LOGI("Agent ", key, " is removed from the master");
 
-    return true;
+    LOGI("Agent ", akey, " is removed from the master");
   }
-
-  return false;
 }
 
 // Function: insert_agent
@@ -86,7 +118,7 @@ size_t Master::num_graphs() const {
 }
 
 // Function: _remove_graph
-bool Master::_remove_graph(key_type key) {
+void Master::_remove_graph(key_type key) {
 
   assert(is_owner());
 
@@ -95,10 +127,11 @@ bool Master::_remove_graph(key_type key) {
     auto& G = gitr->second;
 
     // Shut down all remaining tasks
-    for(const auto& [tid, meta] : G.taskmeta) {
-      if(auto aitr = _agents.find(meta.agent); aitr != _agents.end()) {
-        LOGI("Ask agent to kill the task ", tid.to_string());
-        (*aitr->second.ostream)(pb::Protobuf(pb::KillTask{tid}));
+    for(const auto& [tkey, akey] : G.placement) {
+      if(auto aitr = _agents.find(akey); aitr != _agents.end()) {
+        aitr->second.kill(tkey);
+        //LOGI("Kill task ", t.to_string(), " @ agent ", aitr->first);
+        //(*aitr->second.ostream)(pb::Protobuf(pb::KillTask{t}));
       }
     }
 
@@ -107,15 +140,12 @@ bool Master::_remove_graph(key_type key) {
     remove(std::move(G.istream), std::move(G.ostream));
     _graphs.erase(gitr);
     LOGI("Graph ", key, " is removed from the master");
-    return true;
   }
-
-  return false;
 }
 
 // Function: remove_graph
-std::future<bool> Master::remove_graph(key_type key) {
-  return promise([this, key] () mutable { return _remove_graph(key); });
+std::future<void> Master::remove_graph(key_type key) {
+  return promise([this, key] () mutable { _remove_graph(key); });
 }
 
 // Function: _insert_graph
@@ -171,30 +201,28 @@ Master::~Master() {
 }
 
 // Function: _on_taskinfo
-void Master::_on_taskinfo(key_type key, pb::TaskInfo& info) {
+void Master::_on_taskinfo(key_type akey, pb::TaskInfo& info) {
 
   assert(is_owner());
-      
-  // Update the agent data structure accordingly.
-  if(auto aitr = _agents.find(key); aitr != _agents.end()) {
-    auto& A = aitr->second;
-    if(auto titr = A.taskmeta.find(info.task_id); titr != A.taskmeta.end()) {
-      LOGI(info);
-      *A.released += titr->second.topology.resource();
-      A.taskmeta.erase(titr);
-    }
+  
+  LOGI(info);
+     
+  // Erase the task from the corresponding agent.
+  if(auto aitr = _agents.find(akey); aitr != _agents.end()) {
+    aitr->second.remove(info.task_id);
+    //auto& A = aitr->second;
+    //if(auto titr = A.bins[task.bin].tasks.find(task.key); titr != A.bins[task.bin].tasks.end()) {
+    //  *A.released += task.topology.resource();
+    //  A.bins[task.bin].tasks.erase(titr);
+    //}
   }
 
   // Update the graph data structure accordingly.
   if(auto gitr = _graphs.find(info.task_id.graph); gitr != _graphs.end()) {
-
     auto& G = gitr->second;
-
-    G.taskmeta.erase(info.task_id);
-    G.solution->taskinfos.emplace_back(info);
-
-    if(info.has_error() || G.taskmeta.size() == 0) {
-      _remove_graph(info.task_id.graph);
+    G.update(info);
+    if(info.has_error() || G.placement.size() == 0) {
+      _remove_graph(G.key);
     }
   }
 
@@ -217,9 +245,20 @@ void Master::_on_resource(key_type key, pb::Resource& res) {
   assert(is_owner());
 
   if(auto aitr = _agents.find(key); aitr != _agents.end()) {
-    aitr->second.resource = res;
-    aitr->second.released = res;
-    LOGI("Agent ", key, " connected ", res);
+
+    auto& [akey, agent] = *aitr;
+    
+    // Assign resource
+    agent.resource = res;
+    agent.released = res;
+
+    // Create bins
+    for(unsigned cpu=0; cpu<res.num_cpus; ++cpu) {
+      agent.cpu_bins.push_back(Agent::CpuBin{static_cast<int>(cpu)});
+    }
+    
+    // Agent is officially connected at this moment.
+    LOGI("Agent ", akey, " connected ", res);
   }
 
   _dequeue();
@@ -252,7 +291,7 @@ void Master::_on_topology(key_type key, pb::Topology& tpg) {
     
     if(!_enqueue(G)) {
       LOGW("Graph ", key, " doesn't fit with available resources");
-      G.solution->what = "cluster does not have enough resources";
+      G.solution->what = "Resource request doesn't fit in cluster";
       _remove_graph(key);
       return;
     }
@@ -343,7 +382,7 @@ Master::ClusterInfo Master::_cluster_info() const {
 
   for(const auto& [k, a] : _agents) {
     if(a.resource) {
-      c.agents.emplace_back( AgentInfo{k, *a.resource, *a.released, a.taskmeta.size()} );
+      c.agents.emplace_back( AgentInfo{k, *a.resource, *a.released, a.tasks.size()} );
     }
   }
 
@@ -415,7 +454,7 @@ std::future<key_type> Master::insert_webui(std::shared_ptr<Socket> socket) {
 }
 
 // Function: _remove_webui
-bool Master::_remove_webui(key_type key) {
+void Master::_remove_webui(key_type key) {
 
   assert(is_owner());
 
@@ -424,17 +463,14 @@ bool Master::_remove_webui(key_type key) {
     remove(std::move(webui.istream), std::move(webui.ostream));
     _webuis.erase(aitr);
     LOGI("WebUI ", key, " is removed from the master");
-    return true;
   }
-
-  return false;
 }
 
 
 // Function: remove_webui
 // The public wrapper of the function to remove a webui
-std::future<bool> Master::remove_webui(key_type key) {
-  return promise([this, key](){ return _remove_webui(key);});
+std::future<void> Master::remove_webui(key_type key) {
+  return promise([this, key](){ _remove_webui(key);});
 }
 
 // Function:

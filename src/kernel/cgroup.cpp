@@ -219,7 +219,7 @@ int ControlGroup::swappiness() const {
 }
 
 // Function: cpuset_cpus
-std::vector<int> ControlGroup::cpuset_cpus() const {
+std::set<int> ControlGroup::cpuset_cpus() const {
 
   constexpr auto nexttoken = [] (const char *q,  int sep) {
     if (q)
@@ -237,7 +237,7 @@ std::vector<int> ControlGroup::cpuset_cpus() const {
     [] (const char c) { return c == ' ' || c == '\n' || c == '\r'; }
   ), str.end());
 
-  std::vector<int> cpus;
+  std::set<int> cpus;
   const char *p {nullptr};
   const char *q {nullptr};
   int r = 0;
@@ -296,7 +296,8 @@ std::vector<int> ControlGroup::cpuset_cpus() const {
     }
 
     while (a <= b) {
-      cpus.push_back(a);
+      //cpus.push_back(a);
+      cpus.insert(a);
       a += s;
     }
   }
@@ -306,8 +307,8 @@ std::vector<int> ControlGroup::cpuset_cpus() const {
     //goto failure;
   }
 
-  std::sort(cpus.begin(), cpus.end());
-  cpus.erase(std::unique(cpus.begin(), cpus.end()), cpus.end());
+  //std::sort(cpus.begin(), cpus.end());
+  //cpus.erase(std::unique(cpus.begin(), cpus.end()), cpus.end());
 
   return cpus;
 }

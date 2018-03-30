@@ -39,7 +39,7 @@ class Policy final : public EnableSingletonFromThis<Policy> {
     inline const std::chrono::seconds& RESOURCE_PERIODIC() const;
     
     inline const auto& THIS_HOST() const;
-		inline const auto& MASTER_HOST() const;
+    inline const auto& MASTER_HOST() const;
     inline const auto& AGENT_LISTENER_PORT() const;
     inline const auto& GRAPH_LISTENER_PORT() const;
     inline const auto& SHELL_LISTENER_PORT() const;
@@ -74,7 +74,7 @@ class Policy final : public EnableSingletonFromThis<Policy> {
     std::chrono::seconds _RESOURCE_PERIODIC {10};
 
     std::string _THIS_HOST {"127.0.0.1"};
-		std::string _MASTER_HOST {"127.0.0.1"};
+    std::string _MASTER_HOST {"127.0.0.1"};
     std::string _AGENT_LISTENER_PORT {"9909"};
     std::string _GRAPH_LISTENER_PORT {"9910"};
     std::string _SHELL_LISTENER_PORT {"9911"};
@@ -120,7 +120,7 @@ inline const auto& Policy::THIS_HOST() const {
 }
 
 inline const auto& Policy::MASTER_HOST() const {
-	return _MASTER_HOST;
+  return _MASTER_HOST;
 }
 
 inline const auto& Policy::AGENT_LISTENER_PORT() const {
@@ -152,15 +152,15 @@ inline const auto& Policy::WEBUI_LISTENER_PORT() const {
 }
 
 inline const auto& Policy::SUBMIT_ARGV() const {
-	return _SUBMIT_ARGV;
+  return _SUBMIT_ARGV;
 }
 
 inline const auto& Policy::SUBMIT_FILE() const {
-	return _SUBMIT_FILE;
+  return _SUBMIT_FILE;
 }
 
 inline Policy::ExecutionMode Policy::EXECUTION_MODE() const {
-	return _EXECUTION_MODE;
+  return _EXECUTION_MODE;
 }
 
 inline const std::filesystem::path& Policy::WEBUI_DIR() const {
@@ -296,16 +296,16 @@ auto Runtime::archive(ArchiverT& ar) {
 namespace dtc::env {
 
 inline std::string this_host() {
-	if(auto str = std::getenv("DTC_THIS_HOST")) {
+  if(auto str = std::getenv("DTC_THIS_HOST")) {
     return str;
-	}
+  }
   else return "127.0.0.1";
 }
 
 inline std::string master_host() {
-	if(auto str = std::getenv("DTC_MASTER_HOST")) {
+  if(auto str = std::getenv("DTC_MASTER_HOST")) {
     return str;
-	}
+  }
   else return "127.0.0.1";
 }
 

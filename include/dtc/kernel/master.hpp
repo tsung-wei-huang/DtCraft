@@ -20,7 +20,7 @@ namespace dtc {
 
 // Class: Master
 class Master : public KernelBase {
-
+  
   // Webui-specific structures.
 
   struct AgentInfo {
@@ -54,18 +54,28 @@ class Master : public KernelBase {
 
     std::optional<pb::Resource> resource; 
     std::optional<pb::Resource> released;
+    std::optional<pb::LoadInfo> loadinfo;
 
-    struct TaskMeta {
-      const pb::Topology topology;
-      TaskMeta(pb::Topology&& tpg) : topology {std::move(tpg)} {}
+    struct CpuBin {
+      int idx;
+      std::unordered_set<TaskID> tasks;
     };
 
-    std::unordered_map<TaskID, TaskMeta> taskmeta;
+    struct Task {
+      pb::Topology topology;
+      std::unordered_set<int> cpu_bins;
+    };
+
+    std::vector<CpuBin> cpu_bins;
+    std::unordered_map<TaskID, Task> tasks;
 
     std::shared_ptr<InputStream> istream;
     std::shared_ptr<OutputStream> ostream;
 
     Agent(key_type k) : key {k} {}
+
+    void kill(const TaskID&);
+    void remove(const TaskID&);
   };
 
   // Graph channel.
@@ -73,20 +83,24 @@ class Master : public KernelBase {
     
     const key_type key;
 
+    float weight;
+
     std::optional<pb::Topology> topology;  
     std::optional<pb::Solution> solution;
 
-    struct TaskMeta {
-      const key_type agent;
-      TaskMeta(key_type k) : agent {k} {}
-    };
+    std::unordered_map<TaskID, key_type> placement;
 
-    std::unordered_map<TaskID, TaskMeta> taskmeta;
+    //struct TaskMeta {
+    //  const key_type agent;
+    //  TaskMeta(key_type k) : agent {k} {}
+    //};
 
     std::shared_ptr<InputStream> istream;
     std::shared_ptr<OutputStream> ostream;
 
     Graph(key_type k) : key {k} {}
+
+    void update(const pb::TaskInfo&);
   };
 
   // Webui channel.
@@ -100,18 +114,14 @@ class Master : public KernelBase {
     WebUI(key_type k) : key {k} {}
   };
 
-  // Task
-  struct Task {
-
-  };
 
     bool _enqueue(Graph&);
-    bool _remove_agent(key_type);
-    bool _remove_graph(key_type);
-    bool _remove_webui(key_type);
 
     size_t _dequeue();
-
+    
+    void _remove_agent(key_type);
+    void _remove_graph(key_type);
+    void _remove_webui(key_type);
     void _on_resource(key_type, pb::Resource&);
     void _on_topology(key_type, pb::Topology&);
     void _on_taskinfo(key_type, pb::TaskInfo&);
@@ -133,10 +143,9 @@ class Master : public KernelBase {
     std::future<void> on_resource(key_type, pb::Resource&&);
     std::future<void> on_topology(key_type, pb::Topology&&);
     std::future<void> on_taskinfo(key_type, pb::TaskInfo&&);
-
-    std::future<bool> remove_agent(key_type);
-    std::future<bool> remove_graph(key_type);
-    std::future<bool> remove_webui(key_type);
+    std::future<void> remove_agent(key_type);
+    std::future<void> remove_graph(key_type);
+    std::future<void> remove_webui(key_type);
 
     std::future<key_type> insert_agent(std::shared_ptr<Socket>);
     std::future<key_type> insert_graph(std::shared_ptr<Socket>);
@@ -152,7 +161,7 @@ class Master : public KernelBase {
     std::future<ClusterInfo> cluster_info();
 
   private:
-
+    
     std::unordered_map<key_type, Agent> _agents;
     std::unordered_map<key_type, Graph> _graphs;
     std::unordered_map<key_type, WebUI> _webuis;

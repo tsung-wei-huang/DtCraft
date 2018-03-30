@@ -129,13 +129,15 @@ class Agent : public KernelBase {
     std::shared_ptr<InputStream> istream;
     std::shared_ptr<OutputStream> ostream;
   }; 
-
+  
   private:
 
     CGroup _cgroup;
     Master _master;
+
+    pb::LoadInfo loadinfo;
     
-    std::vector<int> _cpuset;
+    std::set<int> _cpuset;
     std::unordered_map<TaskID, Task> _tasks;
 
     std::list<Frontier> _frontiers;
@@ -144,12 +146,12 @@ class Agent : public KernelBase {
     void _remove_task(const TaskID&, bool);
     void _insert_frontier(Frontier&);
     void _init_frontier_listener();
+    void _init_cgroup();
+    void _init_master();
 
     bool _deploy(Task&);
     bool _insert_task(Task&);
-    
-    void _init_cgroup();
-    void _init_master();
+
 
   public:
     

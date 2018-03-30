@@ -21,7 +21,7 @@ class Debs18StreamFeeder {
   struct Storage {
     
     mutable std::unordered_map<std::string, std::queue<std::string>> infers;
-    mutable std::unordered_map<size_t, std::string> trains;
+    mutable std::unordered_map<size_t, std::string> golden;
     
     size_t cursor    {0};
     size_t total     {0};
@@ -45,7 +45,8 @@ class Debs18StreamFeeder {
 
     F _op;
 
-    bool _verbose {true};
+    bool _verbose  {true};
+    bool _feedback {false};
 
     void _send_infer(Vertex&, const std::string&) const;
     void _send_train(Vertex&, size_t) const;
@@ -78,7 +79,7 @@ class Debs18StreamFeeder {
 template <typename F>
 Debs18StreamFeeder<F>::Storage::Storage(const Storage& rhs) :
   infers    {std::move(rhs.infers)}, 
-  trains    {std::move(rhs.trains)},
+  golden    {std::move(rhs.golden)},
   cursor    {rhs.cursor},
   total     {rhs.total},
   evaluated {rhs.evaluated},
@@ -146,22 +147,22 @@ void Debs18StreamFeeder<F>::_evaluate(Vertex& v, size_t taskid, const std::strin
       
   auto& s = std::any_cast<Storage&>(v.any);
 
-  if(s.trains.find(taskid) == s.trains.end()) return;
+  if(s.golden.find(taskid) == s.golden.end()) return;
   
   // Increment the counter.
   s.evaluated++;
 
   std::string p_time, p_port, g_time, g_port;
 
-  // Calculate the accuracy
+  // Extract the prediction
   std::istringstream p_iss(record);
   std::getline(p_iss, p_time, ',');
   std::getline(p_iss, p_port);
   
   // Extract the golden
-  auto comma1 = s.trains[taskid].find_last_of(',');
-  auto comma2 = s.trains[taskid].find_last_of(',', comma1 - 1);
-  std::istringstream g_iss(s.trains[taskid].substr(comma2 + 1));
+  auto comma1 = s.golden[taskid].find_last_of(',');
+  auto comma2 = s.golden[taskid].find_last_of(',', comma1 - 1);
+  std::istringstream g_iss(s.golden[taskid].substr(comma2 + 1));
   std::getline(g_iss, g_time, ',');
   std::getline(g_iss, g_port);
 
@@ -256,7 +257,7 @@ void Debs18StreamFeeder<F>::_send_infer(Vertex& v, const std::string& shipid) co
       s.infers.erase(shipid);
     }
 
-    s.trains[taskid] = record;
+    s.golden[taskid] = record;
 
     auto infer_record = _make_infer(record);
     
@@ -282,20 +283,23 @@ void Debs18StreamFeeder<F>::_send_train(Vertex& v, size_t taskid) const {
   auto& s = std::any_cast<Storage&>(v.any);
   
   // Send the data with correct label.
-  if(auto node = s.trains.extract(taskid); node) {
+  if(auto node = s.golden.extract(taskid); node) {
     
     auto train_record = _make_train(node.mapped());
     
-    if(_verbose) {
-      cout("[train_task_", taskid, "]: ", train_record, "\n");
-    }
+    if(_feedback) {
 
-    if constexpr(std::is_same_v<void, R>) {
-      _op(taskid, train_record);
-    }
-    else {
-      if(R dout = _op(taskid, train_record); dout) {
-        v.broadcast_to(_out.keys(), *dout);
+      if(_verbose) {
+        cout("[train_task_", taskid, "]: ", train_record, "\n");
+      }
+
+      if constexpr(std::is_same_v<void, R>) {
+        _op(taskid, train_record);
+      }
+      else {
+        if(R dout = _op(taskid, train_record); dout) {
+          v.broadcast_to(_out.keys(), *dout);
+        }
       }
     }
     
@@ -330,7 +334,7 @@ Debs18StreamFeeder<F>& Debs18StreamFeeder<F>::in(auto&& tail) {
     }
     
     // EOF
-    if(s.trains.size() == 0) {
+    if(s.golden.size() == 0) {
 
       assert(s.infers.size() == 0 && s.evaluated == s.total);
 

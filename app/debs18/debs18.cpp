@@ -4,14 +4,13 @@
 
 int main(int argc, char* argv[]) {
 
-
   if(argc != 2) {
-    std::cout << "Usage: ./debs <filename>.csv\n";
+    std::cout << "Usage: ./debs18 <filename>.csv\n";
     std::exit(EXIT_FAILURE);
   }
   
   // Here we use the simplest mapping method for example.
-  debs18_map(argv[1]);
+  debs18_dnn(argv[1]);
 
   return 0;
 }

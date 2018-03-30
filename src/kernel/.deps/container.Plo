@@ -486,7 +486,8 @@ src/kernel/container.lo: src/kernel/container.cpp \
  include/dtc/protobuf/killtask.hpp include/dtc/protobuf/common.hpp \
  include/dtc/protobuf/topology.hpp include/dtc/protobuf/frontier.hpp \
  include/dtc/ipc/socket.hpp include/dtc/protobuf/taskinfo.hpp \
- include/dtc/protobuf/solution.hpp include/dtc/protobuf/brokenio.hpp
+ include/dtc/protobuf/solution.hpp include/dtc/protobuf/brokenio.hpp \
+ include/dtc/protobuf/loadinfo.hpp include/dtc/headerdef.hpp
 
 /usr/include/stdc-predef.h:
 
@@ -1747,3 +1748,7 @@ include/dtc/protobuf/taskinfo.hpp:
 include/dtc/protobuf/solution.hpp:
 
 include/dtc/protobuf/brokenio.hpp:
+
+include/dtc/protobuf/loadinfo.hpp:
+
+include/dtc/headerdef.hpp:

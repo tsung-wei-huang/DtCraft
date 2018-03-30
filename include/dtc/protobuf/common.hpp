@@ -34,13 +34,30 @@ struct TaskID {
 
   std::string to_string() const;
 
-  bool operator == (const TaskID&) const;
+  inline bool operator == (const TaskID&) const;
+  inline bool operator <  (const TaskID&) const;
+  inline bool operator >  (const TaskID&) const;
 
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT& ar) {
     return ar(graph, topology);
   }
 };
+
+// Operator: ==  
+inline bool TaskID::operator == (const TaskID& rhs) const {
+  return graph == rhs.graph && topology == rhs.topology;
+}
+
+// Operator: <
+inline bool TaskID::operator < (const TaskID& rhs) const {
+  return graph < rhs.graph && topology < rhs.topology;
+}
+
+// Operator: >
+inline bool TaskID::operator > (const TaskID& rhs) const {
+  return graph > rhs.graph && topology > rhs.topology;
+}
 
 // Outputstream
 std::ostream& operator<<(std::ostream&, const TaskID&);

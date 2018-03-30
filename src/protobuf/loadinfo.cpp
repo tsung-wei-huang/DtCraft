@@ -11,22 +11,12 @@
  *                                                                            *
  ******************************************************************************/
 
-#include <dtc/protobuf/common.hpp>
+#include <dtc/protobuf/loadinfo.hpp>
 
 namespace dtc {
-  
-// Function: to_string
-std::string TaskID::to_string() const {
-  return std::to_string(graph) + "-" + std::to_string(topology);
-}
 
 
-// Outputstream 
-std::ostream& operator<<(std::ostream& os, const TaskID& rhs) {
-  os << rhs.to_string();
-  return os;
-}
-
-};  // End of namespace dtc. ----------------------------------------------------------------------
 
 
+
+};  // end of namespace dtc. ----------------------------------------------------------------------

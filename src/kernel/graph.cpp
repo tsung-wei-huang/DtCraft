@@ -165,18 +165,6 @@ ContainerBuilder& ContainerBuilder::cpu(uintmax_t n) {
   return *this;
 }
 
-// Function: host
-ContainerBuilder& ContainerBuilder::host(std::string host) {
-  _graph->_tasks.emplace_back(
-    [host=std::move(host), c=key] (pb::Topology* tpg) mutable {
-      if(tpg && tpg->topology == -1) {
-        tpg->containers.at(c).host(std::move(host));
-      }
-    }
-  );
-  return *this;
-}
-
 //-------------------------------------------------------------------------------------------------
 // ProberBuilder
 //-------------------------------------------------------------------------------------------------

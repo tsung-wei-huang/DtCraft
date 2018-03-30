@@ -19,10 +19,26 @@
 
 namespace dtc::pb {
 
+// Struct: LoadInfo
 struct LoadInfo {
 
+  float cpu_load {.0f};
+
+  LoadInfo() = default;
+  LoadInfo(LoadInfo&&) = default;
+  LoadInfo(const LoadInfo&) = default;
+
+  LoadInfo& operator = (const LoadInfo&) = default;
+  LoadInfo& operator = (LoadInfo&&) = default;
+
+  template <typename ArchiverT>
+  std::streamsize archive(ArchiverT& ar) {
+    return ar(cpu_load);
+  }
 
 };
+
+
 
 
 };  // End of namespace dtc::pb. ------------------------------------------------------------------

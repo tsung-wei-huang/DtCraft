@@ -46,10 +46,11 @@ struct Topology {
     Container& operator = (const Container&) = default;
 
     void host(std::string);
+    void hosts(auto&&... hosts);
     void preferred_host(std::string);
-    void preferred_hosts(auto&&... hs);
+    void preferred_hosts(auto&&... hosts);
 
-    std::string host() const;
+    std::vector<std::string> hosts() const;
     std::vector<std::string> preferred_hosts() const;
     
     template <typename ArchiverT>
@@ -173,6 +174,11 @@ inline auto Topology::task_id() const {
 std::ostream& operator<<(std::ostream&, const Topology&);
 
 // -----------------------------------------------------------------------------------------
+
+// Procedure: hosts
+void Topology::Container::hosts(auto&&... hosts) {
+  (host(std::move(hosts)), ...);
+}
 
 // Procedure: preferred_hosts
 void Topology::Container::preferred_hosts(auto&&... hosts) {

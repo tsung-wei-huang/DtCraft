@@ -69,7 +69,7 @@ class ControlGroup {
     uintmax_t memory_limit_in_bytes() const;
     uintmax_t memory_usage_in_bytes() const;
     uintmax_t memory_max_usage_in_bytes() const;
-    std::vector<int> cpuset_cpus() const;
+    std::set<int> cpuset_cpus() const;
 
     inline const std::filesystem::path& path() const;
 

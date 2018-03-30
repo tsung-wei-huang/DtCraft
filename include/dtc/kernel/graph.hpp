@@ -215,7 +215,7 @@ class ContainerBuilder {
     ContainerBuilder& memory(uintmax_t);
     ContainerBuilder& memory_limit_in_bytes(uintmax_t);
     ContainerBuilder& space(uintmax_t);
-    ContainerBuilder& host(std::string);
+    ContainerBuilder& hosts(auto&&... ts);
     ContainerBuilder& preferred_hosts(auto&&... ts);
 };
 
@@ -224,7 +224,20 @@ inline ContainerBuilder::operator key_type() const {
   return key;
 }
 
-// Function: preferred_host
+// Function: hosts
+ContainerBuilder& ContainerBuilder::hosts(auto&&... ts) {
+  _graph->_tasks.emplace_back(
+    [ts..., c=key] (pb::Topology* tpg) mutable {
+      if(tpg && tpg->topology == -1) {
+        tpg->containers.at(c).hosts(std::move(ts)...);
+      }
+    }
+  );
+  return *this;
+}
+
+
+// Function: preferred_hosts
 ContainerBuilder& ContainerBuilder::preferred_hosts(auto&&... ts) {
   _graph->_tasks.emplace_back(
     [ts..., c=key] (pb::Topology* tpg) mutable {

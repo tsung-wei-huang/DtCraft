@@ -491,7 +491,8 @@ src/kernel/executor.lo: src/kernel/executor.cpp \
  include/dtc/kernel/cgroup.hpp include/dtc/protobuf/protobuf.hpp \
  include/dtc/protobuf/killtask.hpp include/dtc/protobuf/frontier.hpp \
  include/dtc/protobuf/taskinfo.hpp include/dtc/protobuf/solution.hpp \
- include/dtc/protobuf/brokenio.hpp include/dtc/webui/webui.hpp
+ include/dtc/protobuf/brokenio.hpp include/dtc/protobuf/loadinfo.hpp \
+ include/dtc/headerdef.hpp include/dtc/webui/webui.hpp
 
 /usr/include/stdc-predef.h:
 
@@ -1774,5 +1775,9 @@ include/dtc/protobuf/taskinfo.hpp:
 include/dtc/protobuf/solution.hpp:
 
 include/dtc/protobuf/brokenio.hpp:
+
+include/dtc/protobuf/loadinfo.hpp:
+
+include/dtc/headerdef.hpp:
 
 include/dtc/webui/webui.hpp:

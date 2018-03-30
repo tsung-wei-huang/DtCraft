@@ -11,7 +11,7 @@ struct Mapper {
 void debs18_map(const std::string& file) {
   
   dtc::Graph G;
-
+  
   auto debs18 = G.insert<dtc::cell::Debs18StreamFeeder>(
     file,
     [] (size_t& tid, std::string& record) -> std::tuple<size_t, std::string> {
@@ -19,28 +19,13 @@ void debs18_map(const std::string& file) {
       return std::forward_as_tuple(tid, record);
     }
   );
-
+  
   auto learner = G.insert<dtc::cell::Operator1x1>(
     [mapper=Mapper()] (std::tuple<size_t, std::string>& task) mutable -> std::optional<std::tuple<size_t, std::string>> {
 
       auto& [taskid, record] = task;
       
-      // Training data.
-      if(auto num_commas = std::count(record.begin(), record.end(), ','); num_commas == 1) {
-
-        std::istringstream iss(record);
-        std::string time, port;
-        std::getline(iss, time, ',');
-        std::getline(iss, port);
-
-        const auto& sid = mapper.tid2sid[taskid];
-        mapper.sid2time[sid] = time;
-        mapper.sid2port[sid] = port;
-
-        return {};
-      }
-      // Inferring data.
-      else if(num_commas == 9) {
+      if(auto num_commas = std::count(record.begin(), record.end(), ','); num_commas == 9) {
         auto sid = record.substr(0, record.find_first_of(','));
         mapper.tid2sid[taskid] = sid;
         return std::make_tuple(taskid, mapper.sid2time[sid] + ',' + mapper.sid2port[sid]);
