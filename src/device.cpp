@@ -17,7 +17,6 @@ namespace dtc {
 
 // Constructor.
 Device::Device(int fd) : _fd {fd} {
-  //assert(is_fd_nonblocking(fd) && is_fd_close_on_exec(fd));
 }
 
 // Destructor
@@ -76,8 +75,6 @@ std::streamsize Device::read(void* buf, std::streamsize sz) const {
   }
   // case 2: eof
   else if(ret == 0 && sz != 0) {
-    //errno = EPIPE;
-    //return -1;
     throw std::system_error(
       std::make_error_code(static_cast<std::errc>(EPIPE)), "Device read failed"
     );

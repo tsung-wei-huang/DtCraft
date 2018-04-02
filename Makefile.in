@@ -171,20 +171,21 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
 	src/csv/csv.lo src/exit.lo src/event/reactor.lo \
 	src/event/event.lo src/event/select.lo src/event/epoll.lo \
-	src/ipc/socket.lo src/ipc/ipc.lo src/ipc/domain.lo \
-	src/ipc/fifo.lo src/ipc/notifier.lo src/ipc/pipe.lo \
-	src/ipc/shm.lo src/ipc/streambuf.lo src/utility/os.lo \
-	src/utility/http_parser.lo src/utility/table.lo \
-	src/ml/naive_bayes.lo src/ml/linear.lo src/ml/optimizer.lo \
-	src/ml/dnn.lo src/error.lo src/policy.lo \
-	src/protobuf/resource.lo src/protobuf/frontier.lo \
-	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
-	src/protobuf/solution.lo src/protobuf/common.lo \
-	src/protobuf/topology.lo src/kernel/container.lo \
-	src/kernel/cgroup.lo src/kernel/manager.lo \
-	src/kernel/stream.lo src/kernel/scheduler.lo \
-	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
-	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
+	src/ipc/socket.lo src/ipc/block_file.lo src/ipc/ipc.lo \
+	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/notifier.lo \
+	src/ipc/pipe.lo src/ipc/shm.lo src/ipc/streambuf.lo \
+	src/utility/os.lo src/utility/http_parser.lo \
+	src/utility/table.lo src/ml/naive_bayes.lo src/ml/linear.lo \
+	src/ml/optimizer.lo src/ml/dnn.lo src/error.lo src/policy.lo \
+	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
+	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
+	src/protobuf/protobuf.lo src/protobuf/solution.lo \
+	src/protobuf/common.lo src/protobuf/topology.lo \
+	src/kernel/container.lo src/kernel/cgroup.lo \
+	src/kernel/manager.lo src/kernel/stream.lo \
+	src/kernel/scheduler.lo src/kernel/vertex.lo \
+	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
+	src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -796,11 +797,11 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/event/demux.hpp include/dtc/event/epoll.hpp \
 	include/dtc/event/event.hpp include/dtc/ipc/notifier.hpp \
 	include/dtc/ipc/streambuf.hpp include/dtc/ipc/domain.hpp \
-	include/dtc/ipc/pipe.hpp include/dtc/ipc/fifo.hpp \
-	include/dtc/ipc/ipc.hpp include/dtc/ipc/shm.hpp \
-	include/dtc/ipc/ios.hpp include/dtc/ipc/socket.hpp \
-	include/dtc/headerdef.hpp include/dtc/utility/os.hpp \
-	include/dtc/utility/allocator.hpp \
+	include/dtc/ipc/block_file.hpp include/dtc/ipc/pipe.hpp \
+	include/dtc/ipc/fifo.hpp include/dtc/ipc/ipc.hpp \
+	include/dtc/ipc/shm.hpp include/dtc/ipc/ios.hpp \
+	include/dtc/ipc/socket.hpp include/dtc/headerdef.hpp \
+	include/dtc/utility/os.hpp include/dtc/utility/allocator.hpp \
 	include/dtc/utility/table.hpp \
 	include/dtc/utility/scope_guard.hpp \
 	include/dtc/utility/random.hpp include/dtc/utility/mempool.hpp \
@@ -1155,12 +1156,13 @@ TESTS = unittest/archive.sh unittest/statgrab.sh unittest/webui.sh \
 lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/csv/csv.cpp src/exit.cpp src/event/reactor.cpp \
 	src/event/event.cpp src/event/select.cpp src/event/epoll.cpp \
-	src/ipc/socket.cpp src/ipc/ipc.cpp src/ipc/domain.cpp \
-	src/ipc/fifo.cpp src/ipc/notifier.cpp src/ipc/pipe.cpp \
-	src/ipc/shm.cpp src/ipc/streambuf.cpp src/utility/os.cpp \
-	src/utility/http_parser.cpp src/utility/table.cpp \
-	src/ml/naive_bayes.cpp src/ml/linear.cpp src/ml/optimizer.cpp \
-	src/ml/dnn.cpp src/error.cpp src/policy.cpp \
+	src/ipc/socket.cpp src/ipc/block_file.cpp src/ipc/ipc.cpp \
+	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/notifier.cpp \
+	src/ipc/pipe.cpp src/ipc/shm.cpp src/ipc/streambuf.cpp \
+	src/utility/os.cpp src/utility/http_parser.cpp \
+	src/utility/table.cpp src/ml/naive_bayes.cpp src/ml/linear.cpp \
+	src/ml/optimizer.cpp src/ml/dnn.cpp src/error.cpp \
+	src/policy.cpp src/protobuf/loadinfo.cpp \
 	src/protobuf/resource.cpp src/protobuf/frontier.cpp \
 	src/protobuf/taskinfo.cpp src/protobuf/protobuf.cpp \
 	src/protobuf/solution.cpp src/protobuf/common.cpp \
@@ -1364,6 +1366,8 @@ src/ipc/$(DEPDIR)/$(am__dirstamp):
 	@: > src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/socket.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
+src/ipc/block_file.lo: src/ipc/$(am__dirstamp) \
+	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/ipc.lo: src/ipc/$(am__dirstamp) \
 	src/ipc/$(DEPDIR)/$(am__dirstamp)
 src/ipc/domain.lo: src/ipc/$(am__dirstamp) \
@@ -1411,6 +1415,8 @@ src/protobuf/$(am__dirstamp):
 src/protobuf/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/protobuf/$(DEPDIR)
 	@: > src/protobuf/$(DEPDIR)/$(am__dirstamp)
+src/protobuf/loadinfo.lo: src/protobuf/$(am__dirstamp) \
+	src/protobuf/$(DEPDIR)/$(am__dirstamp)
 src/protobuf/resource.lo: src/protobuf/$(am__dirstamp) \
 	src/protobuf/$(DEPDIR)/$(am__dirstamp)
 src/protobuf/frontier.lo: src/protobuf/$(am__dirstamp) \
@@ -1965,6 +1971,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/event.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/reactor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/select.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/block_file.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/domain.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/fifo.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ipc/$(DEPDIR)/ipc.Plo@am__quote@
@@ -1989,6 +1996,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/optimizer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/frontier.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/loadinfo.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/protobuf.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/resource.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/solution.Plo@am__quote@

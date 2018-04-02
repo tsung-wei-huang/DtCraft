@@ -15,8 +15,12 @@
 
 namespace dtc::ml {
 
+// ------------------------------------------------------------------------------------------------
+// LinearRegressor
+// ------------------------------------------------------------------------------------------------
+
 // Procedure: _shuffle
-void LinearRegressor::_shuffle(Eigen::MatrixXf& X, Eigen::MatrixXf& Y) {
+void LinearRegressor::_shuffle(Eigen::MatrixXf& X, Eigen::VectorXf& Y) {
   Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> p(X.rows());
   p.setIdentity();
   std::shuffle(p.indices().data(), p.indices().data() + p.indices().size(), _gen);
@@ -25,19 +29,19 @@ void LinearRegressor::_shuffle(Eigen::MatrixXf& X, Eigen::MatrixXf& Y) {
 }
 
 // Function: infer
-Eigen::MatrixXf LinearRegressor::infer(Eigen::MatrixXf& X) const {
+Eigen::VectorXf LinearRegressor::infer(Eigen::MatrixXf& X) const {
   return (X*_W + _B.replicate(X.rows(), 1));
 }
 
 // Function: dimension
-LinearRegressor& LinearRegressor::dimension(size_t features, size_t labels) {
-  _W = Eigen::MatrixXf::Random(features, labels);
-  _B = Eigen::MatrixXf::Random(1, labels);
+LinearRegressor& LinearRegressor::dimension(size_t features) {
+  _W = Eigen::MatrixXf::Random(features, 1);
+  _B = Eigen::MatrixXf::Random(1, 1);
   return *this;
 }
 
 // Procedure: _optimize
-void LinearRegressor::_optimize(const Eigen::MatrixXf& X, const Eigen::MatrixXf& Y, float l) {
+void LinearRegressor::_optimize(const Eigen::MatrixXf& X, const Eigen::VectorXf& Y, float l) {
 
   // Find the derivative at the last layer
   Eigen::MatrixXf delta = ((X*_W + _B.replicate(X.rows(), 1)) - Y) / (2.0f * Y.cols());
@@ -61,6 +65,8 @@ void LinearRegressor::_update(float rate) {
   }, _optimizer);
 }
 
+// ------------------------------------------------------------------------------------------------
+// LinearClassifier
 // ------------------------------------------------------------------------------------------------
 
 // Procedure: _shuffle

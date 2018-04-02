@@ -28,17 +28,13 @@ auto make_device_pair() {
   else if constexpr(std::is_same_v<D, dtc::Pipe>) {
     return dtc::make_pipe();
   }
+  else if constexpr(std::is_same_v<D, dtc::BlockFile>) {
+    return dtc::make_block_file();
+  }
   else static_assert(dtc::dependent_false_v<D>);
 }
 
 // ---- Device test -------------------------------------------------------------------------------
-
-// Procedure: test_device_property
-auto test_device_property(auto device) {
-  REQUIRE(dtc::is_fd_valid(device->fd()));
-  REQUIRE(dtc::is_fd_nonblocking(device->fd()));
-  REQUIRE(dtc::is_fd_close_on_exec(device->fd()));
-}
 
 // Procedure: test_device_io
 auto test_device_io(std::shared_ptr<dtc::Device> rend, std::shared_ptr<dtc::Device> wend) {
@@ -64,6 +60,9 @@ TEST_CASE("DeviceTest.Socket") {
   // Bind a listener.
   auto L = dtc::make_socket_server("0");  
   REQUIRE((L && L->is_listener()));
+  REQUIRE(dtc::is_fd_valid(L->fd()));
+  REQUIRE(dtc::is_fd_nonblocking(L->fd()));
+  REQUIRE(dtc::is_fd_close_on_exec(L->fd()));
 
   // Try accepting an incoming connection.
   REQUIRE_THROWS_AS(L->accept(), std::system_error);
@@ -73,17 +72,36 @@ TEST_CASE("DeviceTest.Socket") {
   
   // Try connecting to the right port
   auto C = dtc::make_socket_client(H, L->this_host().second);
-  REQUIRE((C && C->is_connected()));
+  REQUIRE((C and C->is_connected()));
+  REQUIRE(dtc::is_fd_valid(C->fd()));
+  REQUIRE(dtc::is_fd_nonblocking(C->fd()));
+  REQUIRE(dtc::is_fd_close_on_exec(C->fd()));
 
   // Now accept the connection from the listener.
   auto A = L->accept();
-  REQUIRE((A && A->is_connected()));
+  REQUIRE((A and A->is_connected()));
+  REQUIRE(dtc::is_fd_valid(A->fd()));
+  REQUIRE(dtc::is_fd_nonblocking(A->fd()));
+  REQUIRE(dtc::is_fd_close_on_exec(A->fd()));
   
   // Cross validation.
   REQUIRE(A->this_host() == C->peer_host());
   REQUIRE(A->peer_host() == C->this_host());
-  
-  test_device_property(A);
+}
+
+// Test case: DeviceTest.Pipe
+TEST_CASE("DeviceTest.Pipe") {
+  auto [rend, wend] = dtc::make_pipe();
+  REQUIRE((dtc::is_fd_valid(rend->fd()) and dtc::is_fd_valid(wend->fd())));
+  REQUIRE((dtc::is_fd_nonblocking(rend->fd()) and dtc::is_fd_nonblocking(wend->fd())));
+  REQUIRE((dtc::is_fd_close_on_exec(rend->fd()) and dtc::is_fd_close_on_exec(wend->fd())));
+}
+
+// Test case: DeviceTest.BlockFile
+TEST_CASE("DeviceTest.BlockFile") {
+  auto F = dtc::make_block_file();
+  REQUIRE(dtc::is_fd_valid(F->fd()));
+  REQUIRE(dtc::is_fd_close_on_exec(F->fd()));
 }
 
 // Test case: DeviceTest.IO.Socket

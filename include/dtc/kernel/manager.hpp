@@ -19,6 +19,7 @@
 #include <dtc/ipc/pipe.hpp>
 #include <dtc/ipc/ipc.hpp>
 #include <dtc/ipc/notifier.hpp>
+#include <dtc/ipc/block_file.hpp>
 #include <dtc/concurrent/unique_guard.hpp>
 #include <dtc/concurrent/shared_guard.hpp>
 #include <dtc/archive/binary.hpp>

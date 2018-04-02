@@ -5,10 +5,6 @@ void debs18_dnn(const std::string& file) {
 
   // TODO (Guaannan)
   // raining here
-
-
-
-
   dtc::Graph G;
 
   

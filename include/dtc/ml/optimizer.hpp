@@ -46,7 +46,16 @@ class AdamOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto AdamOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _b1, _b2, _b1_t, _b2_t, _eps, _mts, _vts);
+}
   
 // Function: alpha  
 inline AdamOptimizer& AdamOptimizer::alpha(float v) { 
@@ -78,7 +87,16 @@ class AdamaxOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto AdamaxOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _b1, _b2, _b1_t, _eps, _mts, _uts);
+}
 
 // Function: alpha    
 inline AdamaxOptimizer& AdamaxOptimizer::alpha(float v) { 
@@ -105,7 +123,16 @@ class GradientDescentOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int = -1);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto GradientDescentOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _decay);
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -127,7 +154,16 @@ class AdagradOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto AdagradOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _eps, _gs);
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -151,7 +187,16 @@ class RMSpropOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto RMSpropOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _mu, _eps, _gs);
+}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -181,7 +226,16 @@ class MomentumOptimizer {
 
     void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
     void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto MomentumOptimizer::archive(ArchiverT& ar) {
+  return ar(_alpha, _lambda, _mu, _dW_prevs);
+}
 
 // ------------------------------------------------------------------------------------------------
 

@@ -23,25 +23,23 @@ namespace dtc {
 // Class: Device
 class Device {
   
-  friend class DeviceWriter;
-  friend class DeviceReader;
   friend class OutputStreamBuffer;
   friend class InputStreamBuffer;
 
   protected:
 
     int _fd {-1};
-  
+
   public:
 
     Device(int);
     
     virtual ~Device();
 
-    std::streamsize read(void*, std::streamsize) const;
-    std::streamsize purge(void*, std::streamsize) const;
-    std::streamsize write(const void*, std::streamsize) const;
-    std::streamsize flush(const void*, std::streamsize) const;
+    virtual std::streamsize read(void*, std::streamsize) const;
+    virtual std::streamsize purge(void*, std::streamsize) const;
+    virtual std::streamsize write(const void*, std::streamsize) const;
+    virtual std::streamsize flush(const void*, std::streamsize) const;
     
     inline int fd() const;
     

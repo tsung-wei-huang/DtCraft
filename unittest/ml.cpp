@@ -16,123 +16,112 @@
 #include <dtc/unittest/catch.hpp>
 #include <dtc/dtc.hpp>
 
-// regression_data
-Eigen::MatrixXf regression_data(size_t num_features, size_t num_labels) {
+constexpr auto mnist_image_file = DTC_HOME "/benchmark/mnist/train-images.idx3-ubyte";
+constexpr auto mnist_label_file = DTC_HOME "/benchmark/mnist/train-labels.idx1-ubyte";
+
+// Function: parse_mnist
+std::tuple<Eigen::MatrixXf, Eigen::VectorXi, Eigen::MatrixXf, Eigen::VectorXi> parse_mnist() {
+
+  REQUIRE(std::filesystem::exists(mnist_image_file));
+  REQUIRE(std::filesystem::exists(mnist_label_file));
+
+  Eigen::MatrixXf images = dtc::ml::read_mnist_image<Eigen::MatrixXf>(mnist_image_file) / 255.0;
+  Eigen::VectorXi labels = dtc::ml::read_mnist_label<Eigen::VectorXi>(mnist_label_file);
+    
+  REQUIRE(images.rows() == labels.rows());
+  REQUIRE(images.cols() == 784);
+  REQUIRE(labels.cols() == 1);
+
+  const int N = images.rows();
+  const int num_infers = std::max(10000, N/10);
+  const int num_trains = N - num_infers;
+    
+  Eigen::MatrixXf Dtr = images.middleRows(0, num_trains);
+  Eigen::MatrixXf Dte = images.middleRows(num_trains, num_infers);
+
+  Eigen::VectorXi Ltr = labels.middleRows(0, num_trains);
+  Eigen::VectorXi Lte = labels.middleRows(num_trains, num_infers);
+
+  return {Dtr, Ltr, Dte, Lte};
 }
 
-// ------------------------------------------------------------------------------------------------
+// Testcase: DnnClassifierTest.Mnist
+TEST_CASE("DnnClassifierTest.Mnist") {
+  
+  auto [Dtr, Ltr, Dte, Lte] = parse_mnist();
+  
+  dtc::ml::DnnClassifier nn1;
 
-// Testcase: RegressorTest.Dnn
-TEST_CASE("RegressorTest.Dnn") {
+  nn1.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
+     .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
+     .optimizer<dtc::ml::AdamOptimizer>()
+     .train(Dtr, Ltr, 5, 64, 0.01f, [](){});
+  
+  auto acc1 = ((nn1.infer(Dte) - Lte).array() == 0).count() / static_cast<float>(Lte.rows());
 
-  dtc::ml::DnnRegressor reg;
+  REQUIRE(acc1 >= 0.9f);
+  
+  // Save the model.
+  const auto model = std::filesystem::temp_directory_path() / "dnnc.mnist.model.dat";
+  auto omsz = nn1.save(model);
+  REQUIRE(omsz > 0);
 
+  // Load the model
+  dtc::ml::DnnClassifier nn2;
+  auto imsz = nn2.load(model);
+  REQUIRE(imsz == omsz);
+  
+  // Predict from the retrieved model
+  auto acc2 = ((nn2.infer(Dte) - Lte).array() == 0).count() / static_cast<float>(Lte.rows());
+  REQUIRE(acc1 == acc2);
 }
 
-// Testcase: RegressorTest.Linear
-TEST_CASE("RegressorTest.Linear") {
+// Testcase: DnnRegressorTest.Mnist
+TEST_CASE("DnnRegressorTest.Mnist") {
 
-	//Eigen::MatrixXf data(82, 5);
-	Eigen::MatrixXf data = regression_data(82, 5);
+  auto [Dtr, Ltri, Dte, Ltei] = parse_mnist();
 
-  data << 
-  55.33, 1.72, 54, 1.66219, 92.19,
-  59.13, 1.20, 53, 1.58399, 92.74,
-  57.39, 1.42, 55, 1.61731, 91.88,
-  56.43, 1.78, 55, 1.66228, 92.80,
-  55.98, 1.58, 54, 1.63195, 92.56,
-  56.16, 2.12, 56, 1.68034, 92.61,
-  54.85, 1.17, 54, 1.58206, 92.33,
-  52.83, 1.50, 58, 1.54998, 92.22,
-  54.52, 0.87, 57, 1.56230, 91.56,
-  54.12, 0.88, 57, 1.57818, 92.17,
-  51.72, 0.00, 56, 1.60401, 92.75,
-  51.29, 0.00, 58, 1.59594, 92.89,
-  53.22, 1.31, 58, 1.54814, 92.79,
-  54.76, 1.67, 58, 1.63134, 92.55,
-  53.34, 1.81, 59, 1.60228, 92.42,
-  54.84, 2.87, 60, 1.54949, 92.43,
-  54.03, 1.19, 60, 1.57841, 92.77,
-  51.44, 0.42, 59, 1.61183, 92.60,
-  53.54, 1.39, 59, 1.51081, 92.30,
-  57.88, 1.28, 62, 1.56443, 92.30,
-  60.93, 1.22, 62, 1.53995, 92.48,
-  59.59, 1.13, 61, 1.56949, 91.61,
-  61.42, 1.49, 62, 1.41330, 91.30,
-  56.60, 2.10, 62, 1.54777, 91.37,
-  59.94, 2.29, 61, 1.65523, 91.25,
-  58.30, 3.11, 62, 1.29994, 90.76,
-  58.25, 3.10, 63, 1.19975, 90.90,
-  55.53, 2.88, 64, 1.20817, 90.43,
-  59.79, 1.48, 62, 1.30621, 90.83,
-  57.51, 0.87, 60, 1.29842, 92.18,
-  62.82, 0.88, 59, 1.40483, 91.73,
-  62.57, 0.42, 60, 1.45056, 91.10,
-  60.23, 0.12, 59, 1.54357, 91.74,
-  65.08, 0.10, 60, 1.68940, 91.46,
-  65.58, 0.05, 59, 1.74695, 91.44,
-  65.64, 0.05, 60, 1.74919, 91.56,
-  65.28, 0.42, 60, 1.78053, 91.90,
-  65.03, 0.65, 59, 1.78104, 91.61,
-  67.84, 0.49, 54, 1.72387, 92.09,
-  73.74, 0.00, 54, 1.73496, 90.64,
-  72.66, 0.00, 55, 1.71966, 91.09,
-  71.31, 3.44, 55, 1.60325, 90.51,
-  72.30, 4.02, 55, 1.66783, 90.24,
-  68.81, 6.88, 55, 1.69836, 91.01,
-  66.61, 2.31, 52, 1.77967, 91.90,
-  63.66, 2.99, 52, 1.81271, 91.92,
-  63.85, 0.24, 50, 1.81485, 92.16,
-  67.25, 0.00, 53, 1.72526, 91.36,
-  67.19, 0.00, 52, 1.86782, 92.16,
-  62.34, 0.00, 48, 2.00677, 92.68,
-  62.98, 0.00, 47, 1.95366, 92.88,
-  69.89, 0.00, 55, 1.89387, 92.59,
-  73.13, 0.00, 57, 1.81651, 91.35,
-  65.09, 1.01, 57, 1.45939, 90.29,
-  64.71, 0.61, 55, 1.38934, 90.71,
-  64.05, 1.64, 57, 1.33945, 90.41,
-  63.97, 2.80, 60, 1.42094, 90.43,
-  70.48, 4.64, 60, 1.57680, 89.87,
-  71.11, 3.56, 60, 1.41229, 89.98,
-  69.05, 2.51, 60, 1.54605, 90.00,
-  71.99, 1.28, 55, 1.55182, 89.66,
-  72.03, 1.28, 56, 1.60390, 90.08,
-  69.90, 2.19, 56, 1.67265, 90.67,
-  72.16, 0.51, 56, 1.55242, 90.59,
-  70.97, 0.09, 55, 1.45728, 91.06,
-  70.55, 0.05, 52, 1.26174, 90.69,
-  69.73, 0.06, 54, 1.28802, 91.11,
-  69.93, 0.05, 55, 1.36399, 90.32,
-  70.60, 0.00, 55, 1.42210, 90.36,
-  75.54, 0.00, 55, 1.67219, 90.57,
-  49.14, 0.00, 40, 2.17140, 94.17,
-  49.10, 0.00, 42, 2.31909, 94.39,
-  44.66, 4.99, 42, 2.14314, 93.42,
-  44.64, 3.73, 44, 2.08081, 94.65,
-   4.23, 10.7, 41, 2.17070, 97.61,
-   5.53, 7.99, 40, 1.99418, 97.08,
-  17.11, 5.06, 47, 1.61437, 95.12,
-  67.60, 1.84, 55, 1.64758, 91.86,
-  64.81, 2.24, 54, 1.69592, 91.61,
-  63.13, 1.60, 52, 1.66118, 92.17,
-  63.48, 3.46, 52, 1.48216, 91.56,
-  62.25, 3.56, 50, 1.49734, 92.16;
+  Eigen::VectorXf Ltr = Ltri.cast<float>();
+  Eigen::VectorXf Lte = Ltei.cast<float>();
+
+  dtc::ml::DnnRegressor nn1;
+
+  nn1.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
+     .fully_connected_layer(30, 1, dtc::ml::Activation::NONE)
+     .optimizer<dtc::ml::AdamOptimizer>();
+  
+  float cmse = (nn1.infer(Dte) - Lte).array().square().sum() / (2.0f*Dte.rows());
+  float pmse = cmse;
+
+  nn1.train(Dtr, Ltr, 5, 64, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
+    cmse = (dnnr.infer(Dte) - Lte).array().square().sum() / (2.0f*Dte.rows());
+    REQUIRE(cmse <= pmse);
+    //printf("epoch %d: mse=%.4f\n", i++, cmse);
+    pmse = cmse;
+  });
+}
+
+// Testcase: LinearRegressorTest
+TEST_CASE("LinearRegressorTest") {
+
+	Eigen::MatrixXf X = Eigen::MatrixXf::Random(65536, 16);
+  Eigen::VectorXf Y = Eigen::VectorXf::Random(65536);
 
   dtc::ml::LinearRegressor lgr;
-	
-	Eigen::MatrixXf X = data.leftCols(4);
-  Eigen::MatrixXf Y = data.rightCols(1);
   
-  lgr.dimension(4, 1)
-     .optimizer<dtc::ml::AdamOptimizer>()
-     .train(X, Y, 100, 32, 0.01f, [&, i=0] (auto& lgr) mutable {
-       Eigen::MatrixXf P = lgr.infer(X);
-       printf("epoch %d: %.4f\n", i++, (P-Y).array().square().sum() / (2.0f*P.rows()));
-     });
+  lgr.dimension(16)
+     .optimizer<dtc::ml::AdamOptimizer>();
 
+  float pmse = (lgr.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+
+  lgr.train(X, Y, 128, 64, 0.01f, [&, i=0] (dtc::ml::LinearRegressor& lgr) mutable {
+    printf("epoch %d: %.4f\n", i++, (lgr.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
+  });
+
+  float cmse = (lgr.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+
+  REQUIRE(cmse <= pmse);
 }
-
 
 
 

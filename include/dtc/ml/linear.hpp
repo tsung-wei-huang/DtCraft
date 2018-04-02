@@ -25,17 +25,17 @@ class LinearRegressor {
     
     LinearRegressor() = default;
 
-    LinearRegressor& dimension(size_t, size_t = 1);
+    LinearRegressor& dimension(size_t);
 
     template <typename O, typename... ArgsT>
     LinearRegressor& optimizer(ArgsT&&...);
 
     template <typename C>
-    LinearRegressor& train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
+    LinearRegressor& train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
 
-    Eigen::MatrixXf infer(Eigen::MatrixXf&) const;
+    Eigen::VectorXf infer(Eigen::MatrixXf&) const;
 
-    inline std::tuple<size_t, size_t> dimension() const;
+    inline size_t dimension() const;
 
   private:
 
@@ -48,17 +48,17 @@ class LinearRegressor {
     
     std::default_random_engine _gen {0};
 
-    void _shuffle(Eigen::MatrixXf&, Eigen::MatrixXf&);
-    void _optimize(const Eigen::MatrixXf&, const Eigen::MatrixXf&, float);
+    void _shuffle(Eigen::MatrixXf&, Eigen::VectorXf&);
+    void _optimize(const Eigen::MatrixXf&, const Eigen::VectorXf&, float);
     void _update(float);
     
     template <typename C>
-    void _train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
+    void _train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
 };
 
 // Function: dimension
-inline std::tuple<size_t, size_t> LinearRegressor::dimension() const {
-  return std::make_tuple(_W.rows(), _W.cols());
+inline size_t LinearRegressor::dimension() const {
+  return _W.rows();
 }
     
 // Function: optimizer
@@ -70,7 +70,7 @@ LinearRegressor& LinearRegressor::optimizer(ArgsT&&... args) {
 
 // Function: train
 template <typename C>
-LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::MatrixXf& Y, size_t e, size_t b, float l, C&& c) {
+LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::VectorXf& Y, size_t e, size_t b, float l, C&& c) {
 
   if(X.rows() != Y.rows()) {
     DTC_THROW("Dimension of training data and labels don't match");
@@ -83,7 +83,7 @@ LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::MatrixXf& Y, 
 
 // Function: _train
 template <typename C>
-void LinearRegressor::_train(Eigen::MatrixXf& X, Eigen::MatrixXf& Y, size_t e, size_t b, float l, C&& c) {
+void LinearRegressor::_train(Eigen::MatrixXf& X, Eigen::VectorXf& Y, size_t e, size_t b, float l, C&& c) {
 
 	const size_t num_trains = X.rows();
 

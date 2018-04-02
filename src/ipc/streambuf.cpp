@@ -53,13 +53,11 @@ std::streamsize OutputStreamBuffer::flush() {
 std::streamsize OutputStreamBuffer::_flush() {
   auto sz = std::streamsize {0};
   while(_out_avail() > 0) {
-    auto ret = _sync();
-    if(ret > 0) {
-      sz += ret;
-    }
-    else if(ret == -1) return -1;
+    if(auto ret = _sync(); ret > 0) sz += ret;
+    else if(ret == 0) break;
+    else return -1;
   }
-  return sz;
+  return _out_avail() != 0 ? -1 : sz;
 }
 
 // Function: _is_local_data
@@ -260,6 +258,31 @@ std::streamsize InputStreamBuffer::_copy(void* data, std::streamsize count) cons
   auto num_bytes = std::min(_egptr - _gptr, count);
   std::memcpy(data, _gptr, num_bytes);
   return num_bytes;
+}
+
+// Function: purge
+std::streamsize InputStreamBuffer::purge() {
+  std::scoped_lock lock(_mutex);
+  return _purge();
+}
+
+// Function: _purge
+std::streamsize InputStreamBuffer::_purge() {
+
+  auto sz = std::streamsize {0};
+
+  while(1) {
+    if(auto ret = _sync(); ret > 0) {
+      sz += ret;
+    }
+    else if(ret == 0) {
+      break;
+    }
+    else {
+      return -1;
+    }
+  }
+  return sz;
 }
 
 // Function: sync

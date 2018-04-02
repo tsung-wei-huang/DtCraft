@@ -125,6 +125,7 @@ class InputStreamBuffer {
 
     std::streamsize in_avail() const;
     std::streamsize sync();
+    std::streamsize purge();
     std::streamsize read(void*, std::streamsize);
     std::streamsize copy(void*, std::streamsize) const;
     std::streamsize drop(std::streamsize);
@@ -151,6 +152,7 @@ class InputStreamBuffer {
     
     bool _is_local_data() const noexcept;
     
+    std::streamsize _purge();
     std::streamsize _in_avail() const noexcept;
     std::streamsize _sync();
     std::streamsize _drop(std::streamsize);
