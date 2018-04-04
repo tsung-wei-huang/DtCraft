@@ -49,8 +49,7 @@ void offline() {
       .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
       .optimizer<dtc::ml::AdamOptimizer>()
       .train(Dtr, Ltr, 30, 64, 0.01f, [&, i=0] (auto& dnnc) mutable {
-         Eigen::VectorXi label = dnnc.infer(Dte);
-         auto c = ((label - Lte).array() == 0).count();
+         auto c = ((dnnc.infer(Dte) - Lte).array() == 0).count();
          auto t = Dte.rows();
          dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
        });

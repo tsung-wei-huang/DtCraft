@@ -15,6 +15,7 @@
 #define DTC_CSV_CSV_HPP_
 
 #include <dtc/headerdef.hpp>
+#include <dtc/utility/utility.hpp>
 
 namespace dtc {
 
@@ -39,11 +40,67 @@ T to_nan_or_inf(std::string_view token) {
   return 0;
 }
 
-// Function: csv_size
-// Find the row/column sizes of a given csv table.
-std::tuple<size_t, size_t> csv_size(const std::filesystem::path&, const char = ',');
+// ------------------------------------------------------------------------------------------------
 
 // Function: read_csv
+std::vector<std::vector<std::string>> read_csv(
+  const std::filesystem::path& csv_file, 
+  std::string_view delimiters = ","
+);
+
+// ------------------------------------------------------------------------------------------------
+
+// Function: CsvFrame
+class CsvFrame {
+  
+  public:
+
+    CsvFrame(const std::filesystem::path&, std::string_view=",");
+
+    std::tuple<size_t, size_t> size() const;
+
+    size_t num_rows() const;
+    size_t num_cols() const;
+
+    std::string dump() const;
+
+    std::vector<std::string_view> row_view(size_t) const;
+    std::vector<std::string_view> col_view(size_t) const;
+    std::vector<std::string> row(size_t) const;
+    std::vector<std::string> col(size_t) const;
+     
+    auto row_views(auto&&... rs) const;
+    auto col_views(auto&&... cs) const;
+    auto rows(auto&&... rs) const;
+    auto cols(auto&&... cs) const;
+
+  private:
+    
+    std::vector<std::vector<std::string>> _table;
+};
+
+// Function: row_views
+auto CsvFrame::row_views(auto&&... rs) const {
+  return std::make_tuple(row_view(std::forward<decltype(rs)>(rs))...);
+}
+
+// Function: col_views
+auto CsvFrame::col_views(auto&&... cs) const {
+  return std::make_tuple(col_view(std::forward<decltype(cs)>(cs))...);
+}
+
+// Function: rows
+auto CsvFrame::rows(auto&&... rs) const {
+  return std::make_tuple(row(std::forward<decltype(rs)>(rs))...);
+}
+
+// Function: cols
+auto CsvFrame::cols(auto&&... cs) const {
+  return std::make_tuple(col(std::forward<decltype(cs)>(cs))...);
+}
+
+
+/*// Function: read_csv
 // Read a given csv file to a matrix of type T.
 template <typename T>
 T read_csv(const std::filesystem::path& file, const char del = ',') {
@@ -107,7 +164,7 @@ T read_csv(const std::filesystem::path& file, const char del = ',') {
     return mat;
   }
   else static_assert(dependent_false_v<T>);
-}
+}*/
 
 };  // end of namespace ml. -----------------------------------------------------------------------
 

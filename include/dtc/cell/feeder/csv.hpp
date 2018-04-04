@@ -19,7 +19,7 @@
 
 namespace dtc::cell {
 
-// Class: CsvStreamFeeder
+/*// Class: CsvStreamFeeder
 template <typename F>
 class CsvStreamFeeder {
 
@@ -234,6 +234,8 @@ PlaceHolder& CsvStreamFeeder<F>::out() {
 // Deduction guide
 template <typename F>
 CsvStreamFeeder(Graph*, std::filesystem::path, F&&) -> CsvStreamFeeder<F>;
+
+*/
 
 };  // end of namespace dtc::cell. ----------------------------------------------------------------
 

@@ -15,53 +15,142 @@
 
 namespace dtc {
 
-// Function: csv_size
-// Find the row/column sizes of a given csv table.
-std::tuple<size_t, size_t> csv_size(const std::filesystem::path& file, const char del) {
+// Function: read_csv
+std::vector<std::vector<std::string>> read_csv(const std::filesystem::path& path, std::string_view dels) {
 
-  assert(del == ',' || del == ';');
+  std::ifstream ifs(path);
 
-  using namespace std::literals;
-
-  std::ifstream ifs(file);
-  
-  if(!ifs) {
-    DTC_THROW("Failed to open ", file);
+  if(!ifs.good()) {
+    DTC_THROW("Failed to open ", path);
   }
-  
-  size_t num_rows {0};
-  size_t num_cols {0};
-  
+
+  std::vector<std::vector<std::string>> table;
+
   std::string line;
   std::string token;
-  std::stringstream lss;
+  
+  bool is_first_line {true};
+  size_t num_cols {0};
 
-  while(std::getline(ifs, line)) {
-    
-    // Skip the empty line
-    if(line.size() == 0) {
-      continue;
+  while(read_line(ifs, line)) {
+
+    if(line.empty()) continue;
+
+    std::vector<std::string> row;
+
+    for(const auto& c : line) {
+      if(std::find(dels.begin(), dels.end(), c) != dels.end()) {
+        row.push_back(std::move(token));
+      }
+      else {
+        token.push_back(c);
+      }
+    }
+    row.push_back(std::move(token));
+
+    if(is_first_line) {
+      num_cols = row.size();
+      is_first_line = false;
+    }
+    else if(num_cols != row.size()) {
+      DTC_THROW("Mismatched column size in line: ", line);
     }
 
-    lss.clear();
-    lss.str(line);
-    
-    size_t num_cols_this_line {0};
-
-    while(lss.good()) {
-      std::getline(lss, token, del);
-      ++num_cols_this_line; 
-    }
-
-    if(num_cols_this_line > num_cols) {
-      num_cols = num_cols_this_line;
-    }
-    
-    ++num_rows;
+    table.push_back(std::move(row));
   }
 
-  return std::make_tuple(num_rows, num_cols);
+  return table;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+// Constructor
+CsvFrame::CsvFrame(const std::filesystem::path& path, std::string_view dels) : 
+  _table {read_csv(path, dels)} {
+}
+
+// Function: size
+std::tuple<size_t, size_t> CsvFrame::size() const {
+  if(_table.empty()) return {0, 0};
+  return {_table.size(), _table[0].size()};
+}
+
+// Function: num_cols
+size_t CsvFrame::num_cols() const {
+  return std::get<1>(size());
+}
+
+// Function: num_rows
+size_t CsvFrame::num_rows() const {
+  return std::get<0>(size());
+}
+
+// Function: row_view
+std::vector<std::string_view> CsvFrame::row_view(size_t r) const {
+
+  std::vector<std::string_view> view;
+  
+  if(r >= num_rows()) return view;
+
+  for(const auto& item : _table[r]) {
+    view.push_back(item);
+  }
+
+  return view;
+}
+
+// Function: row
+std::vector<std::string> CsvFrame::row(size_t r) const {
+
+  std::vector<std::string> strs;
+  
+  if(r >= num_rows()) return strs;
+
+  for(const auto& item : _table[r]) {
+    strs.push_back(item);
+  }
+
+  return strs;
 }
 
 
+// Function: col_view
+std::vector<std::string_view> CsvFrame::col_view(size_t c) const {
+  
+  std::vector<std::string_view> view;
+
+  if(c >= num_cols()) return view;
+
+  auto _num_rows = num_rows();
+
+  for(size_t i=0; i<_num_rows;++i) {
+    view.push_back(_table[i][c]);
+  }
+
+  return view;
+}
+
+// Function: col
+std::vector<std::string> CsvFrame::col(size_t c) const {
+  
+  std::vector<std::string> strs;
+
+  if(c >= num_cols()) return strs;
+
+  auto _num_rows = num_rows();
+
+  for(size_t i=0; i<_num_rows;++i) {
+    strs.push_back(_table[i][c]);
+  }
+
+  return strs;
+}
+
+
+
+
 };  // end of namespace dtc. ----------------------------------------------------------------------
+
+
+
+

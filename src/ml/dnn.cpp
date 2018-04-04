@@ -211,7 +211,7 @@ void DnnClassifier::_optimize(const Eigen::MatrixXf& Dtr, const Eigen::VectorXi&
   Eigen::MatrixXf delta = _X[_L.size()-1];
 
   switch(_loss) {
-    case Loss::MSE:
+    case Loss::MEAN_SQUARED_ERROR:
       for(int i=0; i<Dtr.rows(); ++i) {
         delta(i, Ltr(i, 0)) -= 1.0f;
       }
@@ -221,6 +221,24 @@ void DnnClassifier::_optimize(const Eigen::MatrixXf& Dtr, const Eigen::VectorXi&
       for(int i=0; i<Dtr.rows(); ++i) {
         delta(i, Ltr(i, 0)) -= 1.0f;
       }
+    break;
+      
+    case Loss::MEAN_ABSOLUTE_ERROR:  
+      for(int i=0; i<Dtr.rows(); ++i) {
+        if(Ltr(i) > delta(i, 0)) {
+          delta(i, 0) = -1.0f;
+        }
+        else if(Ltr(i) < delta(i, 0)) {
+          delta(i, 0) = 1.0f;
+        }
+        else {
+          delta(i, 0) = .0f;
+        }
+      }
+    break;
+
+    default:
+      assert(false);
     break;
   };
 
@@ -357,7 +375,19 @@ void DnnRegressor::_batch_norm_bp(Eigen::MatrixXf& delta, size_t level){
 
 // Fucntion: loss
 DnnRegressor& DnnRegressor::loss(Loss loss) {
+
+  switch(loss) {
+    case Loss::MEAN_SQUARED_ERROR:
+    case Loss::MEAN_ABSOLUTE_ERROR:
+      _loss = loss;
+    break;
+
+    default:
+      DTC_THROW("Regressor doesn't support softmax cross entropy loss");
+  }
+  
   _loss = loss;
+
   return *this;
 }
 
@@ -374,13 +404,6 @@ Eigen::VectorXf DnnRegressor::infer(const Eigen::MatrixXf& data){
     __act(res, _L[l].activation);
   }
   
-  // Loss layer
-  if(_loss == Loss::SOFTMAX_CROSS_ENTROPY) {
-    const auto l = _L.size() - 1;
-    res = (res - res.rowwise().maxCoeff().replicate(1, _L[l])).array().exp().matrix();
-    res = res.cwiseQuotient(res.rowwise().sum().replicate(1, _L[l]));
-  }
-
   //output layer are linear neurons 
   return res;
 }
@@ -404,20 +427,6 @@ void DnnRegressor::_fprop(const Eigen::MatrixXf& D) {
       _batch_norm_fp(_X[l], l-1); //batch norm forward
     }
     __act(_X[l], _L[l].activation);
-  }
-  
-  // Loss layer
-  switch(_loss){
-    case Loss::MSE:
-      //the Loss is _X[l]-y, which is computed in _optimize   
-    break;
-
-    case Loss::SOFTMAX_CROSS_ENTROPY:    
-      const auto l = _L.size() - 1;
-      // Here we minus the max for numeric stability.
-      _X[l] = (_X[l] - _X[l].rowwise().maxCoeff().replicate(1, _L[l])).array().exp().matrix();
-      _X[l] = _X[l].cwiseQuotient(_X[l].rowwise().sum().replicate(1, _L[l]));
-    break;
   }
 }
 
@@ -452,16 +461,28 @@ void DnnRegressor::_optimize(const Eigen::MatrixXf& Dtr, const Eigen::VectorXf& 
   Eigen::MatrixXf delta = _X[_L.size()-1];
 
   switch(_loss) {
-    case Loss::MSE:
+    case Loss::MEAN_SQUARED_ERROR:
       for(int i=0; i<Dtr.rows(); ++i) {
-        delta(i, 0) -= Ltr(i, 0);
+        delta(i, 0) -= Ltr(i);
       }
     break;
 
-    case Loss::SOFTMAX_CROSS_ENTROPY:
+    case Loss::MEAN_ABSOLUTE_ERROR:
       for(int i=0; i<Dtr.rows(); ++i) {
-        delta(i, 0) -= Ltr(i, 0);
+        if(Ltr(i) > delta(i, 0)) {
+          delta(i, 0) = -1.0f;
+        }
+        else if(Ltr(i) < delta(i, 0)) {
+          delta(i, 0) = 1.0f;
+        }
+        else {
+          delta(i, 0) = .0f;
+        }
       }
+    break;
+    
+    default:
+      assert(false);
     break;
   };
 

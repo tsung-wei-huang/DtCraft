@@ -19,7 +19,8 @@
 namespace dtc::ml {
 
 enum class Loss {
-  MSE,
+  MEAN_SQUARED_ERROR,
+  MEAN_ABSOLUTE_ERROR,
   SOFTMAX_CROSS_ENTROPY
 };
 

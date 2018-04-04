@@ -172,7 +172,7 @@ class DnnRegressor {
 
   private:
     
-    Loss _loss {Loss::MSE};
+    Loss _loss {Loss::MEAN_SQUARED_ERROR};
 
     bool _batch_norm {false};
 

@@ -1146,7 +1146,8 @@ BUILT_SOURCES =
 CLEANFILES = 
 
 # Add files to the distribution list
-EXTRA_DIST = Makefile.sh conf sbin webui benchmark README.md LICENSE
+EXTRA_DIST = Makefile.sh conf sbin webui benchmark README.md LICENSE \
+	logo.jpg
 PHONY_TARGETS = 
 LDADD = 
 TESTS = unittest/archive.sh unittest/statgrab.sh unittest/webui.sh \

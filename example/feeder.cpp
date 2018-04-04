@@ -58,7 +58,7 @@ void text_stream_feeder() {
 // is represented by Eigen matrix.
 void csv_stream_feeder() {
 
-  using namespace std::literals;
+  /*using namespace std::literals;
 
   dtc::Graph G;
   
@@ -77,7 +77,7 @@ void csv_stream_feeder() {
   G.container().add(csf);
 
   // Dispatch the graph.
-  dtc::Executor(G).run(); 
+  dtc::Executor(G).run(); */
 }
 
 // ------------------------------------------------------------------------------------------------

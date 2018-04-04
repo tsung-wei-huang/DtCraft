@@ -666,6 +666,7 @@ EXTRA_DIST += webui
 EXTRA_DIST += benchmark
 EXTRA_DIST += README.md
 EXTRA_DIST += LICENSE
+EXTRA_DIST += logo.jpg
 
 # Regression 
 regression: all-am
