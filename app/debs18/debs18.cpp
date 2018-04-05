@@ -14,7 +14,6 @@ class DataFrame : public dtc::CsvFrame {
     const Eigen::MatrixXf& data() const;
     
     Eigen::MatrixXf get(const std::vector<int>&);
-    Eigen::MatrixXf group_on_type(int);
 
     Eigen::VectorXf id() const;
     Eigen::VectorXf type() const;
@@ -23,13 +22,17 @@ class DataFrame : public dtc::CsvFrame {
     Eigen::VectorXf latitude() const;
     Eigen::VectorXf course() const;
     Eigen::VectorXf heading() const;
-    Eigen::VectorXf timestamp() const;
+    Eigen::VectorXf timestamp(bool=false) const;
     Eigen::VectorXf departure_port() const;
     Eigen::VectorXf draught() const;
-    Eigen::VectorXf arrival_time() const;
+    Eigen::VectorXf arrival_time(bool=false) const;
     Eigen::VectorXf arrival_port() const;
     Eigen::VectorXf distance_from_departure() const;
     Eigen::VectorXf time_to_arrive() const;
+    Eigen::VectorXf arrival_port_longitude() const;
+    Eigen::VectorXf arrival_port_latitude() const;
+
+    float scale_timestamp(float) const;
 
   private:
 
@@ -60,6 +63,15 @@ DataFrame::DataFrame(const std::filesystem::path& path) : dtc::CsvFrame(path) {
     if(i == SHIP_ID) continue;
     _data.col(i) = debs18::make_ship_data(*this, i, false);
   }
+}
+
+// Function: scale_timestamp
+float DataFrame::scale_timestamp(float v) const {
+  static const auto min_timepoint = timestamp_to_timepoint(min_timestamp);
+  static const auto max_timepoint = timestamp_to_timepoint(max_timestamp);
+  static const auto dif_timepoint = max_timepoint - min_timepoint;
+  auto de = std::chrono::duration_cast<std::chrono::minutes>(dif_timepoint).count();
+  return v / de;
 }
 
 // Function: get
@@ -100,8 +112,17 @@ Eigen::VectorXf DataFrame::heading() const {
   return _data.col(SHIP_HEADING);
 }
 
-Eigen::VectorXf DataFrame::timestamp() const {
-  return _data.col(SHIP_TIMESTAMP);
+Eigen::VectorXf DataFrame::timestamp(bool scale) const {
+  Eigen::VectorXf t(_data.rows());
+  for(int i=0; i<t.rows(); ++i) {
+    if(scale) {
+      t(i) = scale_timestamp(_data(i, SHIP_TIMESTAMP));
+    }
+    else {
+      t(i) = _data(i, SHIP_TIMESTAMP);
+    }
+  }
+  return t;
 }
 
 Eigen::VectorXf DataFrame::departure_port() const {
@@ -112,8 +133,17 @@ Eigen::VectorXf DataFrame::draught() const {
   return _data.col(SHIP_DRAUGHT);
 }
 
-Eigen::VectorXf DataFrame::arrival_time() const {
-  return _data.col(SHIP_ARRIVAL_TIME);
+Eigen::VectorXf DataFrame::arrival_time(bool scale) const {
+  Eigen::VectorXf t(_data.rows());
+  for(int i=0; i<t.rows(); ++i) {
+    if(scale) {
+      t(i) = scale_timestamp(_data(i, SHIP_ARRIVAL_TIME));
+    }
+    else {
+      t(i) = _data(i, SHIP_ARRIVAL_TIME);
+    }
+  }
+  return t;
 }
 
 Eigen::VectorXf DataFrame::arrival_port() const {
@@ -135,6 +165,24 @@ Eigen::VectorXf DataFrame::distance_from_departure() const {
   }
   
   return dis;
+}
+
+Eigen::VectorXf DataFrame::arrival_port_longitude() const {
+  const auto ports = col_view(SHIP_ARRIVAL_PORT);
+  Eigen::VectorXf lon(ports.size());
+  for(size_t i=0; i<ports.size(); ++i) {
+    lon(i) = port_longitude(ports[i]);     
+  }
+  return lon;
+}
+
+Eigen::VectorXf DataFrame::arrival_port_latitude() const {
+  const auto ports = col_view(SHIP_ARRIVAL_PORT);
+  Eigen::VectorXf lat(ports.size());
+  for(size_t i=0; i<ports.size(); ++i) {
+    lat(i) = port_latitude(ports[i]);     
+  }
+  return lat;
 }
 
 // function: time_to_arrive
@@ -190,6 +238,7 @@ int main(int argc, char* argv[]) {
          longitude, 
          latitude, 
          course, 
+         //heading,
          timestamp, 
          departure_port, 
          distance_from_departure, 
@@ -223,6 +272,13 @@ int main(int argc, char* argv[]) {
   Eigen::VectorXf Ltr = ship.rightCols(1).middleRows(0, num_trains);
   Eigen::VectorXf Lte = ship.rightCols(1).middleRows(num_trains, num_infers);
   
+  dtc::cout(
+    "Dtr: ", Dtr.rows(), "x", Dtr.cols(), '\n',
+    "Ltr: ", Ltr.rows(), "x", Ltr.cols(), '\n',
+    "Dte: ", Dte.rows(), "x", Dte.cols(), '\n',
+    "Lte: ", Lte.rows(), "x", Lte.cols(), '\n'
+  );
+  
   Eigen::MatrixXf comp(Dte.rows(), 3);    
 
   // Train
@@ -237,10 +293,10 @@ int main(int argc, char* argv[]) {
   
   // Perform training.
   dnng.train(Dtr, Ltr, 32, 256, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnng) mutable {
-        float Etr = (dnng.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
-        float Ete = (dnng.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
-        printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", ++i, Etr, Ete);
-      });
+         float Etr = (dnng.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
+         float Ete = (dnng.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
+         printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", ++i, Etr, Ete);
+       });
   
   // Infer
   comp.col(1) = dnng.infer(Dte);

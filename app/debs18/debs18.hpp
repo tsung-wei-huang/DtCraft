@@ -144,6 +144,8 @@ float distance_on_earth(float, float, float, float);
 float port_latitude(std::string_view);
 float port_longitude(std::string_view);
 
+std::string_view nearest_port(float, float);
+
 Eigen::VectorXf make_type(const dtc::CsvFrame&, bool = false);
 Eigen::VectorXf make_speed(const dtc::CsvFrame&, bool=false);
 Eigen::VectorXf make_longitude(const dtc::CsvFrame&, bool = false);
