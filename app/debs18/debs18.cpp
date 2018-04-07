@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
   comp.col(0) = dnng.infer(Dte);
   
   // Perform training.
-  dnng.train(Dtr, Ltr, 32, 256, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnng) mutable {
+  dnng.train(Dtr, Ltr, 10000, 256, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnng) mutable {
          float Etr = (dnng.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
          float Ete = (dnng.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
          printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", ++i, Etr, Ete);
