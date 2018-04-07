@@ -68,36 +68,38 @@ class CsvFrame {
     std::vector<std::string_view> col_view(size_t) const;
     std::vector<std::string> row(size_t) const;
     std::vector<std::string> col(size_t) const;
-     
-    auto row_views(auto&&... rs) const;
-    auto col_views(auto&&... cs) const;
-    auto rows(auto&&... rs) const;
-    auto cols(auto&&... cs) const;
 
-  private:
+    const std::string& operator()(size_t, size_t) const;
+     
+    //auto row_views(auto&&... rs) const;
+    //auto col_views(auto&&... cs) const;
+    //auto rows(auto&&... rs) const;
+    //auto cols(auto&&... cs) const;
+
+  protected:
     
-    std::vector<std::vector<std::string>> _table;
+    std::vector<std::vector<std::string>> _table;   // row-order table
 };
 
-// Function: row_views
-auto CsvFrame::row_views(auto&&... rs) const {
-  return std::make_tuple(row_view(std::forward<decltype(rs)>(rs))...);
-}
-
-// Function: col_views
-auto CsvFrame::col_views(auto&&... cs) const {
-  return std::make_tuple(col_view(std::forward<decltype(cs)>(cs))...);
-}
-
-// Function: rows
-auto CsvFrame::rows(auto&&... rs) const {
-  return std::make_tuple(row(std::forward<decltype(rs)>(rs))...);
-}
-
-// Function: cols
-auto CsvFrame::cols(auto&&... cs) const {
-  return std::make_tuple(col(std::forward<decltype(cs)>(cs))...);
-}
+//// Function: row_views
+//auto CsvFrame::row_views(auto&&... rs) const {
+//  return std::make_tuple(row_view(std::forward<decltype(rs)>(rs))...);
+//}
+//
+//// Function: col_views
+//auto CsvFrame::col_views(auto&&... cs) const {
+//  return std::make_tuple(col_view(std::forward<decltype(cs)>(cs))...);
+//}
+//
+//// Function: rows
+//auto CsvFrame::rows(auto&&... rs) const {
+//  return std::make_tuple(row(std::forward<decltype(rs)>(rs))...);
+//}
+//
+//// Function: cols
+//auto CsvFrame::cols(auto&&... cs) const {
+//  return std::make_tuple(col(std::forward<decltype(cs)>(cs))...);
+//}
 
 
 /*// Function: read_csv

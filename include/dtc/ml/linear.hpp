@@ -28,7 +28,7 @@ class LinearRegressor {
     LinearRegressor& dimension(size_t);
 
     template <typename O, typename... ArgsT>
-    LinearRegressor& optimizer(ArgsT&&...);
+    O& optimizer(ArgsT&&...);
 
     template <typename C>
     LinearRegressor& train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
@@ -44,7 +44,7 @@ class LinearRegressor {
     Eigen::MatrixXf _B;
     Eigen::MatrixXf _dB;
 
-    Optimizer _optimizer;
+    Optimizer _optimizer{std::in_place_type<AdamOptimizer>};
     
     std::default_random_engine _gen {0};
 
@@ -63,9 +63,8 @@ inline size_t LinearRegressor::dimension() const {
     
 // Function: optimizer
 template <typename O, typename... ArgsT>
-LinearRegressor& LinearRegressor::optimizer(ArgsT&&... args) {
-  _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
-  return *this;
+O& LinearRegressor::optimizer(ArgsT&&... args) {
+  return _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
 }
 
 // Function: train
@@ -117,7 +116,7 @@ class LinearClassifier {
     inline std::tuple<size_t, size_t> dimension() const;
     
     template <typename O, typename... ArgsT>
-    LinearClassifier& optimizer(ArgsT&&...);
+    O& optimizer(ArgsT&&...);
 
     template <typename C>
     LinearClassifier& train(Eigen::MatrixXf&, Eigen::VectorXi&, size_t, size_t, float, C&&);
@@ -131,7 +130,7 @@ class LinearClassifier {
     Eigen::MatrixXf _B;
     Eigen::MatrixXf _dB;
 
-    Optimizer _optimizer;
+    Optimizer _optimizer{std::in_place_type<AdamOptimizer>};
     
     std::default_random_engine _gen {0};
     
@@ -150,9 +149,8 @@ inline std::tuple<size_t, size_t> LinearClassifier::dimension() const {
 
 // Function: optimizer
 template <typename O, typename... ArgsT>
-LinearClassifier& LinearClassifier::optimizer(ArgsT&&... args) {
-  _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
-  return *this;
+O& LinearClassifier::optimizer(ArgsT&&... args) {
+  return _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
 }
 
 // Function: train

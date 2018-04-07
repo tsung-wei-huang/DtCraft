@@ -56,10 +56,9 @@ class DnnClassifier {
     DnnClassifier() = default;
 
     DnnClassifier& fully_connected_layer(size_t, size_t, Activation);
-    DnnClassifier& loss(Loss);
 
     template <typename O, typename... ArgsT>
-    DnnClassifier& optimizer(ArgsT&&...);
+    O& optimizer(ArgsT&&...);
 
     template <typename C>
     DnnClassifier& train(Eigen::MatrixXf&, Eigen::VectorXi&, size_t, size_t, float, C&&);
@@ -68,22 +67,24 @@ class DnnClassifier {
 
     template <typename ArchiverT>
     auto archive(ArchiverT&);
+    
+    template <typename L, typename... ArgsT>
+    L& loss(ArgsT&&...);
 
     std::streamsize load(const std::filesystem::path&);
     std::streamsize save(const std::filesystem::path&);
 
   private:
     
-    Loss _loss {Loss::SOFTMAX_CROSS_ENTROPY};
-
     std::vector<DnnLayer> _L;
     std::vector<Eigen::MatrixXf> _X;
     std::vector<Eigen::MatrixXf> _W;
     std::vector<Eigen::MatrixXf> _dW;
     std::vector<Eigen::MatrixXf> _B;
     std::vector<Eigen::MatrixXf> _dB;
-
-    Optimizer _optimizer;
+    
+    Loss _loss {std::in_place_type<SoftmaxCrossEntropy>};
+    Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
 
     std::default_random_engine _gen {0};
     
@@ -121,12 +122,17 @@ void DnnClassifier::_train(Eigen::MatrixXf& Dtr, Eigen::VectorXi& Ltr, size_t e,
     }
   }
 }
+
+// Function: loss
+template <typename L, typename... ArgsT>
+L& DnnClassifier::loss(ArgsT&&... args) {
+  return _loss.emplace<L>(std::forward<ArgsT>(args)...);
+}
     
 // Function: optimizer
 template <typename O, typename... ArgsT>
-DnnClassifier& DnnClassifier::optimizer(ArgsT&&... args) {
-  _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
-  return *this;
+O& DnnClassifier::optimizer(ArgsT&&... args) {
+  return _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
 }
 
 // Function: train
@@ -156,10 +162,12 @@ class DnnRegressor {
     DnnRegressor() = default;
 
     DnnRegressor& fully_connected_layer(size_t, size_t, Activation);
-    DnnRegressor& loss(Loss);
 
     template <typename O, typename... ArgsT>
-    DnnRegressor& optimizer(ArgsT&&...);
+    O& optimizer(ArgsT&&...);
+    
+    template <typename L, typename... ArgsT>
+    L& loss(ArgsT&&...);
 
     template <typename C>
     DnnRegressor& train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
@@ -172,7 +180,7 @@ class DnnRegressor {
 
   private:
     
-    Loss _loss {Loss::MEAN_SQUARED_ERROR};
+    //Loss _loss {Loss::MEAN_SQUARED_ERROR};
 
     bool _batch_norm {false};
 
@@ -193,7 +201,8 @@ class DnnRegressor {
     std::vector<Eigen::MatrixXf> _rmean;
     std::vector<Eigen::MatrixXf> _rvar;
 
-    Optimizer _optimizer;
+    Loss _loss {std::in_place_type<MeanSquaredError>};
+    Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
 
     std::default_random_engine _gen {0};
     
@@ -234,9 +243,15 @@ void DnnRegressor::_train(Eigen::MatrixXf& Dtr, Eigen::VectorXf& Ltr, size_t e, 
     
 // Function: optimizer
 template <typename O, typename... ArgsT>
-DnnRegressor& DnnRegressor::optimizer(ArgsT&&... args) {
-  _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
-  return *this;
+O& DnnRegressor::optimizer(ArgsT&&... args) {
+  return _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
+}
+
+// Function: loss
+template <typename L, typename... ArgsT>
+L& DnnRegressor::loss(ArgsT&&... args) {
+  static_assert(!std::is_same_v<L, SoftmaxCrossEntropy>);
+  return _loss.emplace<L>(std::forward<ArgsT>(args)...);
 }
 
 // Function: train

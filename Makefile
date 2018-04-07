@@ -175,17 +175,17 @@ am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
 	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/notifier.lo \
 	src/ipc/pipe.lo src/ipc/shm.lo src/ipc/streambuf.lo \
 	src/utility/os.lo src/utility/http_parser.lo \
-	src/utility/table.lo src/ml/naive_bayes.lo src/ml/linear.lo \
-	src/ml/optimizer.lo src/ml/dnn.lo src/error.lo src/policy.lo \
-	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
-	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
-	src/protobuf/protobuf.lo src/protobuf/solution.lo \
-	src/protobuf/common.lo src/protobuf/topology.lo \
-	src/kernel/container.lo src/kernel/cgroup.lo \
-	src/kernel/manager.lo src/kernel/stream.lo \
-	src/kernel/scheduler.lo src/kernel/vertex.lo \
-	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
-	src/kernel/executor.lo src/webui/webui.lo
+	src/utility/table.lo src/ml/loss.lo src/ml/naive_bayes.lo \
+	src/ml/linear.lo src/ml/optimizer.lo src/ml/dnn.lo \
+	src/error.lo src/policy.lo src/protobuf/loadinfo.lo \
+	src/protobuf/resource.lo src/protobuf/frontier.lo \
+	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
+	src/protobuf/solution.lo src/protobuf/common.lo \
+	src/protobuf/topology.lo src/kernel/container.lo \
+	src/kernel/cgroup.lo src/kernel/manager.lo \
+	src/kernel/stream.lo src/kernel/scheduler.lo \
+	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
+	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_$(V))
 am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
@@ -1161,9 +1161,9 @@ lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/notifier.cpp \
 	src/ipc/pipe.cpp src/ipc/shm.cpp src/ipc/streambuf.cpp \
 	src/utility/os.cpp src/utility/http_parser.cpp \
-	src/utility/table.cpp src/ml/naive_bayes.cpp src/ml/linear.cpp \
-	src/ml/optimizer.cpp src/ml/dnn.cpp src/error.cpp \
-	src/policy.cpp src/protobuf/loadinfo.cpp \
+	src/utility/table.cpp src/ml/loss.cpp src/ml/naive_bayes.cpp \
+	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
+	src/error.cpp src/policy.cpp src/protobuf/loadinfo.cpp \
 	src/protobuf/resource.cpp src/protobuf/frontier.cpp \
 	src/protobuf/taskinfo.cpp src/protobuf/protobuf.cpp \
 	src/protobuf/solution.cpp src/protobuf/common.cpp \
@@ -1401,6 +1401,8 @@ src/ml/$(am__dirstamp):
 src/ml/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) src/ml/$(DEPDIR)
 	@: > src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/loss.lo: src/ml/$(am__dirstamp) \
+	src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/naive_bayes.lo: src/ml/$(am__dirstamp) \
 	src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/linear.lo: src/ml/$(am__dirstamp) \
@@ -1993,6 +1995,7 @@ include src/kernel/$(DEPDIR)/stream.Plo
 include src/kernel/$(DEPDIR)/vertex.Plo
 include src/ml/$(DEPDIR)/dnn.Plo
 include src/ml/$(DEPDIR)/linear.Plo
+include src/ml/$(DEPDIR)/loss.Plo
 include src/ml/$(DEPDIR)/naive_bayes.Plo
 include src/ml/$(DEPDIR)/optimizer.Plo
 include src/protobuf/$(DEPDIR)/common.Plo

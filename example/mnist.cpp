@@ -47,7 +47,6 @@ void offline() {
 
     nn.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
       .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
-      .optimizer<dtc::ml::AdamOptimizer>()
       .train(Dtr, Ltr, 30, 64, 0.01f, [&, i=0] (auto& dnnc) mutable {
          auto c = ((dnnc.infer(Dte) - Lte).array() == 0).count();
          auto t = Dte.rows();
@@ -92,8 +91,7 @@ void online() {
     [] (dtc::ml::DnnClassifier& c) {
       dtc::cout("Creating a dnn classifier [784x30x10]\n").flush();
       c.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
-       .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
-       .optimizer<dtc::ml::AdamOptimizer>();
+       .fully_connected_layer(30, 10, dtc::ml::Activation::NONE);
     },
     [i=0] (dtc::ml::DnnClassifier& c, std::tuple<Eigen::MatrixXf, Eigen::VectorXi>& data) mutable {
       auto& [images, labels] = data;
