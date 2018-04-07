@@ -67,6 +67,7 @@ std::vector<std::vector<std::string>> read_csv(const std::filesystem::path& path
 // Constructor
 CsvFrame::CsvFrame(const std::filesystem::path& path, std::string_view dels) : 
   _table {read_csv(path, dels)} {
+
 }
 
 // Function: size
@@ -146,7 +147,10 @@ std::vector<std::string> CsvFrame::col(size_t c) const {
   return strs;
 }
 
-
+// Operator
+const std::string& CsvFrame::operator()(size_t r, size_t c) const {
+  return _table[r][c];
+}
 
 
 };  // end of namespace dtc. ----------------------------------------------------------------------

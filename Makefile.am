@@ -481,6 +481,7 @@ lib_libDtCraft_la_SOURCES += src/ipc/streambuf.cpp
 lib_libDtCraft_la_SOURCES += src/utility/os.cpp
 lib_libDtCraft_la_SOURCES += src/utility/http_parser.cpp
 lib_libDtCraft_la_SOURCES += src/utility/table.cpp
+lib_libDtCraft_la_SOURCES += src/ml/loss.cpp
 lib_libDtCraft_la_SOURCES += src/ml/naive_bayes.cpp
 lib_libDtCraft_la_SOURCES += src/ml/linear.cpp
 lib_libDtCraft_la_SOURCES += src/ml/optimizer.cpp
