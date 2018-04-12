@@ -2,6 +2,62 @@
 
 namespace debs18 {
 
+// Function: statistics
+std::tuple<int, int, int, int> statistics(const std::vector<Trip>& trips) {
+
+  int N {0};
+  int feature_columns {0};
+  int max_trip_length {0};
+  int min_trip_length {std::numeric_limits<int>::max()};
+
+  for(size_t i=0; i<trips.size(); ++i) {
+
+    assert(trips[i].rows() != 0 && trips[i].cols() >= 2);
+
+    if(feature_columns == 0) {
+      feature_columns = trips[i].cols() - 1;
+    }
+    else {
+      assert(feature_columns == trips[i].cols() - 1);
+    }
+
+    N += trips[i].rows();
+
+    max_trip_length = std::max(max_trip_length, (int)trips[i].rows());
+    min_trip_length = std::min(min_trip_length, (int)trips[i].rows());
+  }
+
+  return {N, feature_columns, max_trip_length, min_trip_length};
+}
+
+// Function: stack
+Eigen::MatrixXf stack(const std::vector<Trip>& trips) {
+  
+  Eigen::MatrixXf::Index num_rows {0}, num_cols {0}, k=0;
+
+  for(size_t i=0; i<trips.size(); ++i) {
+    num_rows += trips[i].rows();
+    if(num_cols == 0) {
+      num_cols = trips[i].cols();
+    }
+    else {
+      assert(num_cols == trips[i].cols());
+    }
+  }
+
+  Eigen::MatrixXf stk(num_rows, num_cols);
+  
+  for(size_t i=0; i<trips.size(); ++i) {
+    for(Eigen::MatrixXf::Index r=0; r<trips[i].rows(); ++r) {
+      stk.row(k++) = trips[i].route.row(r);
+    }
+  }
+
+  assert(k == num_rows);
+  
+  return stk;
+}
+
 // Function: remove_NaN_rows
 void remove_NaN_rows(Eigen::MatrixXf& raw) {
 
@@ -22,6 +78,34 @@ void remove_NaN_rows(Eigen::MatrixXf& raw) {
     purified.row(j++) = raw.row(i);
   }
   
+  raw = purified;
+}
+
+// Function: remove_invalid_timestamp_rows
+void remove_invalid_timestamp_rows(Eigen::MatrixXf& raw) {
+
+  assert(raw.cols() >= 2);
+
+  int atid = raw.cols() - 1;
+  int tsid = 0;
+
+  int rows = 0;
+  for(int i=0; i<raw.rows(); ++i) {
+    if(raw(i, tsid) <= raw(i, atid)) {
+      rows++;
+    }
+  }
+
+  Eigen::MatrixXf purified(rows, raw.cols());
+
+  for(int i=0, j=0; i<raw.rows(); ++i) {
+    if(raw(i, tsid) <= raw(i, atid)) {
+      purified.row(j++) = raw.row(i);
+    }
+  }
+
+  assert(purified.rows() == rows);
+
   raw = purified;
 }
 
@@ -160,7 +244,8 @@ float make_heading(const std::string& v, bool scale) {
     }
   }
   catch(...) {
-    return std::numeric_limits<float>::quiet_NaN();
+    return 511.0f;  // unknown
+    //return std::numeric_limits<float>::quiet_NaN();
   }
 }
 
@@ -185,7 +270,8 @@ float make_draught(const std::string& v, bool scale) {
     }
   }
   catch(...) {
-    return std::numeric_limits<float>::quiet_NaN();
+    //return std::numeric_limits<float>::quiet_NaN();
+    return 0.0f;
   }
 }
 

@@ -175,17 +175,18 @@ am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
 	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/notifier.lo \
 	src/ipc/pipe.lo src/ipc/shm.lo src/ipc/streambuf.lo \
 	src/utility/os.lo src/utility/http_parser.lo \
-	src/utility/table.lo src/ml/loss.lo src/ml/naive_bayes.lo \
-	src/ml/linear.lo src/ml/optimizer.lo src/ml/dnn.lo \
-	src/error.lo src/policy.lo src/protobuf/loadinfo.lo \
-	src/protobuf/resource.lo src/protobuf/frontier.lo \
-	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
-	src/protobuf/solution.lo src/protobuf/common.lo \
-	src/protobuf/topology.lo src/kernel/container.lo \
-	src/kernel/cgroup.lo src/kernel/manager.lo \
-	src/kernel/stream.lo src/kernel/scheduler.lo \
-	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
-	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
+	src/utility/table.lo src/ml/loss.lo src/ml/rnn.lo \
+	src/ml/naive_bayes.lo src/ml/linear.lo src/ml/optimizer.lo \
+	src/ml/dnn.lo src/error.lo src/policy.lo \
+	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
+	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
+	src/protobuf/protobuf.lo src/protobuf/solution.lo \
+	src/protobuf/common.lo src/protobuf/topology.lo \
+	src/kernel/container.lo src/kernel/cgroup.lo \
+	src/kernel/manager.lo src/kernel/stream.lo \
+	src/kernel/scheduler.lo src/kernel/vertex.lo \
+	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
+	src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -193,9 +194,10 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(pkglibexec_PROGRAMS) \
 	$(sbin_PROGRAMS)
-am_app_debs18_debs18_OBJECTS = app/debs18/utility.$(OBJEXT) \
-	app/debs18/map.$(OBJEXT) app/debs18/debs18.$(OBJEXT) \
-	app/debs18/dtr.$(OBJEXT) app/debs18/dnn.$(OBJEXT)
+am_app_debs18_debs18_OBJECTS = app/debs18/rnn.$(OBJEXT) \
+	app/debs18/utility.$(OBJEXT) app/debs18/dataframe.$(OBJEXT) \
+	app/debs18/debs18.$(OBJEXT) app/debs18/dtr.$(OBJEXT) \
+	app/debs18/dnn.$(OBJEXT)
 app_debs18_debs18_OBJECTS = $(am_app_debs18_debs18_OBJECTS)
 app_debs18_debs18_DEPENDENCIES = lib/libDtCraft.la
 am_bin_agent_OBJECTS = main/agent.$(OBJEXT)
@@ -813,13 +815,13 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/utility/singleton.hpp include/dtc/utility/json.hpp \
 	include/dtc/utility/utility.hpp include/dtc/utility/ios.hpp \
 	include/dtc/utility/chrono.hpp include/dtc/utility/uuid.hpp \
-	include/dtc/utility/logger.hpp include/dtc/ml/mnist.hpp \
-	include/dtc/ml/ml.hpp include/dtc/ml/activation.hpp \
-	include/dtc/ml/linear.hpp include/dtc/ml/loss.hpp \
-	include/dtc/ml/dnn.hpp include/dtc/ml/optimizer.hpp \
-	include/dtc/ml/naive_bayes.hpp include/dtc/stamp-h1 \
-	include/dtc/config.hpp include/dtc/config.hpp.in~ \
-	include/dtc/unittest/catch.hpp \
+	include/dtc/utility/logger.hpp include/dtc/ml/rnn.hpp \
+	include/dtc/ml/mnist.hpp include/dtc/ml/ml.hpp \
+	include/dtc/ml/activation.hpp include/dtc/ml/linear.hpp \
+	include/dtc/ml/loss.hpp include/dtc/ml/dnn.hpp \
+	include/dtc/ml/optimizer.hpp include/dtc/ml/naive_bayes.hpp \
+	include/dtc/stamp-h1 include/dtc/config.hpp \
+	include/dtc/config.hpp.in~ include/dtc/unittest/catch.hpp \
 	include/dtc/static/threadpool.hpp \
 	include/dtc/static/logger.hpp \
 	include/dtc/concurrent/shared_guard.hpp \
@@ -1161,18 +1163,19 @@ lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/notifier.cpp \
 	src/ipc/pipe.cpp src/ipc/shm.cpp src/ipc/streambuf.cpp \
 	src/utility/os.cpp src/utility/http_parser.cpp \
-	src/utility/table.cpp src/ml/loss.cpp src/ml/naive_bayes.cpp \
-	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
-	src/error.cpp src/policy.cpp src/protobuf/loadinfo.cpp \
-	src/protobuf/resource.cpp src/protobuf/frontier.cpp \
-	src/protobuf/taskinfo.cpp src/protobuf/protobuf.cpp \
-	src/protobuf/solution.cpp src/protobuf/common.cpp \
-	src/protobuf/topology.cpp src/kernel/container.cpp \
-	src/kernel/cgroup.cpp src/kernel/manager.cpp \
-	src/kernel/stream.cpp src/kernel/scheduler.cpp \
-	src/kernel/vertex.cpp src/kernel/graph.cpp \
-	src/kernel/master.cpp src/kernel/agent.cpp \
-	src/kernel/executor.cpp src/webui/webui.cpp
+	src/utility/table.cpp src/ml/loss.cpp src/ml/rnn.cpp \
+	src/ml/naive_bayes.cpp src/ml/linear.cpp src/ml/optimizer.cpp \
+	src/ml/dnn.cpp src/error.cpp src/policy.cpp \
+	src/protobuf/loadinfo.cpp src/protobuf/resource.cpp \
+	src/protobuf/frontier.cpp src/protobuf/taskinfo.cpp \
+	src/protobuf/protobuf.cpp src/protobuf/solution.cpp \
+	src/protobuf/common.cpp src/protobuf/topology.cpp \
+	src/kernel/container.cpp src/kernel/cgroup.cpp \
+	src/kernel/manager.cpp src/kernel/stream.cpp \
+	src/kernel/scheduler.cpp src/kernel/vertex.cpp \
+	src/kernel/graph.cpp src/kernel/master.cpp \
+	src/kernel/agent.cpp src/kernel/executor.cpp \
+	src/webui/webui.cpp
 bin_master_SOURCES = main/master.cpp
 bin_master_LDADD = lib/libDtCraft.la
 bin_agent_SOURCES = main/agent.cpp
@@ -1199,9 +1202,9 @@ example_reduce_sum_SOURCES = example/reduce_sum.cpp
 example_reduce_sum_LDADD = lib/libDtCraft.la
 app_debs18_debs18_LDADD = lib/libDtCraft.la
 app_debs18_debs18_SOURCES = app/debs18/debs18.hpp \
-	app/debs18/feeder.hpp app/debs18/utility.cpp \
-	app/debs18/map.cpp app/debs18/debs18.cpp app/debs18/dtr.cpp \
-	app/debs18/dnn.cpp
+	app/debs18/feeder.hpp app/debs18/rnn.cpp \
+	app/debs18/utility.cpp app/debs18/dataframe.cpp \
+	app/debs18/debs18.cpp app/debs18/dtr.cpp app/debs18/dnn.cpp
 unittest_archive_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_archive_SOURCES = unittest/archive.cpp
 unittest_statgrab_LDADD = lib/libDtCraft.la $(TEST_LIBS)
@@ -1403,6 +1406,7 @@ src/ml/$(DEPDIR)/$(am__dirstamp):
 	@: > src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/loss.lo: src/ml/$(am__dirstamp) \
 	src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/rnn.lo: src/ml/$(am__dirstamp) src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/naive_bayes.lo: src/ml/$(am__dirstamp) \
 	src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/linear.lo: src/ml/$(am__dirstamp) \
@@ -1645,9 +1649,11 @@ app/debs18/$(am__dirstamp):
 app/debs18/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) app/debs18/$(DEPDIR)
 	@: > app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/debs18/rnn.$(OBJEXT): app/debs18/$(am__dirstamp) \
+	app/debs18/$(DEPDIR)/$(am__dirstamp)
 app/debs18/utility.$(OBJEXT): app/debs18/$(am__dirstamp) \
 	app/debs18/$(DEPDIR)/$(am__dirstamp)
-app/debs18/map.$(OBJEXT): app/debs18/$(am__dirstamp) \
+app/debs18/dataframe.$(OBJEXT): app/debs18/$(am__dirstamp) \
 	app/debs18/$(DEPDIR)/$(am__dirstamp)
 app/debs18/debs18.$(OBJEXT): app/debs18/$(am__dirstamp) \
 	app/debs18/$(DEPDIR)/$(am__dirstamp)
@@ -1948,10 +1954,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/dataframe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/debs18.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/dnn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/dtr.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/map.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/rnn.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/utility.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/external.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/feeder.Po@am__quote@
@@ -1998,6 +2005,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/loss.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/naive_bayes.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/optimizer.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/rnn.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/common.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/frontier.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/protobuf/$(DEPDIR)/loadinfo.Plo@am__quote@
@@ -3022,6 +3030,12 @@ echo_OMP_CXXFLAGS:
 
 echo_BOOST_CPPFLAGS:
 	@echo $(BOOST_CPPFLAGS)
+
+echo_PYTHON_CPPFLAGS:
+	@echo $(PYTHON_CPPFLAGS)
+
+echo_PYTHON_LDFLAGS:
+	@echo $(PYTHON_LDFLAGS)
 
 echo_CPU_COUNT:
 	@echo $(CPU_COUNT)

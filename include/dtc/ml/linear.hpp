@@ -15,6 +15,12 @@
 #define DTC_ML_LINEAR_HPP_
 
 #include <dtc/ml/optimizer.hpp>
+#include <dtc/ml/activation.hpp>
+#include <dtc/ml/loss.hpp>
+#include <dtc/ml/optimizer.hpp>
+#include <dtc/ipc/block_file.hpp>
+#include <dtc/ipc/streambuf.hpp>
+#include <dtc/archive/binary.hpp>
 
 namespace dtc::ml {
 
@@ -25,17 +31,18 @@ class LinearRegressor {
     
     LinearRegressor() = default;
 
-    LinearRegressor& dimension(size_t);
+    LinearRegressor& dimension(size_t, size_t);
 
     template <typename O, typename... ArgsT>
     O& optimizer(ArgsT&&...);
 
     template <typename C>
-    LinearRegressor& train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
+    LinearRegressor& train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
 
-    Eigen::VectorXf infer(Eigen::MatrixXf&) const;
+    Eigen::MatrixXf infer(Eigen::MatrixXf&) const;
 
-    inline size_t dimension() const;
+    inline size_t label_dimension() const;
+    inline size_t feature_columns() const;
 
   private:
 
@@ -46,18 +53,21 @@ class LinearRegressor {
 
     Optimizer _optimizer{std::in_place_type<AdamOptimizer>};
     
-    std::default_random_engine _gen {0};
-
-    void _shuffle(Eigen::MatrixXf&, Eigen::VectorXf&);
-    void _optimize(const Eigen::MatrixXf&, const Eigen::VectorXf&, float);
+    void _shuffle(Eigen::MatrixXf&, Eigen::MatrixXf&);
+    void _optimize(const Eigen::MatrixXf&, const Eigen::MatrixXf&, float);
     void _update(float);
     
     template <typename C>
-    void _train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
+    void _train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
 };
 
-// Function: dimension
-inline size_t LinearRegressor::dimension() const {
+// Function: label_dimension
+inline size_t LinearRegressor::label_dimension() const {
+  return _W.cols();
+}
+
+// Function: feature_columns
+inline size_t LinearRegressor::feature_columns() const {
   return _W.rows();
 }
     
@@ -69,7 +79,7 @@ O& LinearRegressor::optimizer(ArgsT&&... args) {
 
 // Function: train
 template <typename C>
-LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::VectorXf& Y, size_t e, size_t b, float l, C&& c) {
+LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::MatrixXf& Y, size_t e, size_t b, float l, C&& c) {
 
   if(X.rows() != Y.rows()) {
     DTC_THROW("Dimension of training data and labels don't match");
@@ -82,7 +92,7 @@ LinearRegressor& LinearRegressor::train(Eigen::MatrixXf& X, Eigen::VectorXf& Y, 
 
 // Function: _train
 template <typename C>
-void LinearRegressor::_train(Eigen::MatrixXf& X, Eigen::VectorXf& Y, size_t e, size_t b, float l, C&& c) {
+void LinearRegressor::_train(Eigen::MatrixXf& X, Eigen::MatrixXf& Y, size_t e, size_t b, float l, C&& c) {
 
 	const size_t num_trains = X.rows();
 

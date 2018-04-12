@@ -107,6 +107,7 @@ nobase_pkginclude_HEADERS += include/dtc/utility/ios.hpp
 nobase_pkginclude_HEADERS += include/dtc/utility/chrono.hpp
 nobase_pkginclude_HEADERS += include/dtc/utility/uuid.hpp
 nobase_pkginclude_HEADERS += include/dtc/utility/logger.hpp
+nobase_pkginclude_HEADERS += include/dtc/ml/rnn.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/mnist.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/ml.hpp
 nobase_pkginclude_HEADERS += include/dtc/ml/activation.hpp
@@ -482,6 +483,7 @@ lib_libDtCraft_la_SOURCES += src/utility/os.cpp
 lib_libDtCraft_la_SOURCES += src/utility/http_parser.cpp
 lib_libDtCraft_la_SOURCES += src/utility/table.cpp
 lib_libDtCraft_la_SOURCES += src/ml/loss.cpp
+lib_libDtCraft_la_SOURCES += src/ml/rnn.cpp
 lib_libDtCraft_la_SOURCES += src/ml/naive_bayes.cpp
 lib_libDtCraft_la_SOURCES += src/ml/linear.cpp
 lib_libDtCraft_la_SOURCES += src/ml/optimizer.cpp
@@ -581,8 +583,9 @@ app_debs18_debs18_LDADD += lib/libDtCraft.la
 app_debs18_debs18_SOURCES =
 app_debs18_debs18_SOURCES += app/debs18/debs18.hpp
 app_debs18_debs18_SOURCES += app/debs18/feeder.hpp
+app_debs18_debs18_SOURCES += app/debs18/rnn.cpp
 app_debs18_debs18_SOURCES += app/debs18/utility.cpp
-app_debs18_debs18_SOURCES += app/debs18/map.cpp
+app_debs18_debs18_SOURCES += app/debs18/dataframe.cpp
 app_debs18_debs18_SOURCES += app/debs18/debs18.cpp
 app_debs18_debs18_SOURCES += app/debs18/dtr.cpp
 app_debs18_debs18_SOURCES += app/debs18/dnn.cpp
@@ -779,6 +782,12 @@ echo_OMP_CXXFLAGS:
 
 echo_BOOST_CPPFLAGS:
 	@echo $(BOOST_CPPFLAGS)
+
+echo_PYTHON_CPPFLAGS:
+	@echo $(PYTHON_CPPFLAGS)
+
+echo_PYTHON_LDFLAGS:
+	@echo $(PYTHON_LDFLAGS)
 
 echo_CPU_COUNT:
 	@echo $(CPU_COUNT)

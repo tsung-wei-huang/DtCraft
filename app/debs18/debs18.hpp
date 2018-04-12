@@ -20,6 +20,7 @@ constexpr auto SHIP_DRAUGHT = 9;
 constexpr auto SHIP_ARRIVAL_TIME = 10;
 constexpr auto SHIP_ARRIVAL_PORT = 11;
 
+// Feature ranges.
 constexpr auto min_type      = 0.0f;
 constexpr auto max_type      = 99.0f;
 constexpr auto min_course    = 0.0f;
@@ -123,6 +124,22 @@ inline static const std::unordered_map<std::string_view, float> port_latitudes {
   {"YALOVA",            40.71889}
 };
 
+// ------------------------------------------------------------------------------------------------
+
+// Struct Trip
+struct Trip {
+
+  std::string id;
+
+  Eigen::MatrixXf route;
+
+  Trip(const std::string i, size_t r, size_t c) : id {i}, route {r, c} {}
+
+  auto rows() const { return route.rows(); }
+  auto cols() const { return route.cols(); }
+};
+
+// ------------------------------------------------------------------------------------------------
 
 // Utility
 std::chrono::system_clock::time_point timestamp_to_timepoint(std::string_view);
@@ -160,14 +177,111 @@ Eigen::VectorXf make_arrival_port(const dtc::CsvFrame&, bool = false);
 Eigen::VectorXf make_ship_data(const dtc::CsvFrame&, int, bool = false);
 
 void remove_NaN_rows(Eigen::MatrixXf&);
+void remove_invalid_timestamp_rows(Eigen::MatrixXf&);
+
+Eigen::MatrixXf stack(const std::vector<Trip>&);
+
+std::tuple<int, int, int, int> statistics(const std::vector<Trip>&);
+
+// ------------------------------------------------------------------------------------------------
+
+// Class: DataFrame
+class DataFrame : public dtc::CsvFrame {
+
+  public:
+
+    enum Index {
+      ID = 0,
+      TYPE,
+      SPEED,
+      LONGITUDE,
+      LATITUDE,
+      COURSE,
+      HEADING,
+      TIMESTAMP,
+      DEPARTURE_PORT,
+      DRAUGHT,
+      ARRIVAL_TIME,
+      ARRIVAL_PORT,
+      DISTANCE_FROM_DEPARTURE,
+      TIME_TO_ARRIVE,
+      DEPARTURE_PORT_LONGITUDE,
+      DEPARTURE_PORT_LATITUDE,
+      ARRIVAL_PORT_LONGITUDE,
+      ARRIVAL_PORT_LATITUDE,
+      CUMULATIVE_DISTANCE,
+      PLACEHOLDER
+    };
+
+    DataFrame(const std::filesystem::path&);
+
+    const Eigen::MatrixXf& data() const;
+    
+    Eigen::MatrixXf get(const std::vector<Index>&);
+    Eigen::MatrixXf sort_on_trip() const;
+
+    Eigen::VectorXf get(Index) const;
+    Eigen::VectorXf id() const;
+    Eigen::VectorXf type() const;
+    Eigen::VectorXf speed() const;
+    Eigen::VectorXf longitude() const;
+    Eigen::VectorXf latitude() const;
+    Eigen::VectorXf course() const;
+    Eigen::VectorXf heading() const;
+    Eigen::VectorXf timestamp(bool=false) const;
+    Eigen::VectorXf departure_port() const;
+    Eigen::VectorXf draught() const;
+    Eigen::VectorXf arrival_time(bool=false) const;
+    Eigen::VectorXf arrival_port() const;
+    Eigen::VectorXf distance_from_departure() const;
+    Eigen::VectorXf time_to_arrive() const;
+    Eigen::VectorXf departure_port_longitude() const;
+    Eigen::VectorXf departure_port_latitude() const;
+    Eigen::VectorXf arrival_port_longitude() const;
+    Eigen::VectorXf arrival_port_latitude() const;
+    
+    float get(size_t, Index) const;
+    float id(size_t) const;
+    float type(size_t) const;
+    float speed(size_t) const;
+    float longitude(size_t) const;
+    float latitude(size_t) const;
+    float course(size_t) const;
+    float heading(size_t) const;
+    float timestamp(size_t) const;
+    float departure_port(size_t) const;
+    float draught(size_t) const;
+    float arrival_time(size_t) const;
+    float arrival_port(size_t) const;
+    float distance_from_departure(size_t) const;
+    float time_to_arrive(size_t) const;
+    float departure_port_longitude(size_t) const;
+    float departure_port_latitude(size_t) const;
+    float arrival_port_longitude(size_t) const;
+    float arrival_port_latitude(size_t) const;
+
+    std::vector<Trip> trips(const std::vector<Index>&) const;
+
+  private:
+
+    Eigen::MatrixXf _data;
+    
+    float _scale_timestamp(float) const;
+};
+
+
+// ------------------------------------------------------------------------------------------------
+
+// Procedure: regression_dnn
+void regression_dnn(const std::filesystem::path&, const std::filesystem::path& = "");
+
+// Procedure: regression_rnn
+void regression_rnn(const std::filesystem::path&, const std::filesystem::path& = "");
 
 
 };  // end of namespace debs18. -------------------------------------------------------------------
 
-
-// Method.
-void debs18_map(const std::string&);
-void debs18_dtr(const std::string&);
-void debs18_dnn(const std::string&);
-
 #endif
+
+
+

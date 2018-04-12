@@ -42,6 +42,9 @@ AM_INIT_AUTOMAKE([subdir-objects tar-ustar])
 LT_INIT
 LT_LANG([C++])
 
+# Enable "pkg-config" tto simplify creating package linking/flags.
+#PKG_PROG_PKG_CONFIG([0.22])
+
 
 # Specify where the Makefile should be produced. 
 # These are the same locations as your Makefile.in's, but named as Makefile only.
@@ -88,6 +91,23 @@ AS_CASE($ax_cv_cxx_compiler_vendor,
 AX_COUNT_CPUS([],[CPU_COUNT=1])
 AC_SUBST(CPU_COUNT)
 
+# Check the Python module
+#AM_PATH_PYTHON([3.2],,[AC_MSG_ERROR([DtCraft requires Python >= 3.2])])
+#
+#AC_ARG_VAR([PYTHON_CPPFLAGS], [Include flags for python])
+#AC_ARG_VAR([PYTHON_LDFLAGS], [Library flags for python])
+#AC_ARG_VAR([PYTHON_LIBS], [Library flags for python])
+#AC_ARG_VAR([PYTHON_CONFIG], [Path to python-config])
+#AC_PATH_PROGS([PYTHON_CONFIG], [python$PYTHON_VERSION-config python-config], [no])
+##AS_IF([test "$PYTHON_CONFIG" = no], [AC_MSG_ERROR([cannot find python-config for $PYTHON])])
+#
+#if test "x$PYTHON_CONFIG" = "xno"; then 
+#  AC_MSG_ERROR([cannot find python-config for $PYTHON])
+#else
+#  PYTHON_CPPFLAGS=`$PYTHON_CONFIG --includes`
+#  PYTHON_LDFLAGS=`$PYTHON_CONFIG --ldflags`
+#  PYTHON_LIBS=`$PYTHON_CONFIG --libs`
+#fi
 
 # Library, header check, so we can easily #include them:
 AC_HEADER_STDC
@@ -185,5 +205,22 @@ AX_PTHREAD([have_pthread=yes], [AC_MSG_ERROR([pthread library is required])])
 # Do final output.
 AC_OUTPUT
 LT_OUTPUT
+
+AC_OUTPUT
+
+echo
+echo "DtCraft configuration summary:"
+echo
+echo "  - Package version (major.minor.micro): $PACKAGE_VERSION"
+echo "  - Library version (current:revision:age): $LIB_VERSION"
+echo "  - Prefix: $prefix"
+echo "  - Building on: $build"
+echo "  - Building for: $host"
+echo "  - CXX: $CXX"
+echo "  - CXXFLAGS: $CXXFLAGS"
+echo "  - CPPFLAGS: $CPPFLAGS"
+echo "  - LDFLAGS: $LDFLAGS"
+echo "  - LIBS: $LIBS"
+echo
 
 

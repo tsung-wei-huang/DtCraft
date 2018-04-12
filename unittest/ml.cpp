@@ -45,8 +45,19 @@ std::tuple<Eigen::MatrixXf, Eigen::VectorXi, Eigen::MatrixXf, Eigen::VectorXi> p
   return {Dtr, Ltr, Dte, Lte};
 }
 
-// Testcase: DnnClassifierTest.Mnist
-TEST_CASE("DnnClassifierTest.Mnist") {
+// Function: regression_data
+std::tuple<Eigen::MatrixXf, Eigen::MatrixXf> regression_data(size_t rows, size_t cols, size_t labels) {
+	
+	Eigen::MatrixXf X = Eigen::MatrixXf::Random(rows, cols);
+  Eigen::MatrixXf Y = Eigen::MatrixXf::Random(rows, labels);
+
+	return {X, Y};
+}
+
+// ------------------------------------------------------------------------------------------------
+
+// Testcase: DnnClassifierTest
+TEST_CASE("ClassifierTest.Dnn") {
   
   auto [Dtr, Ltr, Dte, Lte] = parse_mnist();
   
@@ -75,43 +86,61 @@ TEST_CASE("DnnClassifierTest.Mnist") {
   REQUIRE(acc1 == acc2);
 }
 
-// Testcase: DnnRegressorTest.Mnist
-TEST_CASE("DnnRegressorTest.Mnist") {
+// Testcase: DnnRegressorTest
+TEST_CASE("RegressorTest.Dnn") {
 
-  auto [Dtr, Ltri, Dte, Ltei] = parse_mnist();
+	auto [X, Y] = regression_data(65536, 784, 10);
 
-  Eigen::VectorXf Ltr = Ltri.cast<float>();
-  Eigen::VectorXf Lte = Ltei.cast<float>();
+  dtc::ml::DnnRegressor dnn;
 
-  dtc::ml::DnnRegressor nn1;
-
-  nn1.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
-     .fully_connected_layer(30, 1, dtc::ml::Activation::NONE);
+  dnn.fully_connected_layer(X.cols(), 30, dtc::ml::Activation::SIGMOID)
+     .fully_connected_layer(30, Y.cols(), dtc::ml::Activation::NONE);
   
-  float cmse = (nn1.infer(Dte) - Lte).array().square().sum() / (2.0f*Dte.rows());
-  float pmse = cmse;
+  float pmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
 
-  nn1.train(Dtr, Ltr, 5, 64, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
-    cmse = (dnnr.infer(Dte) - Lte).array().square().sum() / (2.0f*Dte.rows());
-    REQUIRE(cmse <= pmse);
-    //printf("epoch %d: mse=%.4f\n", i++, cmse);
-    pmse = cmse;
+  dnn.train(X, Y, 5, 64, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
+    //auto cmse = (dnnr.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+    //printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
   });
+
+  float cmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+
+  REQUIRE(cmse <= pmse);
 }
 
-// Testcase: LinearRegressorTest
-TEST_CASE("LinearRegressorTest") {
+// Testcase:: RnnRegressorNx1Test
+TEST_CASE("RegressorTest.RnnRegressorNx1") {
+  
+  auto [X, Y] = regression_data(65536, 100, 4);
 
-	Eigen::MatrixXf X = Eigen::MatrixXf::Random(65536, 16);
-  Eigen::VectorXf Y = Eigen::VectorXf::Random(65536);
+  dtc::ml::RnnRegressorNx1 rnn;
+
+  rnn.cell(10, 30, 4, dtc::ml::Activation::RELU)
+     .loss<dtc::ml::MeanSquaredError>();
+  
+  float pmse = (rnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+
+  rnn.train(X, Y, 10, 64, 0.01f, [&, i=0] (dtc::ml::RnnRegressorNx1& rnn) mutable {
+    //printf("epoch %d: mse=%.4f\n", i++, (rnn.infer(X) - Y).array().square().sum() / (2.0f * X.rows()));
+  });
+
+  float cmse = (rnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
+  
+  REQUIRE(cmse <= pmse);
+}
+
+// Testcase: LinearRegressor
+TEST_CASE("RegressorTest.Linear") {
+
+  auto [X, Y] = regression_data(65536, 100, 4);
 
   dtc::ml::LinearRegressor lgr;
   
-  lgr.dimension(16);
+  lgr.dimension(100, 4);
 
   float pmse = (lgr.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
 
-  lgr.train(X, Y, 128, 64, 0.01f, [&, i=0] (dtc::ml::LinearRegressor& lgr) mutable {
+  lgr.train(X, Y, 5, 64, 0.01f, [&, i=0] (dtc::ml::LinearRegressor& lgr) mutable {
     //printf("epoch %d: %.4f\n", i++, (lgr.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
   });
 

@@ -331,6 +331,14 @@ echo "echo_BOOST_CPPFLAGS:"
 echo "	@echo \$(BOOST_CPPFLAGS)"
 echo ""
 
+echo "echo_PYTHON_CPPFLAGS:"
+echo "	@echo \$(PYTHON_CPPFLAGS)"
+echo ""
+
+echo "echo_PYTHON_LDFLAGS:"
+echo "	@echo \$(PYTHON_LDFLAGS)"
+echo ""
+
 echo "echo_CPU_COUNT:"
 echo "	@echo \$(CPU_COUNT)"
 echo ""

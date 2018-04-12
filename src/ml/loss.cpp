@@ -31,6 +31,12 @@ void MeanSquaredError::dloss(Eigen::MatrixXf& D, const Eigen::VectorXf& Y) const
   D -= Y;
 }
 
+// Procedure: dloss
+void MeanSquaredError::dloss(Eigen::MatrixXf& D, const Eigen::MatrixXf& Y) const {
+  assert(D.rows() == Y.rows() && D.cols() == Y.cols());
+  D -= Y;
+}
+
 // ------------------------------------------------------------------------------------------------
 
 // Procedure: dloss
@@ -45,7 +51,14 @@ void SoftmaxCrossEntropy::dloss(Eigen::MatrixXf& D, const Eigen::VectorXi& Y) co
 
 // Procedure: dloss
 void SoftmaxCrossEntropy::dloss(Eigen::MatrixXf& D, const Eigen::VectorXf& Y) const {
-  assert(false);
+  assert(D.rows() == Y.rows() && D.cols() == 1);
+  D -= Y;
+}
+
+// Procedure: dloss
+void SoftmaxCrossEntropy::dloss(Eigen::MatrixXf& D, const Eigen::MatrixXf& Y) const {
+  assert(D.rows() == Y.rows() && D.cols() == Y.cols());
+  D -= Y;
 }
 
 
@@ -89,6 +102,27 @@ void MeanAbsoluteError::dloss(Eigen::MatrixXf& D, const Eigen::VectorXf& Y) cons
     }
   }
 }
+
+// Procedure: dloss
+void MeanAbsoluteError::dloss(Eigen::MatrixXf& D, const Eigen::MatrixXf& Y) const {
+
+  assert(D.rows() == Y.rows() && D.cols() == Y.cols());
+  
+  for(int j=0; j<D.cols(); ++j) {
+    for(int i=0; i<D.rows(); ++i) {
+      if(Y(i, j) > D(i, j)) {
+        D(i, j) = -1.0f;
+      }
+      else if(Y(i, j) < D(i, j)) {
+        D(i, j) = 1.0f;
+      }
+      else {
+        D(i, j) = .0f;
+      }
+    }
+  }
+}
+
 
 // ------------------------------------------------------------------------------------------------
 
@@ -139,9 +173,33 @@ void HuberLoss::dloss(Eigen::MatrixXf& D, const Eigen::VectorXf& Y) const {
       }
     }
   }
-  
 }
 
+// Procedure: dloss
+void HuberLoss::dloss(Eigen::MatrixXf& D, const Eigen::MatrixXf& Y) const {
+
+  assert(D.rows() == Y.rows() && D.cols() == Y.cols());
+  
+  for(int j=0; j<D.cols(); ++j) {
+    for(int i=0; i<D.rows(); ++i) {
+      float d = std::fabs(D(i, j) - Y(i, j));
+      if(d <= _delta) {
+        D(i, j) -= Y(i, j);
+      }
+      else {
+        if(Y(i, j) > D(i, j)) {
+          D(i, j) = -_delta;
+        }
+        else if(Y(i, j) < D(i, j)) {
+          D(i, j) = _delta;
+        }
+        else {
+          D(i, j) = .0f;
+        }
+      }
+    }
+  }
+}
 
 };  // end of namespace dtc::ml -------------------------------------------------------------------
 

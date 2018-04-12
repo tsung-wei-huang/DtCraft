@@ -27,6 +27,7 @@ struct MeanSquaredError {
 
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXi&) const;
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXf&) const;
+  void dloss(Eigen::MatrixXf&, const Eigen::MatrixXf&) const;
 
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT&);
@@ -46,6 +47,7 @@ struct MeanAbsoluteError {
   
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXi&) const;
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXf&) const;
+  void dloss(Eigen::MatrixXf&, const Eigen::MatrixXf&) const;
 
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT&);
@@ -65,6 +67,7 @@ struct SoftmaxCrossEntropy {
   
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXi&) const;
   void dloss(Eigen::MatrixXf&, const Eigen::VectorXf&) const;
+  void dloss(Eigen::MatrixXf&, const Eigen::MatrixXf&) const;
 
   template <typename ArchiverT>
   std::streamsize archive(ArchiverT&);
@@ -91,6 +94,7 @@ class HuberLoss {
     
     void dloss(Eigen::MatrixXf&, const Eigen::VectorXi&) const;
     void dloss(Eigen::MatrixXf&, const Eigen::VectorXf&) const;
+    void dloss(Eigen::MatrixXf&, const Eigen::MatrixXf&) const;
 
     template <typename ArchiverT>
     std::streamsize archive(ArchiverT&);

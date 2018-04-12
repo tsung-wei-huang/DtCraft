@@ -19,6 +19,16 @@
 #include <algorithm>
 #include <thread>
 
+namespace dtc::this_thread {
+
+// Function: random_engine
+inline std::default_random_engine& random_engine() {
+  thread_local static std::default_random_engine gen{0};
+  return gen;
+}
+
+};  // end of namespace dtc::this_thread. ---------------------------------------------------------
+
 namespace dtc {
 
 // Function: random

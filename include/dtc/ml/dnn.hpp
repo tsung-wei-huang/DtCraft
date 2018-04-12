@@ -86,8 +86,6 @@ class DnnClassifier {
     Loss _loss {std::in_place_type<SoftmaxCrossEntropy>};
     Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
 
-    std::default_random_engine _gen {0};
-    
     template <typename C>
     void _train(Eigen::MatrixXf&, Eigen::VectorXi&, size_t, size_t, float, C&&);
 
@@ -170,19 +168,23 @@ class DnnRegressor {
     L& loss(ArgsT&&...);
 
     template <typename C>
-    DnnRegressor& train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
+    DnnRegressor& train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
     
-    Eigen::VectorXf infer(const Eigen::MatrixXf&);
+    Eigen::MatrixXf infer(const Eigen::MatrixXf&);
 
     DnnRegressor& batch_norm(bool);
 
     bool batch_norm() const;
 
-  private:
+    template <typename ArchiverT>
+    auto archive(ArchiverT&);
     
-    //Loss _loss {Loss::MEAN_SQUARED_ERROR};
+    std::streamsize load(const std::filesystem::path&);
+    std::streamsize save(const std::filesystem::path&);
 
-    bool _batch_norm {false};
+  private:
+
+    //bool _batch_norm {false};
 
     std::vector<DnnLayer> _L;
     std::vector<Eigen::MatrixXf> _X;
@@ -190,41 +192,43 @@ class DnnRegressor {
     std::vector<Eigen::MatrixXf> _dW;
     std::vector<Eigen::MatrixXf> _B;
     std::vector<Eigen::MatrixXf> _dB;
-    std::vector<Eigen::MatrixXf> _gamma;
-    std::vector<Eigen::MatrixXf> _beta;
-    std::vector<Eigen::MatrixXf> _mean;
-    std::vector<Eigen::MatrixXf> _var;
-    std::vector<Eigen::MatrixXf> _isqrtvar;
-    std::vector<Eigen::MatrixXf> _hhat;
-    std::vector<Eigen::MatrixXf> _dbeta;
-    std::vector<Eigen::MatrixXf> _dgamma;
-    std::vector<Eigen::MatrixXf> _rmean;
-    std::vector<Eigen::MatrixXf> _rvar;
+    //std::vector<Eigen::MatrixXf> _gamma;
+    //std::vector<Eigen::MatrixXf> _beta;
+    //std::vector<Eigen::MatrixXf> _mean;
+    //std::vector<Eigen::MatrixXf> _var;
+    //std::vector<Eigen::MatrixXf> _isqrtvar;
+    //std::vector<Eigen::MatrixXf> _hhat;
+    //std::vector<Eigen::MatrixXf> _dbeta;
+    //std::vector<Eigen::MatrixXf> _dgamma;
+    //std::vector<Eigen::MatrixXf> _rmean;
+    //std::vector<Eigen::MatrixXf> _rvar;
 
     Loss _loss {std::in_place_type<MeanSquaredError>};
     Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
 
-    std::default_random_engine _gen {0};
-    
-    void _batch_norm_fp(Eigen::MatrixXf& D, size_t level);
-    void _batch_norm_infer_fp(Eigen::MatrixXf& D, size_t level);
-    void _batch_norm_bp(Eigen::MatrixXf& delta, size_t level);
-    void _shuffle(Eigen::MatrixXf&, Eigen::VectorXf&);
+    //void _batch_norm_fp(Eigen::MatrixXf& D, size_t level);
+    //void _batch_norm_infer_fp(Eigen::MatrixXf& D, size_t level);
+    //void _batch_norm_bp(Eigen::MatrixXf& delta, size_t level);
+    void _shuffle(Eigen::MatrixXf&, Eigen::MatrixXf&);
     void _fprop(const Eigen::MatrixXf&);
     void _bprop(Eigen::MatrixXf&);
-    void _optimize(const Eigen::MatrixXf&, const Eigen::VectorXf&, float);
+    void _optimize(const Eigen::MatrixXf&, const Eigen::MatrixXf&, float);
     void _update(float);
     
     template <typename C>
-    void _train(Eigen::MatrixXf&, Eigen::VectorXf&, size_t, size_t, float, C&&);
-    
-    std::streamsize load(const std::filesystem::path&);
-    std::streamsize save(const std::filesystem::path&);
+    void _train(Eigen::MatrixXf&, Eigen::MatrixXf&, size_t, size_t, float, C&&);
+
 };
+
+// Function: archive
+template <typename ArchiverT>
+auto DnnRegressor::archive(ArchiverT& ar) {
+  return ar(_loss, _L, _X, _W, _dW, _B, _dB, _optimizer);
+}
 
 // Function: _train
 template <typename C>
-void DnnRegressor::_train(Eigen::MatrixXf& Dtr, Eigen::VectorXf& Ltr, size_t e, size_t b, float l, C&& c) {
+void DnnRegressor::_train(Eigen::MatrixXf& Dtr, Eigen::MatrixXf& Ltr, size_t e, size_t b, float l, C&& c) {
 
 	const size_t num_trains = Dtr.rows();
 
@@ -256,7 +260,7 @@ L& DnnRegressor::loss(ArgsT&&... args) {
 
 // Function: train
 template <typename C>
-DnnRegressor& DnnRegressor::train(Eigen::MatrixXf& Dtr, Eigen::VectorXf& Ltr, size_t e, size_t b, float lrate, C&& c) {
+DnnRegressor& DnnRegressor::train(Eigen::MatrixXf& Dtr, Eigen::MatrixXf& Ltr, size_t e, size_t b, float lrate, C&& c) {
 
   if(Dtr.rows() != Ltr.rows()) {
     DTC_THROW("Dimension of training data and labels don't match");
