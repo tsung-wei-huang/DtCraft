@@ -172,9 +172,9 @@ class DnnRegressor {
     
     Eigen::MatrixXf infer(const Eigen::MatrixXf&);
 
-    DnnRegressor& batch_norm(bool);
+    //DnnRegressor& batch_norm(bool);
 
-    bool batch_norm() const;
+    //bool batch_norm() const;
 
     template <typename ArchiverT>
     auto archive(ArchiverT&);

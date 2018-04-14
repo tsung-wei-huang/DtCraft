@@ -46,9 +46,10 @@ class Threadpool {
   };
 
   public:
-    
-    const std::thread::id owner { std::this_thread::get_id() };
 
+    inline Threadpool(unsigned = 0);
+    inline ~Threadpool();
+    
     template <typename C>
     auto async(C&&, const Signal = Signal::STANDARD);
     
@@ -57,15 +58,28 @@ class Threadpool {
     
     inline size_t num_tasks() const;
     inline size_t num_workers() const;
+
+    inline bool is_worker() const;
     
   private:
 
-    std::mutex _task_queue_mutex;
+    mutable std::mutex _mutex;
+
     std::condition_variable _worker_signal;
     std::deque<std::function<Signal()>> _task_queue;
     std::vector<std::thread> _threads;
-
+    std::unordered_set<std::thread::id> _worker_ids;
 };
+
+// Constructor
+inline Threadpool::Threadpool(unsigned N) {
+  spawn(N);
+}
+
+// Destructor
+inline Threadpool::~Threadpool() {
+  shutdown();
+}
 
 // Function: num_tasks
 // Return the number of "unfinished" tasks. Notice that this value is not necessary equal to
@@ -79,28 +93,39 @@ inline size_t Threadpool::num_workers() const {
   return _threads.size();
 }
 
+inline bool Threadpool::is_worker() const {
+  std::scoped_lock<std::mutex> lock(_mutex);
+  return _worker_ids.find(std::this_thread::get_id()) != _worker_ids.end();
+}
+
 // Procedure: spawn
 // The procedure spawns "n" threads monitoring the task queue and executing each task. After the
 // task is finished, the thread reacts to the returned signal.
 inline void Threadpool::spawn(unsigned N) {
-  
-  if(std::this_thread::get_id() != owner) {
-    throw std::runtime_error("Only the threadpool owner can spawn threads");
+
+  if(is_worker()) {
+    throw std::runtime_error("Worker cannot spawn threads");
   }
 
+  
   for(size_t i=0; i<N; ++i) {
 
-    _threads.emplace_back([master=this] () -> void { 
+    _threads.emplace_back([this] () -> void { 
+
+      {  // Acquire lock
+        std::scoped_lock<std::mutex> lock(_mutex);
+        _worker_ids.insert(std::this_thread::get_id());         
+      }
 
       auto stop = bool {false};
       while(!stop) {
         decltype(_task_queue)::value_type task;
 
         { // Acquire lock. --------------------------------------------------------------------------
-          std::unique_lock<std::mutex> lock(master->_task_queue_mutex);
-          master->_worker_signal.wait(lock, [master] () { return master->_task_queue.size() != 0; });
-          task = std::move(master->_task_queue.front());
-          master->_task_queue.pop_front();
+          std::unique_lock<std::mutex> lock(_mutex);
+          _worker_signal.wait(lock, [this] () { return _task_queue.size() != 0; });
+          task = std::move(_task_queue.front());
+          _task_queue.pop_front();
         } // Release lock. --------------------------------------------------------------------------
 
         // Execute the task and react to the returned signal.
@@ -114,6 +139,12 @@ inline void Threadpool::spawn(unsigned N) {
         };
 
       } // End of worker loop.
+
+      {  // Acquire lock
+        std::scoped_lock<std::mutex> lock(_mutex);
+        _worker_ids.erase(std::this_thread::get_id());         
+      }
+
     });
   }
 }
@@ -145,7 +176,7 @@ auto Threadpool::async(C&& c, const Signal sig) {
   // Schedule a thread to do this.
   else {
     {
-      std::unique_lock lock(_task_queue_mutex);
+      std::unique_lock lock(_mutex);
       _task_queue.emplace_back(
         [p=StrongMovable(std::move(p)), c=std::forward<C>(c), ret=sig] () mutable { 
           if constexpr(std::is_same_v<void, R>) {
@@ -169,7 +200,7 @@ auto Threadpool::async(C&& c, const Signal sig) {
   //std::packaged_task<R()> task (std::forward<C>(c));
   //auto fu = task.get_future();
   //{
-  //  std::unique_lock<std::mutex> lock(_task_queue_mutex);
+  //  std::unique_lock<std::mutex> lock(_mutex);
   //  _task_queue.emplace_back(
   //    [sm=StrongMovable<decltype(task)>(std::move(task)), ret=sig] () { 
   //      sm.object();
@@ -185,9 +216,9 @@ auto Threadpool::async(C&& c, const Signal sig) {
 // Procedure: shutdown
 // Remove a given number of workers. Notice that only the master can call this procedure.
 inline void Threadpool::shutdown() {
-
-  if(std::this_thread::get_id() != owner) {
-    throw std::runtime_error("Only the threadpool owner can shut down the service");
+  
+  if(is_worker()) {
+    throw std::runtime_error("Worker cannot shut down thread pool");
   }
 
   for(size_t i=0; i<_threads.size(); ++i) {
@@ -203,10 +234,6 @@ inline void Threadpool::shutdown() {
 
 };  // End of namespace dtc. ----------------------------------------------------------------------
 
-
-namespace dtc::tpl {
-
-};  // End of namespace dtc::tpl. -----------------------------------------------------------------
 
 
 #endif

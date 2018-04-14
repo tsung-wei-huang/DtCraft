@@ -1,6 +1,6 @@
-#include <app/debs18/debs18.hpp>
+#include <dtc/contrib/debs18/query2.hpp>
 
-namespace debs18 {
+namespace dtc::debs18 {
 
 // Procedure: regression_dnn
 void regression_dnn(const std::filesystem::path& path, const std::filesystem::path& model) {
@@ -14,11 +14,11 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
     debs18::DataFrame::LONGITUDE,
     debs18::DataFrame::LATITUDE,
     debs18::DataFrame::COURSE,
-    debs18::DataFrame::DISTANCE_FROM_DEPARTURE,
-    debs18::DataFrame::CUMULATIVE_DISTANCE,
+    //debs18::DataFrame::DISTANCE_FROM_DEPARTURE,
+    //debs18::DataFrame::CUMULATIVE_DISTANCE,
     debs18::DataFrame::DEPARTURE_PORT,
-    //debs18::DataFrame::HEADING,
-    //debs18::DataFrame::DRAUGHT,
+    debs18::DataFrame::HEADING,
+    debs18::DataFrame::DRAUGHT,
     debs18::DataFrame::ARRIVAL_TIME
   });
 
@@ -88,7 +88,7 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
   comp.col(0) = dnn.infer(Dte);
   
   // Perform training.
-  dnn.train(Dtr, Ltr, 10, 128, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
+  dnn.train(Dtr, Ltr, 100, 128, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
          float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
          float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
          printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", ++i, Etr, Ete);
@@ -117,21 +117,25 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
   });
 
   for(const auto [tid, err] : tripinfo) {
-    std::cout << "trips[" << trips[tid].id << "] MSE=" << err << ", "
+    std::cout << "trips[" << trips[tid].id << "] MAE=" << err << ", "
               << "LEN=" << trips[tid].rows() << std::endl;
   }
+  
+  std::cout << "Total MAE="
+            << (dnn.infer(ship.leftCols(ship.cols()-1)) - ship.rightCols(1)).array().abs().sum() / ship.rows()
+            << std::endl;
 
   // Save the model
   if(!model.empty()) {
     dtc::LOGI("Saving model to ", model, " ...");
     dnn.save(model);
   }
-  
+
   // End regression
   dtc::LOGI("Successfully performed DNN regression");
 }
 
-  
+// ------------------------------------------------------------------------------------------------
 
 /*// Procedure: debs18_dnn
 void debs18_dnn(const std::string& file) {
@@ -174,4 +178,5 @@ void debs18_dnn(const std::string& file) {
 }*/
 
 
-};  // end of namespace debs18 --------------------------------------------------------------------
+
+};  // end of namespace dtc::debs18. --------------------------------------------------------------

@@ -312,7 +312,6 @@ TEST_CASE("ThreadpoolTest.SpwanShutdown") {
 
   REQUIRE(threadpool.num_workers() == 0);
   REQUIRE(threadpool.num_tasks() == 0);
-  REQUIRE(threadpool.owner == std::this_thread::get_id());
 
   const auto W = std::max(1u, std::thread::hardware_concurrency());
 

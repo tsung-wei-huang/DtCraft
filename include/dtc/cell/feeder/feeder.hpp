@@ -17,7 +17,6 @@
 #include <dtc/cell/feeder/file.hpp>
 #include <dtc/cell/feeder/csv.hpp>
 #include <dtc/cell/feeder/mnist.hpp>
-#include <dtc/cell/feeder/debs.hpp>
 
 
 #endif

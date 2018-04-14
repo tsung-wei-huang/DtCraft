@@ -1,9 +1,9 @@
-#ifndef DTC_APP_DEBS18_DEBS18_HPP_
-#define DTC_APP_DEBS18_DEBS18_HPP_
+#ifndef DTC_CONTRIB_DEBS18_DATAFRAME_HPP_
+#define DTC_CONTRIB_DEBS18_DATAFRAME_HPP_
 
-#include <app/debs18/feeder.hpp>
+#include <dtc/dtc.hpp>
 
-namespace debs18 {
+namespace dtc::debs18 {
 
 // Predefined variables
 constexpr auto NUM_SHIP_ATTRIBUTES = 12;
@@ -161,6 +161,8 @@ float distance_on_earth(float, float, float, float);
 float port_latitude(std::string_view);
 float port_longitude(std::string_view);
 
+std::string minutes_to_timestamp(int);
+
 std::string_view nearest_port(float, float);
 
 Eigen::VectorXf make_type(const dtc::CsvFrame&, bool = false);
@@ -175,6 +177,8 @@ Eigen::VectorXf make_departure_port(const dtc::CsvFrame&, bool = false);
 Eigen::VectorXf make_arrival_time(const dtc::CsvFrame&, bool = false);
 Eigen::VectorXf make_arrival_port(const dtc::CsvFrame&, bool = false);
 Eigen::VectorXf make_ship_data(const dtc::CsvFrame&, int, bool = false);
+
+Eigen::MatrixXf make_regression_features(const std::string&);
 
 void remove_NaN_rows(Eigen::MatrixXf&);
 void remove_invalid_timestamp_rows(Eigen::MatrixXf&);
@@ -270,18 +274,6 @@ class DataFrame : public dtc::CsvFrame {
 };
 
 
-// ------------------------------------------------------------------------------------------------
-
-// Procedure: regression_dnn
-void regression_dnn(const std::filesystem::path&, const std::filesystem::path& = "");
-
-// Procedure: regression_rnn
-void regression_rnn(const std::filesystem::path&, const std::filesystem::path& = "");
-
-
-};  // end of namespace debs18. -------------------------------------------------------------------
+};  // end of namespace dtc::debs18. --------------------------------------------------------------
 
 #endif
-
-
-

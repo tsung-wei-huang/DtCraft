@@ -14,7 +14,7 @@
 #ifndef DTC_PROTOBUF_LOADINFO_HPP_
 #define DTC_PROTOBUF_LOADINFO_HPP_
 
-#include <headerdef.hpp>
+#include <dtc/headerdef.hpp>
 #include <dtc/statgrab/statgrab.hpp>
 
 namespace dtc::pb {

@@ -69,6 +69,9 @@ class Graph {
     template <template<typename...> class C, typename... ArgsT>
     auto insert(ArgsT&&...);
 
+    template <typename T, typename... ArgsT>
+    auto insert(ArgsT&&...);
+
   private:
     
     void _emplace_stream(key_type, key_type, key_type);
@@ -87,6 +90,13 @@ template <template<typename...> class C, typename... ArgsT>
 auto Graph::insert(ArgsT&&... args) {
   return C(this, std::forward<ArgsT>(args)...);
 }
+
+template <typename C, typename... ArgsT>
+auto Graph::insert(ArgsT&&... args) {
+  return C(this, std::forward<ArgsT>(args)...);
+}
+
+
 
 //-------------------------------------------------------------------------------------------------
 

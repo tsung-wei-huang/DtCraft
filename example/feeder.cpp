@@ -3,8 +3,6 @@
 // Date   : 2018/02/09
 
 #include <dtc/dtc.hpp>
-#include <dtc/cell/cell.hpp>
-#include <dtc/cell/feeder/socket.hpp>
 
 // Procedure: text_stream_feeder
 // Create a feeder that generates a discrete text stream line by line from a given file
