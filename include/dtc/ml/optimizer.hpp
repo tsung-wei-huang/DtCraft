@@ -25,18 +25,22 @@ namespace dtc::ml {
 // doesn’t keep a history of anything (just the rolling averages). It is reputed to work 
 // well for both sparse matrices and noisy data.
 class AdamOptimizer {
+    
+  struct MovingAverage {
+    Eigen::MatrixXf mt;
+    Eigen::MatrixXf vt;
+    float b1_t {0.9f};
+    float b2_t {0.999f};
+  };
 
   private:
   
     float _alpha {0.001f};     // learning rate
     float _b1    {0.9f};       // decay term
     float _b2    {0.999f};     // decay term
-    float _b1_t  {0.9f};       // decay term power t
-    float _b2_t  {0.999f};     // decay term power t
     float _eps   {1e-8};    
 
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _mts;
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _vts;
+    std::unordered_map<Eigen::MatrixXf*, MovingAverage> _states;
 
   public:
 
@@ -44,19 +48,9 @@ class AdamOptimizer {
 
     inline AdamOptimizer& alpha(float);
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
-
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto AdamOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _b1, _b2, _b1_t, _b2_t, _eps, _mts, _vts);
-}
-  
 // Function: alpha  
 inline AdamOptimizer& AdamOptimizer::alpha(float v) { 
   _alpha = v; 
@@ -67,17 +61,21 @@ inline AdamOptimizer& AdamOptimizer::alpha(float v) {
 
 // Class: AdamaxOptimizer
 class AdamaxOptimizer {
+    
+  struct MovingAverage {
+    Eigen::MatrixXf mt;
+    Eigen::MatrixXf ut;
+    float b1_t {0.9f};
+  };
 
   private:
 
     float _alpha {0.002f};     // learning rate
     float _b1    {0.9f};       // decay term
     float _b2    {0.999f};     // decay term
-    float _b1_t  {_b1};        // decay term power t
     float _eps   {1e-8};    
 
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _mts;
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _uts;
+    std::unordered_map<Eigen::MatrixXf*, MovingAverage> _states;
 
   public:
 
@@ -85,18 +83,17 @@ class AdamaxOptimizer {
 
     inline AdamaxOptimizer& alpha(float);
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    //template <typename ArchiverT>
+    //auto archive(ArchiverT&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto AdamaxOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _b1, _b2, _b1_t, _eps, _mts, _uts);
-}
+//// Function: archive
+//template <typename ArchiverT>
+//auto AdamaxOptimizer::archive(ArchiverT& ar) {
+//  return ar(_alpha, _b1, _b2, _b1_t, _eps, _mts, _uts);
+//}
 
 // Function: alpha    
 inline AdamaxOptimizer& AdamaxOptimizer::alpha(float v) { 
@@ -121,18 +118,17 @@ class GradientDescentOptimizer {
     GradientDescentOptimizer& decay(float v) { _decay = v; return *this; }
     GradientDescentOptimizer& alpha(float v) { _alpha = v; return *this; }
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int = -1);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    //template <typename ArchiverT>
+    //auto archive(ArchiverT&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto GradientDescentOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _decay);
-}
+//// Function: archive
+//template <typename ArchiverT>
+//auto GradientDescentOptimizer::archive(ArchiverT& ar) {
+//  return ar(_alpha, _decay);
+//}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -144,7 +140,7 @@ class AdagradOptimizer {
     float _alpha {0.01f};
     float _eps {1e-8};
     
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _gs;
+    std::unordered_map<Eigen::MatrixXf*, Eigen::MatrixXf> _states;
     
   public:
 
@@ -152,18 +148,17 @@ class AdagradOptimizer {
 
     AdagradOptimizer& alpha(float v) { _alpha = v; return *this; }
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    //template <typename ArchiverT>
+    //auto archive(ArchiverT&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto AdagradOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _eps, _gs);
-}
+//// Function: archive
+//template <typename ArchiverT>
+//auto AdagradOptimizer::archive(ArchiverT& ar) {
+//  return ar(_alpha, _eps, _gs);
+//}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -177,7 +172,7 @@ class RMSpropOptimizer {
     float _mu {0.99f};
     float _eps {1e-8};
 
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _gs;
+    std::unordered_map<Eigen::MatrixXf*, Eigen::MatrixXf> _states;
 
   public:
 
@@ -185,18 +180,17 @@ class RMSpropOptimizer {
     
     RMSpropOptimizer& alpha(float v) { _alpha = v; return *this; }
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    //template <typename ArchiverT>
+    //auto archive(ArchiverT&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto RMSpropOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _mu, _eps, _gs);
-}
+//// Function: archive
+//template <typename ArchiverT>
+//auto RMSpropOptimizer::archive(ArchiverT& ar) {
+//  return ar(_alpha, _mu, _eps, _gs);
+//}
 
 // ------------------------------------------------------------------------------------------------
 
@@ -216,7 +210,7 @@ class MomentumOptimizer {
     float _lambda {0};
     float _mu {0.9};
 
-    std::unordered_map<int, std::vector<Eigen::MatrixXf>> _dW_prevs;
+    std::unordered_map<Eigen::MatrixXf*, Eigen::MatrixXf> _states;
 
   public:
 
@@ -224,18 +218,17 @@ class MomentumOptimizer {
 
     MomentumOptimizer& alpha(float v) { _alpha = v; return *this; }
 
-    void update(const std::vector<Eigen::MatrixXf>&, std::vector<Eigen::MatrixXf>&, int);
-    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&, int);
+    void update(const Eigen::MatrixXf&, Eigen::MatrixXf&);
 
-    template <typename ArchiverT>
-    auto archive(ArchiverT&);
+    //template <typename ArchiverT>
+    //auto archive(ArchiverT&);
 };
 
-// Function: archive
-template <typename ArchiverT>
-auto MomentumOptimizer::archive(ArchiverT& ar) {
-  return ar(_alpha, _lambda, _mu, _dW_prevs);
-}
+//// Function: archive
+//template <typename ArchiverT>
+//auto MomentumOptimizer::archive(ArchiverT& ar) {
+//  return ar(_alpha, _lambda, _mu, _dW_prevs);
+//}
 
 // ------------------------------------------------------------------------------------------------
 

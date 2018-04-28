@@ -45,9 +45,10 @@ void offline() {
     
     dtc::ml::DnnClassifier nn;
 
-    nn.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
-      .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
-      .train(Dtr, Ltr, 30, 64, 0.01f, [&, i=0] (auto& dnnc) mutable {
+    nn.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
+    nn.layer<dtc::ml::FullyConnectedLayer>(30, 10, dtc::ml::Activation::NONE);
+
+    nn.train(Dtr, Ltr, 30, 64, 0.01f, [&, i=0] (auto& dnnc) mutable {
          auto c = ((dnnc.infer(Dte) - Lte).array() == 0).count();
          auto t = Dte.rows();
          dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
@@ -90,8 +91,8 @@ void online() {
   auto dnn = G.insert<dtc::cell::Visitor1x1>(
     [] (dtc::ml::DnnClassifier& c) {
       dtc::cout("Creating a dnn classifier [784x30x10]\n").flush();
-      c.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
-       .fully_connected_layer(30, 10, dtc::ml::Activation::NONE);
+      c.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
+      c.layer<dtc::ml::FullyConnectedLayer>(30, 10, dtc::ml::Activation::NONE);
     },
     [i=0] (dtc::ml::DnnClassifier& c, std::tuple<Eigen::MatrixXf, Eigen::VectorXi>& data) mutable {
       auto& [images, labels] = data;

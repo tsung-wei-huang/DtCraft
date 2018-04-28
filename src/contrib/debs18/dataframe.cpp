@@ -2,9 +2,20 @@
 
 namespace dtc::debs18 {
 
-std::string minutes_to_timestamp(int minutes) {
+// Function: timestamp_to_timepoint
+std::chrono::system_clock::time_point timestamp_to_timepoint(const std::string& time) {
+  //assert(!time.empty());
+  std::tm tm = {};
+  if(::strptime(time.data(), "%d-%m-%y %H:%M", &tm) == nullptr) {
+    throw std::invalid_argument("Failed on strptime");
+  }
+  return std::chrono::system_clock::from_time_t(::timegm(&tm));
+}
+
+// Function: minutes_to_timestamp
+std::string minutes_to_timestamp(float minutes) {
   static const auto min_timepoint = timestamp_to_timepoint(min_timestamp);
-  auto cur_timepoint = min_timepoint + std::chrono::minutes(minutes);
+  auto cur_timepoint = min_timepoint + std::chrono::minutes((int)(minutes));
   auto tt = std::chrono::system_clock::to_time_t(cur_timepoint);
   char buffer[128];
   if(::std::strftime(buffer, sizeof(buffer),"%d-%m-%y %H:%M", std::gmtime(&tt)) == 0){ 
@@ -13,34 +24,20 @@ std::string minutes_to_timestamp(int minutes) {
   return std::string(buffer);
 }
 
+// Function: timestamp_to_minutes
+float timestamp_to_minutes(const std::string& ts) {
+  static auto min_timepoint = timestamp_to_timepoint(min_timestamp);
+  auto cur_timepoint = timestamp_to_timepoint(ts);
+  return std::chrono::duration_cast<std::chrono::minutes>(cur_timepoint - min_timepoint).count();
+}
 
-//// Function: statistics
-//std::tuple<int, int, int, int> statistics(const std::vector<Trip>& trips) {
-//
-//  int N {0};
-//  int feature_columns {0};
-//  int max_trip_length {0};
-//  int min_trip_length {std::numeric_limits<int>::max()};
-//
-//  for(size_t i=0; i<trips.size(); ++i) {
-//
-//    assert(trips[i].rows() != 0 && trips[i].cols() >= 2);
-//
-//    if(feature_columns == 0) {
-//      feature_columns = trips[i].cols() - 1;
-//    }
-//    else {
-//      assert(feature_columns == trips[i].cols() - 1);
-//    }
-//
-//    N += trips[i].rows();
-//
-//    max_trip_length = std::max(max_trip_length, (int)trips[i].rows());
-//    min_trip_length = std::min(min_trip_length, (int)trips[i].rows());
-//  }
-//
-//  return {N, feature_columns, max_trip_length, min_trip_length};
-//}
+// Procedure: shuffle
+void shuffle(Eigen::MatrixXf& D) {
+  Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> p(D.rows());
+  p.setIdentity();
+  std::shuffle(p.indices().data(), p.indices().data() + p.indices().size(), this_thread::random_engine());
+  D = p * D;
+}
 
 // Function: stack
 Eigen::MatrixXf stack(const std::vector<Trip>& trips) {
@@ -66,6 +63,47 @@ Eigen::MatrixXf stack(const std::vector<Trip>& trips) {
   }
 
   assert(k == num_rows);
+  
+  return stk;
+}
+
+// Function: stack_on_type
+Eigen::MatrixXf stack_on_type(const std::vector<Trip>& trips, int type) {
+  
+  assert(10<=type and type <100);
+
+  Eigen::MatrixXf::Index num_rows {0}, num_cols {0}, k=0;
+
+  for(size_t i=0; i<trips.size(); ++i) {
+    if(trips[i].type != type) {
+      continue;
+    }
+    num_rows += trips[i].rows();
+    if(num_cols == 0) {
+      num_cols = trips[i].cols();
+    }
+    else {
+      assert(num_cols == trips[i].cols());
+    }
+  }
+
+  Eigen::MatrixXf stk(num_rows, num_cols);
+  
+  for(size_t i=0; i<trips.size(); ++i) {
+    if(trips[i].type != type) {
+      continue;
+    }
+    for(Eigen::MatrixXf::Index r=0; r<trips[i].rows(); ++r) {
+      stk.row(k++) = trips[i].route.row(r);
+    }
+  }
+  
+  assert(k == num_rows);
+  
+  Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> p(k);
+  p.setIdentity();
+  std::shuffle(p.indices().data(), p.indices().data() + p.indices().size(), this_thread::random_engine());
+  stk = p * stk;
   
   return stk;
 }
@@ -122,63 +160,18 @@ void remove_invalid_timestamp_rows(Eigen::MatrixXf& raw) {
 }
 
 // Function: make_type
-float make_type(const std::string& v, bool scale) {
+float make_type(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_type(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
   }
 }
 
-// Function: make_type
-Eigen::VectorXf make_type(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_TYPE);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_type(view[i], scale);
-  }
-  return vec;
-}
-
 // Function: make_speed
-float make_speed(const std::string& v, bool scale) {
+float make_speed(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_speed(res);
-    }
-    else {
-      return res;
-    }
-  }
-  catch(...) {
-    return std::numeric_limits<float>::quiet_NaN();
-  }
-}
-
-// Function: make_speed
-Eigen::VectorXf make_speed(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_SPEED);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_speed(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_longitude
-float make_longitude(const std::string& v, bool scale) {
-  try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_longitude(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }
   catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
@@ -186,24 +179,9 @@ float make_longitude(const std::string& v, bool scale) {
 }
 
 // Function: make_longitude
-Eigen::VectorXf make_longitude(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_LONGITUDE);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_longitude(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_latitude
-float make_latitude(const std::string& v, bool scale) {
+float make_longitude(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_latitude(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }
   catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
@@ -211,24 +189,9 @@ float make_latitude(const std::string& v, bool scale) {
 }
 
 // Function: make_latitude
-Eigen::VectorXf make_latitude(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_LATITUDE);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_latitude(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_course
-float make_course(const std::string& v, bool scale) {
+float make_latitude(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_course(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }
   catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
@@ -236,24 +199,19 @@ float make_course(const std::string& v, bool scale) {
 }
 
 // Function: make_course
-Eigen::VectorXf make_course(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_COURSE);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_course(view[i], scale);
+float make_course(const std::string& v) {
+  try {
+    return std::stof(v);
   }
-  return vec;
+  catch(...) {
+    return std::numeric_limits<float>::quiet_NaN();
+  }
 }
 
 // Function: make_heading
-float make_heading(const std::string& v, bool scale) {
+float make_heading(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_heading(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }
   catch(...) {
     return 511.0f;  // unknown
@@ -261,25 +219,10 @@ float make_heading(const std::string& v, bool scale) {
   }
 }
 
-// Function: make_heading
-Eigen::VectorXf make_heading(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_HEADING);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_heading(view[i], scale);
-  }
-  return vec;
-}
-
 // Function: make_draught
-float make_draught(const std::string& v, bool scale) {
+float make_draught(const std::string& v) {
   try {
-    if(float res = std::stof(v); scale == true) {
-      return scale_draught(res);
-    }
-    else {
-      return res;
-    }
+    return std::stof(v);
   }
   catch(...) {
     //return std::numeric_limits<float>::quiet_NaN();
@@ -287,233 +230,113 @@ float make_draught(const std::string& v, bool scale) {
   }
 }
 
-// Function: make_draught
-Eigen::VectorXf make_draught(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_DRAUGHT);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_draught(view[i], scale);
-  }
-  return vec;
-}
-
 // Function: make_timestamp
-float make_timestamp(const std::string& v, bool scale) {
+float make_timestamp(const std::string& v) {
   try {
-    if(scale == true) return scale_timestamp(v); 
-    else return timestamp_to_minutes(v);
+    return timestamp_to_minutes(v);
   }
   catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
   }
 }
 
-// Function: make_timestamp
-Eigen::VectorXf make_timestamp(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_TIMESTAMP);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_timestamp(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_departure_port
-float make_port(const std::string& v, bool scale) {
+// Function: make_port
+float make_port(const std::string& v) {
   try {
-    if(scale == true) return scale_departure_port(v);
-    else return port_to_id(v);
+    return ports.at(v).id;
   }
   catch(...) {
     return std::numeric_limits<float>::quiet_NaN();
   }
-}
-
-// Function: make_departure_port
-Eigen::VectorXf make_departure_port(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_DEPARTURE_PORT);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_port(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_arrival_time
-Eigen::VectorXf make_arrival_time(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_ARRIVAL_TIME);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_timestamp(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_arrival_port
-Eigen::VectorXf make_arrival_port(const dtc::CsvFrame& csv, bool scale) {
-  auto view = csv.col(SHIP_ARRIVAL_PORT);
-  Eigen::VectorXf vec(view.size());
-  for(int i=0; i<vec.size(); ++i) {
-    vec(i) = make_port(view[i], scale);
-  }
-  return vec;
-}
-
-// Function: make_ship_data
-Eigen::VectorXf make_ship_data(const dtc::CsvFrame& csv, int id, bool scale) {
-  
-  switch(id) {
-    case SHIP_TYPE:
-      return make_type(csv, scale); 
-    break;
-
-    case SHIP_SPEED:
-      return make_speed(csv, scale);
-    break;
-
-    case SHIP_LONGITUDE:
-      return make_longitude(csv, scale);
-    break;
-    
-    case SHIP_LATITUDE:
-      return make_latitude(csv, scale);
-    break;
-
-    case SHIP_COURSE:
-      return make_course(csv, scale);
-    break;
-
-    case SHIP_HEADING:
-      return make_heading(csv, scale);
-    break;
-
-    case SHIP_TIMESTAMP:
-      return make_timestamp(csv, scale);
-    break;
-
-    case SHIP_DEPARTURE_PORT:
-      return make_departure_port(csv, scale);
-    break;
-
-    case SHIP_DRAUGHT:
-      return make_draught(csv, scale);
-    break;
-
-    case SHIP_ARRIVAL_TIME:
-      return make_arrival_time(csv, scale);
-    break;
-
-    case SHIP_ARRIVAL_PORT:
-      return make_arrival_port(csv, scale);
-    break;
-
-    default:
-      throw std::runtime_error(std::string{"Unsupported ship data id "} + std::to_string(id));
-  };
-
-}
-
-// Function: timestamp_to_timepoint
-std::chrono::system_clock::time_point timestamp_to_timepoint(std::string_view time) {
-  //assert(!time.empty());
-  std::tm tm = {};
-  if(::strptime(time.data(), "%d-%m-%y %H:%M", &tm) == nullptr) {
-    assert(time.empty());
-    throw std::invalid_argument("Failed on strptime");
-  }
-  return std::chrono::system_clock::from_time_t(::timegm(&tm));
-}
-
-// Function: scale_timestamp
-float scale_timestamp(std::string_view ts) {
-  static auto _min_timepoint = timestamp_to_timepoint(min_timestamp);
-  static auto _max_timepoint = timestamp_to_timepoint(max_timestamp);
-  static auto _dif_timepoint = _max_timepoint - _min_timepoint;
-	auto tp = timestamp_to_timepoint(ts);
-  auto nu = std::chrono::duration_cast<std::chrono::minutes>(tp - _min_timepoint).count();
-  auto de = std::chrono::duration_cast<std::chrono::minutes>(_dif_timepoint).count();
-  return nu / static_cast<float>(de);
-}
-
-// Function: timestamp_to_minutes
-float timestamp_to_minutes(std::string_view ts) {
-  static auto min_timepoint = timestamp_to_timepoint(min_timestamp);
-  auto cur_timepoint = timestamp_to_timepoint(ts);
-  return std::chrono::duration_cast<std::chrono::minutes>(cur_timepoint - min_timepoint).count();
 }
 
 // Function: port_longitude
-float port_longitude(std::string_view port) {
-  if(port_longitudes.find(port) == port_longitudes.end()) {
-    dtc::LOGE("Port ", port, "'s longitude not found");
+float port_longitude(const std::string& port) {
+  if(ports.find(port) == ports.end()) {
+    //dtc::LOGE("Port ", port, "'s longitude not found");
     return std::numeric_limits<float>::quiet_NaN();
   }
-  return port_longitudes.at(port);
+  return ports.at(port).longitude;
 }
 
 // Function: port_latitude
-float port_latitude(std::string_view port) {
-  if(port_latitudes.find(port) == port_latitudes.end()) {
-    dtc::LOGE("Port ", port, "'s latitude not found");
+float port_latitude(const std::string& port) {
+  if(ports.find(port) == ports.end()) {
+    //dtc::LOGE("Port ", port, "'s latitude not found");
     return std::numeric_limits<float>::quiet_NaN();
   }
-  return port_latitudes.at(port);
+  return ports.at(port).latitude;
 }
 
-// Function: port_to_id
-float port_to_id(std::string_view port) {
-  if(port_ids.find(port) == port_ids.end()) {
-    //dtc::LOGE("Port ", port, "'s id not found");
-    return std::numeric_limits<float>::quiet_NaN();
-  }
-	return port_ids.at(port);
-}
+//// Function: scale_departure_port
+//float scale_departure_port(const std::string& port) {
+//  return (port_to_id(port) - min_port_id) / (max_port_id - min_port_id);
+//}
+//
+//// Function: scale_course
+//float scale_course(float d) {
+//  static auto _dif_course = max_course - min_course;
+//  return (d - min_course) / _dif_course;
+//}
+//
+//// Function: scale_heading
+//float scale_heading(float d) {
+//  static auto _dif_heading = max_heading - min_heading;
+//  return (d - min_heading) / _dif_heading;
+//}
+//
+//// Function: scale_type
+//float scale_type(float d) {
+//  static auto _dif_type = max_type - min_type;
+//  return (d - min_type) / _dif_type;
+//}
+//
+//// Function: scale_speed
+//float scale_speed(float d) {
+//  static auto _dif_speed = max_speed - min_speed;
+//  return (d - min_speed) / _dif_speed;
+//}
+//
+//// Function: scale_draught
+//float scale_draught(float d) {
+//  static auto _dif_draught = max_draught - min_draught;
+//  return (d - min_draught) / _dif_draught;
+//}
+//
+//// Function: scale_longitude
+//float scale_longitude(float l) {
+//  static auto _dif_longitude = max_longitude - min_longitude; 
+//  return (l - min_longitude) / _dif_longitude;
+//}
+//
+//// Function: scale_latitude
+//float scale_latitude(float l) {
+//  static auto _dif_latitude = max_latitude - min_latitude;
+//  return (l - min_latitude) / _dif_latitude;
+//}
+//
+//// Function: scale_timestamp
+//float scale_timestamp(const std::string& ts) {
+//  static auto _min_timepoint = timestamp_to_timepoint(min_timestamp);
+//  static auto _max_timepoint = timestamp_to_timepoint(max_timestamp);
+//  static auto _dif_timepoint = _max_timepoint - _min_timepoint;
+//	auto tp = timestamp_to_timepoint(ts);
+//  auto nu = std::chrono::duration_cast<std::chrono::minutes>(tp - _min_timepoint).count();
+//  auto de = std::chrono::duration_cast<std::chrono::minutes>(_dif_timepoint).count();
+//  return nu / static_cast<float>(de);
+//}
 
-// Function: scale_departure_port
-float scale_departure_port(std::string_view port) {
-  return (port_to_id(port) - min_port_id) / (max_port_id - min_port_id);
-}
+float nearest_port(float lat, float lon) {
 
-// Function: scale_course
-float scale_course(float d) {
-  static auto _dif_course = max_course - min_course;
-  return (d - min_course) / _dif_course;
-}
+  auto itr = std::min_element(ports.begin(), ports.end(), [&] (const auto& p, const auto& s) {
+    auto dp = distance_on_earth(lat, lon, p.second.latitude, p.second.longitude);
+    auto ds = distance_on_earth(lat, lon, s.second.latitude, s.second.longitude);
+    return dp < ds; 
+  });
 
-// Function: scale_heading
-float scale_heading(float d) {
-  static auto _dif_heading = max_heading - min_heading;
-  return (d - min_heading) / _dif_heading;
-}
-
-// Function: scale_type
-float scale_type(float d) {
-  static auto _dif_type = max_type - min_type;
-  return (d - min_type) / _dif_type;
-}
-
-// Function: scale_speed
-float scale_speed(float d) {
-  static auto _dif_speed = max_speed - min_speed;
-  return (d - min_speed) / _dif_speed;
-}
-
-// Function: scale_draught
-float scale_draught(float d) {
-  static auto _dif_draught = max_draught - min_draught;
-  return (d - min_draught) / _dif_draught;
-}
-
-// Function: scale_longitude
-float scale_longitude(float l) {
-  static auto _dif_longitude = max_longitude - min_longitude; 
-  return (l - min_longitude) / _dif_longitude;
-}
-
-// Function: scale_latitude
-float scale_latitude(float l) {
-  static auto _dif_latitude = max_latitude - min_latitude;
-  return (l - min_latitude) / _dif_latitude;
+  assert(itr != ports.end());
+  
+  return itr->second.id;
 }
 
 // This function converts decimal degrees to radians
@@ -540,9 +363,20 @@ float distance_on_earth(float lat1d, float lon1d, float lat2d, float lon2d) {
   lon1r = deg2rad(lon1d);
   lat2r = deg2rad(lat2d);
   lon2r = deg2rad(lon2d);
-  u = sin((lat2r - lat1r)/2);
-  v = sin((lon2r - lon1r)/2);
-  return 2.0 * earthRadiusKm * asin(sqrt(u * u + cos(lat1r) * cos(lat2r) * v * v));
+  u = std::sin((lat2r - lat1r)/2);
+  v = std::sin((lon2r - lon1r)/2);
+  return 2.0 * earthRadiusKm * std::asin(std::sqrt(u * u + std::cos(lat1r) * std::cos(lat2r) * v * v));
+}
+
+// Function: bearing_on_earth
+float bearing_on_earth(float lat1d, float lon1d, float lat2d, float lon2d) {                                                                      
+  float lat1r, lat2r;
+  lat1r = deg2rad(lat1d);
+  lat2r = deg2rad(lat2d);
+  auto diffLong = deg2rad(lon2d - lon1d);
+  auto x = std::sin(diffLong)*std::cos(lat2r);
+  auto y = std::cos(lat1r)*std::sin(lat2r) - std::sin(lat1r)*std::cos(lat2r)*std::cos(diffLong);
+  return std::fmod((rad2deg(std::atan2(x,y))+360.0f), 360.0f);
 }
 
 // Function: make_regression_features
@@ -566,31 +400,31 @@ Eigen::MatrixXf make_regression_features(const std::string& tuple) {
   std::getline(ss, token, ',');       // ID (ignore)
 
   std::getline(ss, token, ',');       // TYPE 
-  row(0, type_c) = make_type(token, false);
+  row(0, type_c) = make_type(token);
 
   std::getline(ss, token, ',');       // SPEED
-  row(0, speed_c) = make_speed(token, false);
+  row(0, speed_c) = make_speed(token);
 
   std::getline(ss, token, ',');       // LON
-  row(0, longitude_c) = make_longitude(token, false);
+  row(0, longitude_c) = make_longitude(token);
 
   std::getline(ss, token, ',');       // LAT
-  row(0, latitude_c) = make_latitude(token, false);
+  row(0, latitude_c) = make_latitude(token);
 
   std::getline(ss, token, ',');       // COURSE
-  row(0, course_c) = make_course(token, false);
+  row(0, course_c) = make_course(token);
 
   std::getline(ss, token, ',');       // HEADING 
-  row(0, heading_c) = make_heading(token, false);
+  row(0, heading_c) = make_heading(token);
 
   std::getline(ss, token, ',');       // timestamp
-  row(0, timestamp_c) = make_timestamp(token, false);
+  row(0, timestamp_c) = make_timestamp(token);
 
   std::getline(ss, token, ',');       // departure port
-  row(0, departure_port_c) = make_port(token, false);
+  row(0, departure_port_c) = make_port(token);
 
   std::getline(ss, token, ',');       // draugh
-  row(0, draught_c) = make_draught(token, false);
+  row(0, draught_c) = make_draught(token);
 
   return row;
 }
@@ -618,271 +452,117 @@ DataFrame::DataFrame(const std::filesystem::path& path) : dtc::CsvFrame(path) {
     _data(i, SHIP_ID) = ship_id_map[ship_ids[i]];
   }
 
-  for(size_t i=0; i<num_cols(); ++i) {
-    if(i == SHIP_ID) continue;
-    _data.col(i) = debs18::make_ship_data(*this, i, false);
-  }
-
-}
-
-// Proceedure: sort_on_trip
-Eigen::MatrixXf DataFrame::sort_on_trip() const {
-
-  std::vector<int> indices(num_rows());
-  for(int i=0; i<(int)indices.size(); ++i) {
-    indices[i] = i;
-  }
-
-  std::sort(indices.begin(), indices.end(), [&] (int a, int b) {
-    if(_data(a, SHIP_ID) == _data(b, SHIP_ID)) {
-      return _data(a, SHIP_TIMESTAMP) < _data(b, SHIP_TIMESTAMP);
+  for(size_t j=0; j<num_cols(); ++j) {
+    if(j == SHIP_ID) {
+      continue;
     }
-    return _data(a, SHIP_ID) < _data(b, SHIP_ID);
-  });
-  
-  Eigen::PermutationMatrix<Eigen::Dynamic, Eigen::Dynamic> p(indices.size());
 
-  for(int i=0; i<(int)indices.size(); ++i) {
-    p.indices()[indices[i]] = i;
+    switch(j) {
+      case SHIP_ID:
+        continue;
+      break;
+
+      case SHIP_TYPE:
+        _data.col(j) = _make_type();
+      break;
+
+      case SHIP_SPEED:
+        _data.col(j) = _make_speed();
+      break;
+
+      case SHIP_LONGITUDE:
+        _data.col(j) = _make_longitude();
+      break;
+
+      case SHIP_LATITUDE:
+        _data.col(j) = _make_latitude();
+      break;
+
+      case SHIP_COURSE:
+        _data.col(j) = _make_course();
+      break;
+
+      case SHIP_HEADING:
+        _data.col(j) = _make_heading();
+      break;
+
+      case SHIP_TIMESTAMP:
+        _data.col(j) = _make_timestamp();
+      break;
+
+      case SHIP_DEPARTURE_PORT:
+        _data.col(j) = _make_departure_port();
+      break;
+
+      case SHIP_DRAUGHT:
+        _data.col(j) = _make_draught();
+      break;
+
+      case SHIP_ARRIVAL_TIME:
+        _data.col(j) = _make_arrival_time();
+      break;
+
+      case SHIP_ARRIVAL_PORT:
+        _data.col(j) = _make_arrival_port();
+      break;
+
+      default:
+        throw std::invalid_argument("invalid ship index "s + std::to_string(j));
+      break;
+    }
   }
 
-  return p * _data;
 }
 
-// Function: _scale_timestamp
-float DataFrame::_scale_timestamp(float v) const {
-  static const auto min_timepoint = timestamp_to_timepoint(min_timestamp);
-  static const auto max_timepoint = timestamp_to_timepoint(max_timestamp);
-  static const auto dif_timepoint = max_timepoint - min_timepoint;
-  auto de = std::chrono::duration_cast<std::chrono::minutes>(dif_timepoint).count();
-  return v / de;
-}
-
-// Function: get
-Eigen::VectorXf DataFrame::get(Index i) const {
-  
-  switch(i) {
-
-    case ID:
-      return id();
-    break;
-
-    case TYPE:
-      return type();
-    break;
-
-    case SPEED:
-      return speed();
-    break;
-    
-    case LONGITUDE:
-      return longitude();
-    break;
-
-    case LATITUDE:
-      return latitude();
-    break;
-
-    case COURSE:
-      return course();
-    break;
-    
-    case HEADING:
-      return heading();
-    break;
-
-    case TIMESTAMP:
-      return timestamp();
-    break;
-    
-    case DEPARTURE_PORT:
-      return departure_port();
-    break;
-
-    case DRAUGHT:
-      return draught();
-    break;
-
-    case ARRIVAL_TIME:
-      return arrival_time();
-    break;
-
-    case ARRIVAL_PORT:
-      return arrival_port();
-    break;
-
-    case DISTANCE_FROM_DEPARTURE:
-      return distance_from_departure();
-    break;
-
-    case TIME_TO_ARRIVE:
-      return time_to_arrive();
-    break;
-
-    case DEPARTURE_PORT_LONGITUDE:
-      return departure_port_longitude();
-    break;
-
-    case DEPARTURE_PORT_LATITUDE:
-      return departure_port_latitude();
-    break;
-
-    case ARRIVAL_PORT_LONGITUDE:
-      return arrival_port_longitude();
-    break;
-
-    case ARRIVAL_PORT_LATITUDE:
-      return arrival_port_latitude();
-    break;
-
-    default:
-      assert(false);
-    break;
-  };
-
-}
-
-// Function: get
-Eigen::MatrixXf DataFrame::get(const std::vector<Index>& ids) {
-  Eigen::MatrixXf data(num_rows(), ids.size());
-  for(size_t i=0; i<ids.size(); ++i) {
-    data.col(i) = get(ids[i]);
-  }
-  return data;
-}
-
-Eigen::VectorXf DataFrame::id() const {
-  return _data.col(SHIP_ID);
-}
-
-float DataFrame::id(size_t r) const {
+float DataFrame::_id(size_t r) const {
   return _data(r, SHIP_ID);
 }
 
-Eigen::VectorXf DataFrame::type() const {
-  return _data.col(SHIP_TYPE);
-}
-
-float DataFrame::type(size_t r) const {
+float DataFrame::_type(size_t r) const {
   return _data(r, SHIP_TYPE);
 }
 
-Eigen::VectorXf DataFrame::speed() const {
-  return _data.col(SHIP_SPEED);
-}
-
-float DataFrame::speed(size_t r) const {
+float DataFrame::_speed(size_t r) const {
   return _data(r, SHIP_SPEED);
 }
 
-Eigen::VectorXf DataFrame::longitude() const {
-  return _data.col(SHIP_LONGITUDE);
-}
-
-float DataFrame::longitude(size_t r) const {
+float DataFrame::_longitude(size_t r) const {
   return _data(r, SHIP_LONGITUDE);
 }
 
-Eigen::VectorXf DataFrame::latitude() const {
-  return _data.col(SHIP_LATITUDE);
-}
-
-float DataFrame::latitude(size_t r) const {
+float DataFrame::_latitude(size_t r) const {
   return _data(r, SHIP_LATITUDE);
 }
 
-Eigen::VectorXf DataFrame::course() const {
-  return _data.col(SHIP_COURSE);
-}
-
-float DataFrame::course(size_t r) const {
+float DataFrame::_course(size_t r) const {
   return _data(r, SHIP_COURSE);
 }
 
-Eigen::VectorXf DataFrame::heading() const {
-  return _data.col(SHIP_HEADING);
-}
-
-float DataFrame::heading(size_t r) const {
+float DataFrame::_heading(size_t r) const {
   return _data(r, SHIP_HEADING);
 }
 
-Eigen::VectorXf DataFrame::timestamp(bool scale) const {
-  Eigen::VectorXf t(_data.rows());
-  for(int i=0; i<t.rows(); ++i) {
-    if(scale) {
-      t(i) = _scale_timestamp(_data(i, SHIP_TIMESTAMP));
-    }
-    else {
-      t(i) = _data(i, SHIP_TIMESTAMP);
-    }
-  }
-  return t;
-}
-
-float DataFrame::timestamp(size_t r) const {
+float DataFrame::_timestamp(size_t r) const {
   return _data(r, SHIP_TIMESTAMP);
 }
 
-Eigen::VectorXf DataFrame::departure_port() const {
-  return _data.col(SHIP_DEPARTURE_PORT);
-}
-
-float DataFrame::departure_port(size_t r) const {
+float DataFrame::_departure_port(size_t r) const {
   return _data(r, SHIP_DEPARTURE_PORT);
 }
 
-Eigen::VectorXf DataFrame::draught() const {
-  return _data.col(SHIP_DRAUGHT);
-}
-
-float DataFrame::draught(size_t r) const {
+float DataFrame::_draught(size_t r) const {
   return _data(r, SHIP_DRAUGHT);
 }
 
-Eigen::VectorXf DataFrame::arrival_time(bool scale) const {
-  Eigen::VectorXf t(_data.rows());
-  for(int i=0; i<t.rows(); ++i) {
-    if(scale) {
-      t(i) = _scale_timestamp(_data(i, SHIP_ARRIVAL_TIME));
-    }
-    else {
-      t(i) = _data(i, SHIP_ARRIVAL_TIME);
-    }
-  }
-  return t;
-}
-
-float DataFrame::arrival_time(size_t r) const {
+float DataFrame::_arrival_time(size_t r) const {
   return _data(r, SHIP_ARRIVAL_TIME);
 }
 
-Eigen::VectorXf DataFrame::arrival_port() const {
-  return _data.col(SHIP_ARRIVAL_PORT);
-}
-
-float DataFrame::arrival_port(size_t r) const {
+float DataFrame::_arrival_port(size_t r) const {
   return _data(r, SHIP_ARRIVAL_PORT);
 }
 
-Eigen::VectorXf DataFrame::distance_from_departure() const {
-
-  const auto ports = col_view(SHIP_DEPARTURE_PORT);
-
-  Eigen::VectorXf dis(ports.size());
-
-  for(size_t i=0; i<ports.size(); ++i) {
-    float slon = _data(i, SHIP_LONGITUDE);
-    float slat = _data(i, SHIP_LATITUDE);
-    float plon = port_longitude(ports[i]);
-    float plat = port_latitude(ports[i]);
-    dis(i) = distance_on_earth(slat, slon, plat, plon);
-  }
-  
-  return dis;
-}
-
-float DataFrame::distance_from_departure(size_t r) const {
+float DataFrame::_distance_from_departure(size_t r) const {
   float slon = _data(r, SHIP_LONGITUDE);
   float slat = _data(r, SHIP_LATITUDE);
   float plon = port_longitude((*this)(r, SHIP_DEPARTURE_PORT));
@@ -890,142 +570,101 @@ float DataFrame::distance_from_departure(size_t r) const {
   return distance_on_earth(slat, slon, plat, plon);
 }
 
-Eigen::VectorXf DataFrame::departure_port_longitude() const {
-  const auto ports = col_view(SHIP_DEPARTURE_PORT);
-  Eigen::VectorXf lon(ports.size());
-  for(size_t i=0; i<ports.size(); ++i) {
-    lon(i) = port_longitude(ports[i]);     
-  }
-  return lon;
-}
-
-float DataFrame::departure_port_longitude(size_t r) const {
+float DataFrame::_departure_port_longitude(size_t r) const {
   return port_longitude((*this)(r, SHIP_DEPARTURE_PORT));
 }
 
-Eigen::VectorXf DataFrame::departure_port_latitude() const {
-  const auto ports = col_view(SHIP_DEPARTURE_PORT);
-  Eigen::VectorXf lat(ports.size());
-  for(size_t i=0; i<ports.size(); ++i) {
-    lat(i) = port_latitude(ports[i]);     
-  }
-  return lat;
-}
-
-float DataFrame::departure_port_latitude(size_t r) const {
+float DataFrame::_departure_port_latitude(size_t r) const {
   return port_latitude((*this)(r, SHIP_DEPARTURE_PORT));
 }
 
-Eigen::VectorXf DataFrame::arrival_port_longitude() const {
-  const auto ports = col_view(SHIP_ARRIVAL_PORT);
-  Eigen::VectorXf lon(ports.size());
-  for(size_t i=0; i<ports.size(); ++i) {
-    lon(i) = port_longitude(ports[i]);     
-  }
-  return lon;
-}
-
-float DataFrame::arrival_port_longitude(size_t r) const {
+float DataFrame::_arrival_port_longitude(size_t r) const {
   return port_longitude((*this)(r, SHIP_ARRIVAL_PORT));
 }
 
-Eigen::VectorXf DataFrame::arrival_port_latitude() const {
-  const auto ports = col_view(SHIP_ARRIVAL_PORT);
-  Eigen::VectorXf lat(ports.size());
-  for(size_t i=0; i<ports.size(); ++i) {
-    lat(i) = port_latitude(ports[i]);     
-  }
-  return lat;
-}
-
-float DataFrame::arrival_port_latitude(size_t r) const {
+float DataFrame::_arrival_port_latitude(size_t r) const {
   return port_latitude((*this)(r, SHIP_ARRIVAL_PORT));
 }
 
-// function: time_to_arrive
-Eigen::VectorXf DataFrame::time_to_arrive() const {
-  return _data.col(SHIP_ARRIVAL_TIME) - _data.col(SHIP_TIMESTAMP);
-}
-
-float DataFrame::time_to_arrive(size_t r) const {
+float DataFrame::_time_to_arrive(size_t r) const {
   return _data(r, SHIP_ARRIVAL_TIME) - _data(r, SHIP_TIMESTAMP);
 }
 
 // Function: get
-float DataFrame::get(size_t r, Index i) const {
+float DataFrame::_get(size_t r, Index i) const {
   
   switch(i) {
 
     case ID:
-      return id(r);
+      return _id(r);
     break;
 
     case TYPE:
-      return type(r);
+      return _type(r);
     break;
 
     case SPEED:
-      return speed(r);
+      return _speed(r);
     break;
     
     case LONGITUDE:
-      return longitude(r);
+      return _longitude(r);
     break;
 
     case LATITUDE:
-      return latitude(r);
+      return _latitude(r);
     break;
 
     case COURSE:
-      return course(r);
+      return _course(r);
     break;
     
     case HEADING:
-      return heading(r);
+      return _heading(r);
     break;
 
     case TIMESTAMP:
-      return timestamp(r);
+      return _timestamp(r);
     break;
     
     case DEPARTURE_PORT:
-      return departure_port(r);
+      return _departure_port(r);
     break;
 
     case DRAUGHT:
-      return draught(r);
+      return _draught(r);
     break;
 
     case ARRIVAL_TIME:
-      return arrival_time(r);
+      return _arrival_time(r);
     break;
 
     case ARRIVAL_PORT:
-      return arrival_port(r);
+      return _arrival_port(r);
     break;
 
     case DISTANCE_FROM_DEPARTURE:
-      return distance_from_departure(r);
+      return _distance_from_departure(r);
     break;
 
     case TIME_TO_ARRIVE:
-      return time_to_arrive(r);
+      return _time_to_arrive(r);
     break;
 
     case DEPARTURE_PORT_LONGITUDE:
-      return departure_port_longitude(r);
+      return _departure_port_longitude(r);
     break;
 
     case DEPARTURE_PORT_LATITUDE:
-      return departure_port_latitude(r);
+      return _departure_port_latitude(r);
     break;
 
     case ARRIVAL_PORT_LONGITUDE:
-      return arrival_port_longitude(r);
+      return _arrival_port_longitude(r);
     break;
 
     case ARRIVAL_PORT_LATITUDE:
-      return arrival_port_latitude(r);
+      return _arrival_port_latitude(r);
     break;
     
     case PLACEHOLDER:
@@ -1061,33 +700,88 @@ std::vector<Trip> DataFrame::trips(const std::vector<Index>& ids) const {
     // Generate trips for this ship
     float preport = -1.0f;
     size_t count {0};
-
+    
+    // Create a new trip
     auto add_trip = [&] (size_t i, size_t count) {
       Eigen::MatrixXf& mat = trips.emplace_back(key, count, ids.size()).route; 
       for(size_t j=i-count, k=0; j<i; ++j, ++k) {
+        trips.back().type = _get(rows[j], TYPE);
         //mat.row(k) = _data.row(rows[j]);
         for(size_t f=0; f<ids.size(); ++f) {
+          // Case 1: cumulative distance
           if(ids[f] == CUMULATIVE_DISTANCE) {
             if(k==0) {
-              mat(k, f) = distance_from_departure(rows[j]);
+              mat(k, f) = _distance_from_departure(rows[j]);
             }
             else {
-              float clng = get(rows[j], LONGITUDE);
-              float clat = get(rows[j], LATITUDE);
-              float plng = get(rows[j-1], LONGITUDE);
-              float plat = get(rows[j-1], LATITUDE);
+              float clng = _get(rows[j], LONGITUDE);
+              float clat = _get(rows[j], LATITUDE);
+              float plng = _get(rows[j-1], LONGITUDE);
+              float plat = _get(rows[j-1], LATITUDE);
               mat(k, f) = distance_on_earth(clat, clng, plat, plng) + mat(k-1, f);
             }
           }
+          // Case 2: adjacent bearing
+          else if(ids[f] == BEARING) {
+            if(k==0) {
+              mat(k, f) = 0.0f;
+            }
+            else {
+              mat(k, f) = bearing_on_earth(
+                _get(rows[j-1], LATITUDE), 
+                _get(rows[j-1], LONGITUDE),
+                _get(rows[j], LATITUDE), 
+                _get(rows[j], LONGITUDE)                
+              );
+            }
+          }
+          // Case 3: delta longitude
+          else if(ids[f] == DELTA_LONGITUDE) {
+            if(k == 0) {
+              mat(k, f) = 0.0f;
+            }
+            else {
+              mat(k, f) = _get(rows[j], LONGITUDE) - _get(rows[j-1], LONGITUDE);
+            }
+          }
+          // Case 4: delta latitude
+          else if(ids[f] == DELTA_LATITUDE) {
+            if(k == 0) {
+              mat(k, f) = 0.0f;
+            }
+            else {
+              mat(k, f) = _get(rows[j], LATITUDE) - _get(rows[j-1], LATITUDE);
+            }
+          }
+          // Case 5: delta timestamp
+          else if(ids[f] == DELTA_TIMESTAMP) {
+            if(k == 0) {
+              mat(k, f) = 0.0f;
+            }
+            else {
+              mat(k, f) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP);
+            }
+          }
+          // Case 6: cumulative time
+          else if(ids[f] == CUMULATIVE_TIME) {
+            if(k==0) {
+              mat(k, f) = 0.0f;
+            }
+            else {
+              mat(k, f) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP) + mat(k-1, f);
+            }
+          }
+          // others
           else {
-            mat(k, f) = get(rows[j], ids[f]);
+            mat(k, f) = _get(rows[j], ids[f]);
           }
         }
       }
     };
 
     for(size_t i=0; i<rows.size(); ++i) {
-      if(_data(rows[i], SHIP_DEPARTURE_PORT) != preport && count != 0) {
+      if((_data(rows[i], SHIP_DEPARTURE_PORT) != preport || 
+          std::fabs(_data(rows[i], TIMESTAMP) - _data(rows[i-1], TIMESTAMP)) >= 1440.0f) && count != 0) {
         add_trip(i, count);
         count = 0;
       }
@@ -1109,9 +803,229 @@ const Eigen::MatrixXf& DataFrame::data() const {
   return _data;
 }
 
+// Function: types
+std::set<int> DataFrame::types() const {
+  std::set<int> types;
+  for(size_t r=0; r<num_rows(); ++r) {
+    types.insert( std::stoi((*this)(r, SHIP_TYPE)) );
+  }
+  return types;
+}
+
+// Function: type
+Eigen::VectorXf DataFrame::_make_type() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_type((*this)(r, SHIP_TYPE));
+  }
+  return vec;
+}
+
+// Function: speed
+Eigen::VectorXf DataFrame::_make_speed() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_speed((*this)(r, SHIP_SPEED));
+  }
+  return vec;
+}
+
+// Function: longitude
+Eigen::VectorXf DataFrame::_make_longitude() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_longitude((*this)(r, SHIP_LONGITUDE));
+  }
+  return vec;
+}
+
+// Function: latitude
+Eigen::VectorXf DataFrame::_make_latitude() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_latitude((*this)(r, SHIP_LATITUDE));
+  }
+  return vec;
+}
+
+// Function: course
+Eigen::VectorXf DataFrame::_make_course() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_course((*this)(r, SHIP_COURSE));
+  }
+  return vec;
+}
+
+// Function: heading
+Eigen::VectorXf DataFrame::_make_heading() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_heading((*this)(r, SHIP_HEADING));
+  }
+  return vec;
+}
+
+// Function: timestamp
+Eigen::VectorXf DataFrame::_make_timestamp() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_timestamp((*this)(r, SHIP_TIMESTAMP));
+  }
+  return vec;
+}
+
+// Function: departure_port
+Eigen::VectorXf DataFrame::_make_departure_port() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_port((*this)(r, SHIP_DEPARTURE_PORT));
+  }
+  return vec;
+}
+
+// Function: draught
+Eigen::VectorXf DataFrame::_make_draught() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_draught((*this)(r, SHIP_DRAUGHT));
+  }
+  return vec;
+}
+
+// Function: arrival_time
+Eigen::VectorXf DataFrame::_make_arrival_time() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_timestamp((*this)(r, SHIP_ARRIVAL_TIME));
+  }
+  return vec;
+}
+
+// Function: arrival_port
+Eigen::VectorXf DataFrame::_make_arrival_port() const {
+  Eigen::VectorXf vec(num_rows());
+  for(size_t r=0; r<num_rows(); ++r) {
+    vec(r) = make_port((*this)(r, SHIP_ARRIVAL_PORT));
+  }
+  return vec;
+}
+
+// ------------------------------------------------------------------------------------------------
+
+MeditMap::MeditMap(const std::filesystem::path& path) {
+  
+  std::ifstream ifs(path);
+  
+  if(!ifs.good())  {
+    throw std::invalid_argument(std::string("Failed to open Mediterrenean map ") + path.string());
+  }
+  
+  // Read the header
+  // -7 38 0.05
+  // 31 46 0.05
+  // 299 899
+
+  ifs >> _minlon >> _maxlon >> _scale
+      >> _minlat >> _maxlat >> _scale
+      >> _rows >> _cols;
+
+  _grid.resize(_rows);
+
+  // 1 means blockage, 0 means paths
+  for(int r=0; r<_rows; ++r) {
+    _grid[r].resize(_cols);
+    for(int c=0; c<_cols; ++c) {
+      ifs >> _grid[r][c];
+    }
+  }
+}
+
+std::tuple<int, int> MeditMap::to_grid(float lat, float lon) const {
+	auto c = std::clamp(int(std::floor((lon - _minlon)/_scale)), 0, _cols-1);
+  auto r = std::clamp(int(std::floor((_maxlat - lat - _scale)/_scale)), 0, _rows-1);
+  return {r, c};
+}
+
+//
+int MeditMap::operator()(float lat, float lon) const {
+  auto [r, c] = to_grid(lat, lon);
+  return _grid[r][c];
+}
+
+int MeditMap::distance(float lat1, float lon1, float lat2, float lon2) const {
+  
+  auto [sr, sc] = to_grid(lat1, lon1);
+  auto [tr, tc] = to_grid(lat2, lon2);
+
+  std::queue<std::pair<int, int>> queue;
+
+  std::vector<std::vector<int>> dis;
+  dis.resize(_rows);
+  for(auto& r : dis) {
+    r.resize(_cols);
+  }
+  for(int i=0; i<_rows; ++i) {
+    for(int j=0; j<_cols; ++j) {
+      dis[i][j] = std::numeric_limits<int>::max();
+    }
+  }
+  
+  // Search from the source
+  static const int step[8][2] = {
+    { 1,  0},
+    {-1,  0},
+    { 0,  1},
+    { 0, -1},
+    { 1,  1},
+    { 1, -1},
+    {-1,  1},
+    {-1, -1}
+  };
 
 
+  dis[sr][sc] = _grid[sr][sc];
+  queue.push({sr, sc});
 
+  while(!queue.empty()) {
+    
+    auto [fr, fc] = queue.front();
+
+    assert(dis[fr][fc] != std::numeric_limits<int>::max());
+
+    if(fr == tr and fc == tc) break;
+
+    for(int s=0; s<8; ++s) {
+      
+      int nr = fr + step[s][0];
+      int nc = fc + step[s][1];
+
+      // skip the invalid step
+      if(nr < 0 or nr >= _rows or nc < 0 or nc >= _cols) continue;
+
+      if(dis[fr][fc] + _grid[nr][nc] + 1 < dis[nr][nc]) {
+        dis[nr][nc] = dis[fr][fc] + _grid[nr][nc] + 1;
+        queue.push({nr, nc});
+      }
+    }
+    queue.pop();
+  }
+
+  return dis[tr][tc];
+}
 
 
 };  // end of namespace dtc::debs18. --------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+

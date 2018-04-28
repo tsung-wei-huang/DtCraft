@@ -2,9 +2,33 @@
 
 namespace dtc::debs18 {
 
-// Procedure: regression_dnn
-void regression_dnn(const std::filesystem::path& path, const std::filesystem::path& model) {
+struct HyperParameters {
+  std::filesystem::path input;
+  std::filesystem::path model;
+  float lrate = 0.01f;
+  size_t num_neurons = 10;
+  size_t mini_batch = 64;
+  size_t num_epochs = 10000;
+  float MAE = std::numeric_limits<float>::max();
+};
 
+std::ostream& operator << (std::ostream& os, const HyperParameters& hp) {
+  os << "input=" << hp.input << ", "
+     << "model=" << hp.model << ", "
+     << "[lrate|neurons|mini-batch|epochs] = [" 
+     << hp.lrate       << "|" 
+     << hp.num_neurons << "|" 
+     << hp.mini_batch  << "|"
+     << hp.num_epochs  << "], MAE=" << hp.MAE;
+  return os;
+}
+
+// Total available ship types:
+// 0, 20, 30, 32, 34, 36, 37, 51, 52, 53, 60, 66, 69, 70, 71, 72, 73, 74, 79,
+// 80, 81, 82, 83, 84, 85, 89, 90, 99
+std::tuple<Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf> 
+make_data(const std::filesystem::path& path) {
+  
   DataFrame df(path);
 
   auto trips = df.trips({
@@ -15,10 +39,16 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
     debs18::DataFrame::LATITUDE,
     debs18::DataFrame::COURSE,
     //debs18::DataFrame::DISTANCE_FROM_DEPARTURE,
-    //debs18::DataFrame::CUMULATIVE_DISTANCE,
-    debs18::DataFrame::DEPARTURE_PORT,
+    debs18::DataFrame::CUMULATIVE_DISTANCE,
+    debs18::DataFrame::CUMULATIVE_TIME,
+    //debs18::DataFrame::DEPARTURE_PORT,
     debs18::DataFrame::HEADING,
-    debs18::DataFrame::DRAUGHT,
+    //debs18::DataFrame::DRAUGHT,
+    debs18::DataFrame::BEARING,
+    //debs18::DataFrame::ARRIVAL_PORT,
+    //debs18::DataFrame::DELTA_TIMESTAMP,
+    //debs18::DataFrame::DELTA_LONGITUDE,
+    //debs18::DataFrame::DELTA_LATITUDE,
     debs18::DataFrame::ARRIVAL_TIME
   });
 
@@ -27,7 +57,8 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
     "Data       : ", path, '\n',
     "# rows     : ", df.num_rows(), '\n',
     "# cols     : ", df.num_cols(), '\n',
-    "# trips    : ", trips.size(), '\n'
+    "# trips    : ", trips.size(), '\n',
+    "# types    : ", df.types().size(), '\n'
   );
 
   // Purify the data
@@ -52,6 +83,12 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
   dtc::LOGI("Stacking trips ...");
   Eigen::MatrixXf ship = stack(trips);
 
+  assert(ship.rows() != 0);
+
+  // Shuffling the ship
+  dtc::LOGI("Shuffling ship ...");
+  shuffle(ship);
+
   // Extract the training data.
   std::cout << "Ship data (top 30 rows):\n";
   if(ship.rows() >= 30) std::cout << ship.topRows(30) << " ... (more)\n";
@@ -60,12 +97,11 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
   assert(ship.hasNaN() == false);
 
   const int N = ship.rows();
-  const int num_infers = N/10;
+  const int num_infers = N*0.05f;
   const int num_trains = N - num_infers;
     
   Eigen::MatrixXf Dtr = ship.leftCols(ship.cols()-1).middleRows(0, num_trains);
   Eigen::MatrixXf Dte = ship.leftCols(ship.cols()-1).middleRows(num_trains, num_infers);
-
   Eigen::MatrixXf Ltr = ship.rightCols(1).middleRows(0, num_trains);
   Eigen::MatrixXf Lte = ship.rightCols(1).middleRows(num_trains, num_infers);
   
@@ -75,35 +111,80 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
     "Dte: ", Dte.rows(), "x", Dte.cols(), ", ",
     "Lte: ", Lte.rows(), "x", Lte.cols(), '\n'
   );
+
+  return {ship, Dtr, Dte, Ltr, Lte};
+}
+
+// Procedure: train
+void try_train(HyperParameters& hp) {
+
+
   
-  Eigen::MatrixXf comp(Dte.rows(), 3);    
+  auto [ship, Dtr, Dte, Ltr, Lte] = make_data(hp.input);
+
+  std::cout << "HP=" << hp << std::endl;
   
-  // Train
-  dtc::ml::DnnRegressor dnn;
-  dnn.fully_connected_layer(Dtr.cols(), 30, dtc::ml::Activation::RELU)
-     .fully_connected_layer(30, 1, dtc::ml::Activation::NONE)
-     .loss<dtc::ml::MeanAbsoluteError>();
-  
-  // Record the prediction before training.
-  comp.col(0) = dnn.infer(Dte);
-  
+  ml::DnnRegressor dnn;
+
+  dnn.layer<dtc::ml::FullyConnectedLayer>(Dtr.cols(), hp.num_neurons, dtc::ml::Activation::RELU);
+  dnn.layer<dtc::ml::FullyConnectedLayer>(hp.num_neurons, 1);
+  dnn.loss<dtc::ml::MeanAbsoluteError>();
+
   // Perform training.
-  dnn.train(Dtr, Ltr, 100, 128, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
-         float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
-         float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
-         printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", ++i, Etr, Ete);
-       });
+  dnn.train(Dtr, Ltr, hp.num_epochs, hp.mini_batch, hp.lrate, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
+    if(++i % 100 == 0) {
+      float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
+      float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
+      printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", i, Etr, Ete);
+    }
+  });
   
   // Infer
-  comp.col(1) = dnn.infer(Dte);
-  comp.col(2) = Lte;
+  Eigen::MatrixXf comp(Dte.rows(), 2);    
+  comp.col(0) = dnn.infer(Dte);
+  comp.col(1) = Lte;
   
-  std::cout << "Prediction [before | after | golden] (top 30 rows):\n";
+  std::cout << "Prediction [predict <-> golden] (top 30 rows):\n";
   if(comp.rows() < 30) std::cout << comp << std::endl;
   else std::cout << comp.topRows(30) << " ... (more)\n";
 
+  auto total_mae = (dnn.infer(ship.leftCols(ship.cols()-1)) - ship.rightCols(1)).array().abs().sum() / ship.rows();
+  
+  std::cout << "Total MAE=" << total_mae << std::endl;
+
+  hp.MAE = total_mae;
+}
+
+// Procedure: regression_dnn
+void regression_dnn(const std::filesystem::path& path, const std::filesystem::path& model) {
+
+  HyperParameters hp_curr {path, model};
+  HyperParameters hp_best {path, model};
+
+  for(size_t N=8; N<=32; N+=2) {
+    hp_curr.num_neurons = N;
+    for(size_t B=16; B<=128; B=B<<1) {
+      hp_curr.mini_batch = B;
+      for(size_t E=2000; E<=10000; E+=1000) {
+        hp_curr.num_epochs = E;
+        hp_curr.MAE = std::numeric_limits<float>::max();
+        try_train(hp_curr);
+        if(hp_curr.MAE < hp_best.MAE) {
+          hp_best = hp_curr;
+          std::ofstream ofs(model);
+          ofs << hp_best << '\n';
+        }
+      }
+    }
+  }
+
+  // End regression
+  dtc::LOGI("Successfully performed DNN regression");
+  std::cout << hp_best << std::endl;
+}
+  
   // Evaluate per trip accuracy
-  dtc::LOGI("Evaluating per trip accuracy ...");
+  /*dtc::LOGI("Evaluating per trip accuracy ...");
   std::vector<std::tuple<size_t, float>> tripinfo;
   for(size_t i=0; i<trips.size(); ++i) {
     Eigen::MatrixXf D = trips[i].route.leftCols(trips[i].route.cols()-1);
@@ -118,22 +199,9 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
 
   for(const auto [tid, err] : tripinfo) {
     std::cout << "trips[" << trips[tid].id << "] MAE=" << err << ", "
-              << "LEN=" << trips[tid].rows() << std::endl;
-  }
-  
-  std::cout << "Total MAE="
-            << (dnn.infer(ship.leftCols(ship.cols()-1)) - ship.rightCols(1)).array().abs().sum() / ship.rows()
-            << std::endl;
-
-  // Save the model
-  if(!model.empty()) {
-    dtc::LOGI("Saving model to ", model, " ...");
-    dnn.save(model);
-  }
-
-  // End regression
-  dtc::LOGI("Successfully performed DNN regression");
-}
+              << "LEN=" << trips[tid].rows() << ", "
+              << "TYPE=" << trips[tid].route(0, 1) << " vs " << trips[tid].type << std::endl;
+  } */
 
 // ------------------------------------------------------------------------------------------------
 

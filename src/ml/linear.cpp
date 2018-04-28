@@ -54,14 +54,9 @@ void LinearRegressor::_optimize(const Eigen::MatrixXf& X, const Eigen::MatrixXf&
 
 // Procedure: _update
 void LinearRegressor::_update(float rate) {
-
-  // Update the weight
-  constexpr static int tag_w = 0;
-  constexpr static int tag_b = 1;
-
   std::visit([this, rate](auto&& opt){
-    opt.alpha(rate).update(_dW, _W, tag_w);
-    opt.alpha(rate).update(_dB, _B, tag_b);
+    opt.alpha(rate).update(_dW, _W);
+    opt.alpha(rate).update(_dB, _B);
   }, _optimizer);
 }
 
@@ -129,14 +124,9 @@ void LinearClassifier::_optimize(const Eigen::MatrixXf& X, const Eigen::VectorXi
 
 // Procedure: _update
 void LinearClassifier::_update(float rate) {
-
-  // Update the weight
-  constexpr static int tag_w = 0;
-  constexpr static int tag_b = 1;
-
   std::visit([this, rate](auto&& opt){
-    opt.alpha(rate).update(_dW, _W, tag_w);
-    opt.alpha(rate).update(_dB, _B, tag_b);
+    opt.alpha(rate).update(_dW, _W);
+    opt.alpha(rate).update(_dB, _B);
   }, _optimizer);
 }
 

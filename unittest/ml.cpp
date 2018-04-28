@@ -63,9 +63,14 @@ TEST_CASE("ClassifierTest.Dnn") {
   
   dtc::ml::DnnClassifier nn1;
 
-  nn1.fully_connected_layer(784, 30, dtc::ml::Activation::RELU)
-     .fully_connected_layer(30, 10, dtc::ml::Activation::NONE)
-     .train(Dtr, Ltr, 5, 64, 0.01f, [](){});
+  nn1.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
+  nn1.layer<dtc::ml::FullyConnectedLayer>(30, 10);
+
+  nn1.train(Dtr, Ltr, 5, 64, 0.01f, [&, i=0] (auto& nn1) mutable {
+        auto c = ((nn1.infer(Dte) - Lte).array() == 0).count();
+        auto t = Dte.rows();
+        dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
+      });
   
   auto acc1 = ((nn1.infer(Dte) - Lte).array() == 0).count() / static_cast<float>(Lte.rows());
 
@@ -89,18 +94,17 @@ TEST_CASE("ClassifierTest.Dnn") {
 // Testcase: DnnRegressorTest
 TEST_CASE("RegressorTest.Dnn") {
 
-	auto [X, Y] = regression_data(65536, 784, 10);
+	auto [X, Y] = regression_data(30, 5, 2);
 
   dtc::ml::DnnRegressor dnn;
 
-  dnn.fully_connected_layer(X.cols(), 30, dtc::ml::Activation::SIGMOID)
-     .fully_connected_layer(30, Y.cols(), dtc::ml::Activation::NONE);
+  dnn.layer<dtc::ml::FullyConnectedLayer>(X.cols(), 10, dtc::ml::Activation::SIGMOID);
+  dnn.layer<dtc::ml::FullyConnectedLayer>(10, Y.cols());
   
   float pmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
 
-  dnn.train(X, Y, 5, 64, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
-    //auto cmse = (dnnr.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
-    //printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
+  dnn.train(X, Y, 30, 15, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
+    printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
   });
 
   float cmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());

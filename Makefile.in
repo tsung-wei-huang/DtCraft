@@ -178,16 +178,16 @@ am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
 	src/ipc/shm.lo src/ipc/streambuf.lo src/utility/os.lo \
 	src/utility/http_parser.lo src/utility/table.lo src/ml/loss.lo \
 	src/ml/rnn.lo src/ml/naive_bayes.lo src/ml/linear.lo \
-	src/ml/optimizer.lo src/ml/dnn.lo src/error.lo src/policy.lo \
-	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
-	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
-	src/protobuf/protobuf.lo src/protobuf/solution.lo \
-	src/protobuf/common.lo src/protobuf/topology.lo \
-	src/kernel/container.lo src/kernel/cgroup.lo \
-	src/kernel/manager.lo src/kernel/stream.lo \
-	src/kernel/scheduler.lo src/kernel/vertex.lo \
-	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
-	src/kernel/executor.lo src/webui/webui.lo
+	src/ml/optimizer.lo src/ml/dnn.lo src/ml/layer.lo src/error.lo \
+	src/policy.lo src/protobuf/loadinfo.lo \
+	src/protobuf/resource.lo src/protobuf/frontier.lo \
+	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
+	src/protobuf/solution.lo src/protobuf/common.lo \
+	src/protobuf/topology.lo src/kernel/container.lo \
+	src/kernel/cgroup.lo src/kernel/manager.lo \
+	src/kernel/stream.lo src/kernel/scheduler.lo \
+	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
+	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -803,8 +803,9 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/ml/activation.hpp include/dtc/ml/linear.hpp \
 	include/dtc/ml/loss.hpp include/dtc/ml/dnn.hpp \
 	include/dtc/ml/optimizer.hpp include/dtc/ml/naive_bayes.hpp \
-	include/dtc/stamp-h1 include/dtc/config.hpp \
-	include/dtc/config.hpp.in~ include/dtc/unittest/catch.hpp \
+	include/dtc/ml/layer.hpp include/dtc/stamp-h1 \
+	include/dtc/config.hpp include/dtc/config.hpp.in~ \
+	include/dtc/unittest/catch.hpp \
 	include/dtc/static/threadpool.hpp \
 	include/dtc/static/logger.hpp \
 	include/dtc/concurrent/shared_guard.hpp \
@@ -1150,16 +1151,17 @@ lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/utility/http_parser.cpp src/utility/table.cpp \
 	src/ml/loss.cpp src/ml/rnn.cpp src/ml/naive_bayes.cpp \
 	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
-	src/error.cpp src/policy.cpp src/protobuf/loadinfo.cpp \
-	src/protobuf/resource.cpp src/protobuf/frontier.cpp \
-	src/protobuf/taskinfo.cpp src/protobuf/protobuf.cpp \
-	src/protobuf/solution.cpp src/protobuf/common.cpp \
-	src/protobuf/topology.cpp src/kernel/container.cpp \
-	src/kernel/cgroup.cpp src/kernel/manager.cpp \
-	src/kernel/stream.cpp src/kernel/scheduler.cpp \
-	src/kernel/vertex.cpp src/kernel/graph.cpp \
-	src/kernel/master.cpp src/kernel/agent.cpp \
-	src/kernel/executor.cpp src/webui/webui.cpp
+	src/ml/layer.cpp src/error.cpp src/policy.cpp \
+	src/protobuf/loadinfo.cpp src/protobuf/resource.cpp \
+	src/protobuf/frontier.cpp src/protobuf/taskinfo.cpp \
+	src/protobuf/protobuf.cpp src/protobuf/solution.cpp \
+	src/protobuf/common.cpp src/protobuf/topology.cpp \
+	src/kernel/container.cpp src/kernel/cgroup.cpp \
+	src/kernel/manager.cpp src/kernel/stream.cpp \
+	src/kernel/scheduler.cpp src/kernel/vertex.cpp \
+	src/kernel/graph.cpp src/kernel/master.cpp \
+	src/kernel/agent.cpp src/kernel/executor.cpp \
+	src/webui/webui.cpp
 bin_master_SOURCES = main/master.cpp
 bin_master_LDADD = lib/libDtCraft.la
 bin_agent_SOURCES = main/agent.cpp
@@ -1407,6 +1409,8 @@ src/ml/linear.lo: src/ml/$(am__dirstamp) \
 src/ml/optimizer.lo: src/ml/$(am__dirstamp) \
 	src/ml/$(DEPDIR)/$(am__dirstamp)
 src/ml/dnn.lo: src/ml/$(am__dirstamp) src/ml/$(DEPDIR)/$(am__dirstamp)
+src/ml/layer.lo: src/ml/$(am__dirstamp) \
+	src/ml/$(DEPDIR)/$(am__dirstamp)
 src/error.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/policy.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/protobuf/$(am__dirstamp):
@@ -1984,6 +1988,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/stream.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/kernel/$(DEPDIR)/vertex.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/dnn.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/layer.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/linear.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/loss.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/ml/$(DEPDIR)/naive_bayes.Plo@am__quote@

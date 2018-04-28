@@ -14,39 +14,13 @@
 #ifndef DTC_ML_DNN_HPP_
 #define DTC_ML_DNN_HPP_
 
-#include <dtc/ml/activation.hpp>
 #include <dtc/ml/loss.hpp>
-#include <dtc/ml/optimizer.hpp>
+#include <dtc/ml/layer.hpp>
 #include <dtc/ipc/block_file.hpp>
 #include <dtc/ipc/streambuf.hpp>
 #include <dtc/archive/binary.hpp>
 
 namespace dtc::ml {
-
-// Struct
-struct DnnLayer {
-
-  size_t num_neurons {0};
-  Activation activation {Activation::NONE};
-
-  inline operator size_t () const;
-
-  template <typename ArchiverT>
-  auto archive(ArchiverT&);
-};
-
-// Operator ()
-inline DnnLayer::operator size_t() const {
-  return num_neurons;
-}
-
-// Function: archive
-template <typename ArchiverT>
-auto DnnLayer::archive(ArchiverT& ar) {
-  return ar(num_neurons, activation);
-}
-
-// ------------------------------------------------------------------------------------------------
 
 // Class: DnnClassifier
 class DnnClassifier {
@@ -54,8 +28,6 @@ class DnnClassifier {
   public:
 
     DnnClassifier() = default;
-
-    DnnClassifier& fully_connected_layer(size_t, size_t, Activation);
 
     template <typename O, typename... ArgsT>
     O& optimizer(ArgsT&&...);
@@ -71,17 +43,15 @@ class DnnClassifier {
     template <typename L, typename... ArgsT>
     L& loss(ArgsT&&...);
 
+    template <typename L, typename... ArgsT>
+    L& layer(ArgsT&&...);
+
     std::streamsize load(const std::filesystem::path&);
     std::streamsize save(const std::filesystem::path&);
 
   private:
-    
-    std::vector<DnnLayer> _L;
-    std::vector<Eigen::MatrixXf> _X;
-    std::vector<Eigen::MatrixXf> _W;
-    std::vector<Eigen::MatrixXf> _dW;
-    std::vector<Eigen::MatrixXf> _B;
-    std::vector<Eigen::MatrixXf> _dB;
+
+    std::vector<Layer> _layers;
     
     Loss _loss {std::in_place_type<SoftmaxCrossEntropy>};
     Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
@@ -90,8 +60,6 @@ class DnnClassifier {
     void _train(Eigen::MatrixXf&, Eigen::VectorXi&, size_t, size_t, float, C&&);
 
     void _shuffle(Eigen::MatrixXf&, Eigen::VectorXi&);
-    void _fprop(const Eigen::MatrixXf&);
-    void _bprop(Eigen::MatrixXf&);
     void _optimize(const Eigen::MatrixXf&, const Eigen::VectorXi&, float);
     void _update(float);
 };
@@ -99,7 +67,7 @@ class DnnClassifier {
 // Function: archive
 template <typename ArchiverT>
 auto DnnClassifier::archive(ArchiverT& ar) {
-  return ar(_loss, _L, _X, _W, _dW, _B, _dB, _optimizer);
+  return ar(_layers, _loss);
 }
     
 // Function: _train
@@ -133,6 +101,14 @@ O& DnnClassifier::optimizer(ArgsT&&... args) {
   return _optimizer.emplace<O>(std::forward<ArgsT>(args)...); 
 }
 
+// Function: layer
+template <typename L, typename... ArgsT>
+L& DnnClassifier::layer(ArgsT&&... args) {
+  L& l = std::get<L>(_layers.emplace_back(std::in_place_type<L>, std::forward<ArgsT>(args)...));
+  l.layer = _layers.size() - 1;
+  return l;
+}
+
 // Function: train
 template <typename C>
 DnnClassifier& DnnClassifier::train(Eigen::MatrixXf& Dtr, Eigen::VectorXi& Ltr, size_t e, size_t b, float lrate, C&& c) {
@@ -141,8 +117,8 @@ DnnClassifier& DnnClassifier::train(Eigen::MatrixXf& Dtr, Eigen::VectorXi& Ltr, 
     DTC_THROW("Dimension of training data and labels don't match");
   }
 
-  if(_L.size() < 2) {
-    DTC_THROW("Neural network must have at least two layers");
+  if(_layers.empty()) {
+    DTC_THROW("Neural network must have at one layer");
   }
 
   _train(Dtr, Ltr, e, b, lrate, std::forward<C>(c)); 
@@ -159,7 +135,8 @@ class DnnRegressor {
 
     DnnRegressor() = default;
 
-    DnnRegressor& fully_connected_layer(size_t, size_t, Activation);
+    template <typename L, typename... ArgsT>
+    L& layer(ArgsT&&...);
 
     template <typename O, typename... ArgsT>
     O& optimizer(ArgsT&&...);
@@ -172,10 +149,6 @@ class DnnRegressor {
     
     Eigen::MatrixXf infer(const Eigen::MatrixXf&);
 
-    //DnnRegressor& batch_norm(bool);
-
-    //bool batch_norm() const;
-
     template <typename ArchiverT>
     auto archive(ArchiverT&);
     
@@ -184,34 +157,12 @@ class DnnRegressor {
 
   private:
 
-    //bool _batch_norm {false};
-
-    std::vector<DnnLayer> _L;
-    std::vector<Eigen::MatrixXf> _X;
-    std::vector<Eigen::MatrixXf> _W;
-    std::vector<Eigen::MatrixXf> _dW;
-    std::vector<Eigen::MatrixXf> _B;
-    std::vector<Eigen::MatrixXf> _dB;
-    //std::vector<Eigen::MatrixXf> _gamma;
-    //std::vector<Eigen::MatrixXf> _beta;
-    //std::vector<Eigen::MatrixXf> _mean;
-    //std::vector<Eigen::MatrixXf> _var;
-    //std::vector<Eigen::MatrixXf> _isqrtvar;
-    //std::vector<Eigen::MatrixXf> _hhat;
-    //std::vector<Eigen::MatrixXf> _dbeta;
-    //std::vector<Eigen::MatrixXf> _dgamma;
-    //std::vector<Eigen::MatrixXf> _rmean;
-    //std::vector<Eigen::MatrixXf> _rvar;
+    std::vector<Layer> _layers;
 
     Loss _loss {std::in_place_type<MeanSquaredError>};
     Optimizer _optimizer {std::in_place_type<AdamOptimizer>};
 
-    //void _batch_norm_fp(Eigen::MatrixXf& D, size_t level);
-    //void _batch_norm_infer_fp(Eigen::MatrixXf& D, size_t level);
-    //void _batch_norm_bp(Eigen::MatrixXf& delta, size_t level);
     void _shuffle(Eigen::MatrixXf&, Eigen::MatrixXf&);
-    void _fprop(const Eigen::MatrixXf&);
-    void _bprop(Eigen::MatrixXf&);
     void _optimize(const Eigen::MatrixXf&, const Eigen::MatrixXf&, float);
     void _update(float);
     
@@ -223,7 +174,7 @@ class DnnRegressor {
 // Function: archive
 template <typename ArchiverT>
 auto DnnRegressor::archive(ArchiverT& ar) {
-  return ar(_loss, _L, _X, _W, _dW, _B, _dB, _optimizer);
+  return ar(_layers, _loss);
 }
 
 // Function: _train
@@ -258,6 +209,14 @@ L& DnnRegressor::loss(ArgsT&&... args) {
   return _loss.emplace<L>(std::forward<ArgsT>(args)...);
 }
 
+// Function: layer
+template <typename L, typename... ArgsT>
+L& DnnRegressor::layer(ArgsT&&... args) {
+  L& l = std::get<L>(_layers.emplace_back(std::in_place_type<L>, std::forward<ArgsT>(args)...));
+  l.layer = _layers.size() - 1;
+  return l;
+}
+
 // Function: train
 template <typename C>
 DnnRegressor& DnnRegressor::train(Eigen::MatrixXf& Dtr, Eigen::MatrixXf& Ltr, size_t e, size_t b, float lrate, C&& c) {
@@ -266,14 +225,16 @@ DnnRegressor& DnnRegressor::train(Eigen::MatrixXf& Dtr, Eigen::MatrixXf& Ltr, si
     DTC_THROW("Dimension of training data and labels don't match");
   }
 
-  if(_L.size() < 2) {
-    DTC_THROW("Neural network must have at least two layers");
+  if(_layers.empty()) {
+    DTC_THROW("Neural network must have at least one layer");
   }
 
   _train(Dtr, Ltr, e, b, lrate, std::forward<C>(c)); 
 
   return *this;
 }
+
+// 
 
 
 };  // end of namespace dtc::ml -------------------------------------------------------------------

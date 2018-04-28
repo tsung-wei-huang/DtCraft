@@ -195,7 +195,7 @@ void LinearClassifier::_train(Eigen::MatrixXf& X, Eigen::VectorXi& Y, size_t e, 
       c(*this);
     }
   }
-}
+} 
 
 
 

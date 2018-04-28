@@ -150,8 +150,16 @@ void RnnRegressorNx1::_optimize(const Eigen::MatrixXf& Dtr, const Eigen::MatrixX
 
 // Procedure: _update
 void RnnRegressorNx1::_update(float rate) {
+  
+  std::visit([this, rate](auto&& opt){
+    opt.alpha(rate).update(_dWx, _Wx);
+    opt.alpha(rate).update(_dBx, _Bx);
+    opt.alpha(rate).update(_dWy, _Wy);
+    opt.alpha(rate).update(_dBy, _By);
+    opt.alpha(rate).update(_dWs, _Ws);
+  }, _optimizer); 
 
-  constexpr static int tag_wx = 0;
+  /*constexpr static int tag_wx = 0;
   constexpr static int tag_bx = 1;
   constexpr static int tag_wy = 2;
   constexpr static int tag_by = 3;
@@ -163,7 +171,7 @@ void RnnRegressorNx1::_update(float rate) {
     opt.alpha(rate).update(_dWy, _Wy, tag_wy);
     opt.alpha(rate).update(_dBy, _By, tag_by);
     opt.alpha(rate).update(_dWs, _Ws, tag_ws);
-  }, _optimizer);
+  }, _optimizer); */
 
 }
 
