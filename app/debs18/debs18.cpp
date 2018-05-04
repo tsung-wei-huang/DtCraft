@@ -11,19 +11,25 @@ void benchmark(const std::filesystem::path& file, const std::filesystem::path& m
 
   auto feeder = G.insert<dtc::debs18::StreamFeeder>(file);
 
-  auto predictor = G.insert<dtc::cell::Visitor1x1>(
-    [model] (dtc::ml::DnnRegressor& dnn) {
-      //std::cout << "Loading model " << model << std::endl;
-      dnn.load(model);
-    },
-    [] (dtc::ml::DnnRegressor& dnn, std::tuple<std::string, std::string>& envelope) {
-      const auto& [taskid, content] = envelope; 
-      Eigen::MatrixXf infer = dtc::debs18::make_regression_features(content);
-      //std::cout << infer.rows() << "x" << infer.cols() << std::endl;
-      int pred_at = (dnn.infer(infer))(0, 0);
-      return std::make_tuple(taskid, dtc::debs18::minutes_to_timestamp(pred_at) + ',');
-    }
-  );
+  //auto predictor = G.insert<dtc::cell::Visitor1x1>(
+  //  [P=dtc::debs18::ArrivalTimePredictor{model}] (dtc::debs18::ArrivalTimePredictor& pred) {
+  //    dnn.load(model);
+  //  },
+  //  [] (dtc::ml::DnnRegressor& dnn, std::tuple<std::string, std::string>& envelope) {
+  //    const auto& [taskid, content] = envelope; 
+  //    Eigen::MatrixXf infer = dtc::debs18::make_regression_features(content);
+  //    //std::cout << infer.rows() << "x" << infer.cols() << std::endl;
+  //    int pred_at = (dnn.infer(infer))(0, 0);
+  //    return std::make_tuple(taskid, dtc::debs18::minutes_to_timestamp(pred_at) + ',');
+  //  }
+  //);
+
+  dtc::debs18::ArrivalTimePredictor P{model};
+
+  auto predictor = G.insert<dtc::cell::Operator1x1>([&] (std::tuple<std::string, std::string>& envelope) {
+    const auto& [taskid, content] = envelope; 
+    return std::make_tuple(taskid, P.infer(content));
+  });
   
   feeder.in(predictor.out());
   predictor.in(feeder.out());

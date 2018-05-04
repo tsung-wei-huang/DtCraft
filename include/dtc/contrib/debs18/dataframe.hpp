@@ -312,45 +312,6 @@ class DataFrame : public dtc::CsvFrame {
 
 };
 
-
-// ------------------------------------------------------------------------------------------------
-
-class MeditMap {
-  
-  private:
-
-    std::vector<std::vector<int>> _grid;
-
-    float _minlat;    // Y
-    float _maxlat;
-    float _minlon;
-    float _maxlon;    // X
-    float _scale;
-
-    int _rows;
-    int _cols;
-
-  public:
-    
-    MeditMap(const std::filesystem::path&);
-
-    inline float minlat() const { return _minlat; }
-    inline float maxlat() const { return _maxlat; }
-    inline float minlon() const { return _minlon; }
-    inline float maxlon() const { return _maxlon; }
-    inline float scale()  const { return _scale;  }
-
-    inline int rows() const { return _rows; }
-    inline int cols() const { return _cols; }
-
-    int operator () (float, float) const;
-
-    std::tuple<int, int> to_grid(float, float) const;
-
-    int distance(float, float, float, float) const;
-};
-
-
 };  // end of namespace dtc::debs18. --------------------------------------------------------------
 
 #endif

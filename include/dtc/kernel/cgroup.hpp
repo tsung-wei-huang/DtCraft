@@ -79,6 +79,9 @@ class ControlGroup {
   private:  
 
     std::filesystem::path _path;
+
+    void _set(const std::filesystem::path&, std::string_view) const;
+    std::string _get(const std::filesystem::path&) const;
 };
 
 // Function: path
