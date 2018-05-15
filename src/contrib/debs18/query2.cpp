@@ -147,7 +147,7 @@ std::ostream& operator << (std::ostream& os, const HyperParameters& hp) {
 // Total available ship types:
 // 0, 20, 30, 32, 34, 36, 37, 51, 52, 53, 60, 66, 69, 70, 71, 72, 73, 74, 79,
 // 80, 81, 82, 83, 84, 85, 89, 90, 99
-std::tuple<Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf> 
+std::tuple<Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, Eigen::MatrixXf, std::vector<Trip>> 
 make_data(const std::filesystem::path& path) {
   
   DataFrame df(path);
@@ -160,16 +160,20 @@ make_data(const std::filesystem::path& path) {
     debs18::DataFrame::LATITUDE,
     debs18::DataFrame::COURSE,
     //debs18::DataFrame::DISTANCE_FROM_DEPARTURE,
-    debs18::DataFrame::CUMULATIVE_DISTANCE,
+    //debs18::DataFrame::CUMULATIVE_DISTANCE,
     debs18::DataFrame::CUMULATIVE_TIME,
     //debs18::DataFrame::DEPARTURE_PORT,
     debs18::DataFrame::HEADING,
     //debs18::DataFrame::DRAUGHT,
-    debs18::DataFrame::BEARING,
+    //debs18::DataFrame::BEARING,
     //debs18::DataFrame::ARRIVAL_PORT,
     //debs18::DataFrame::DELTA_TIMESTAMP,
     //debs18::DataFrame::DELTA_LONGITUDE,
     //debs18::DataFrame::DELTA_LATITUDE,
+    //debs18::DataFrame::ALL_PORT_AVG_DISTANCE,
+    debs18::DataFrame::ALL_PORT_CUMULATIVE_DISTANCE,
+    //debs18::DataFrame::ALL_PORT_X_DIR,
+    //debs18::DataFrame::ALL_PORT_Y_DIR,
     debs18::DataFrame::ARRIVAL_TIME
   });
 
@@ -187,21 +191,21 @@ make_data(const std::filesystem::path& path) {
   for(size_t i=0; i<trips.size(); ++i) {
     remove_NaN_rows(trips[i].route);  // arrival time might be missing.
   }
-  std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
+  //std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
 
   // Remove rows with invalid timestamp
   dtc::LOGI("Removing rows with redundant timestamp ...");
   for(size_t i=0; i<trips.size(); ++i) {
     remove_invalid_timestamp_rows(trips[i].route);
   }
-  std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
+  //std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
   
   // Remove empty trip
   dtc::LOGI("Removing empty trips ...");
   trips.erase(std::remove_if(trips.begin(), trips.end(), [] (auto& t) {
     return t.rows() == 0;
   }), trips.end());
-  std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
+  //std::cout << std::accumulate(trips.begin(), trips.end(), 0u, [] (size_t sum, const Trip& trip) { return sum + trip.rows(); }) << std::endl;
 
   // Stack all trips to a big Eigen Matrix
   dtc::LOGI("Stacking trips ...");
@@ -209,14 +213,19 @@ make_data(const std::filesystem::path& path) {
 
   assert(ship.rows() != 0);
 
+
+  // Predict remaining time.
+  //ship.col(ship.cols()-1) -= ship.col(0);
+
+
   // Shuffling the ship
   dtc::LOGI("Shuffling ship ...");
   shuffle(ship);
 
   // Extract the training data.
-  std::cout << "Ship data (top 30 rows):\n";
-  if(ship.rows() >= 30) std::cout << ship.topRows(30) << " ... (more)\n";
-  else std::cout << ship << std::endl;
+  //std::cout << "Ship data (top 30 rows):\n";
+  //if(ship.rows() >= 30) std::cout << ship.topRows(30) << " ... (more)\n";
+  //else std::cout << ship << std::endl;
 
   assert(ship.hasNaN() == false);
 
@@ -237,13 +246,13 @@ make_data(const std::filesystem::path& path) {
     "Lte: ", Lte.rows(), "x", Lte.cols(), '\n'
   );
 
-  return {ship, Dtr, Dte, Ltr, Lte};
+  return {ship, Dtr, Dte, Ltr, Lte, trips};
 }
 
 // Procedure: train
 void try_train(HyperParameters& hp) {
   
-  auto [ship, Dtr, Dte, Ltr, Lte] = make_data(hp.input);
+  auto [ship, Dtr, Dte, Ltr, Lte, trips] = make_data(hp.input);
 
   std::cout << "HP=" << hp << std::endl;
   
@@ -253,14 +262,29 @@ void try_train(HyperParameters& hp) {
   dnn.layer<dtc::ml::FullyConnectedLayer>(hp.num_neurons, 1);
   dnn.loss<dtc::ml::MeanAbsoluteError>();
 
-  // Perform training.
-  dnn.train(Dtr, Ltr, hp.num_epochs, hp.mini_batch, hp.lrate, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
-    //if(++i % 100 == 0) {
-    //  float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
-    //  float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
-    //  printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", i, Etr, Ete);
-    //}
-  });
+  ////// Perform training.
+  //dnn.train(Dtr, Ltr, hp.num_epochs, hp.mini_batch, hp.lrate, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
+  //  if(++i % 100 == 0) {
+  //    float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
+  //    float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
+  //    printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", i, Etr, Ete);
+  //  }
+  //  //hp.lrate = (1.0f / (1.0f + 0.95f * i))
+  //});
+
+
+
+  for(size_t epoch = 0; epoch <= hp.num_epochs; ++epoch) {
+
+    dnn.train(Dtr, Ltr, 1, hp.mini_batch, hp.lrate, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {});
+      
+    if(epoch && epoch % 10000 == 0) {
+      float Etr = (dnn.infer(Dtr) - Ltr).array().abs().sum() / (static_cast<float>(Dtr.rows()));
+      float Ete = (dnn.infer(Dte) - Lte).array().abs().sum() / (static_cast<float>(Dte.rows()));
+      printf("Epoch %d: Etr=%.4f, Ete=%.4f\n", epoch, Etr, Ete);
+      hp.lrate *= 0.95;
+    }
+  }
   
   // Infer
   //Eigen::MatrixXf comp(Dte.rows(), 2);    
@@ -271,9 +295,25 @@ void try_train(HyperParameters& hp) {
   //if(comp.rows() < 30) std::cout << comp << std::endl;
   //else std::cout << comp.topRows(30) << " ... (more)\n";
 
+
+  //float total_err {0.0f};
+  //size_t total_rows {0};
+  //for(const auto & trip : trips) {
+  //  Eigen::MatrixXf dtr = trip.route.leftCols(trip.route.cols()-1);
+  //  Eigen::MatrixXf dte = trip.route.rightCols(1);
+  //  float sum {0.0f};
+  //  for(size_t i=0;i<dtr.rows(); ++i){
+  //    sum += (dnn.infer(dtr.row(i)))(0, 0);
+  //    total_err += std::fabs(sum/(i+1) - dte(i, 0));
+  //  }
+  //  total_rows += trip.rows();
+  //}
+  //assert(total_rows == ship.rows());
+
   auto total_mae = (dnn.infer(ship.leftCols(ship.cols()-1)) - ship.rightCols(1)).array().abs().sum() / ship.rows();
   
-  std::cout << "Total MAE=" << total_mae << std::endl;
+  //std::cout << "MAE=" << total_mae << " SMAE=" << total_err/ship.rows() << std::endl;
+  std::cout << "MAE=" << total_mae << std::endl;
 
   hp.MAE = total_mae;
 
@@ -284,7 +324,7 @@ void try_train(HyperParameters& hp) {
 void regression_dnn(const std::filesystem::path& path, const std::filesystem::path& model) {
   
   // Per ship type
-  for(int type=0; type<=99; ++type) {
+  for(int type=70; type<=99; ++type) {
     auto dpath = model / ("type_"s  + std::to_string(type) + ".csv");
     auto hpath = model / ("model_"s + std::to_string(type) + ".dat");
     auto mpath = model / ("model_"s + std::to_string(type) + ".bin");
@@ -293,15 +333,15 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
       //std::cout << hpath << " => " << mpath << std::endl;
       HyperParameters hp {dpath, mpath}; 
       ifs >> hp.lrate >> hp.num_neurons >> hp.mini_batch >> hp.num_epochs;
-      //hp.num_epochs = 20000;
+      //hp.num_epochs = 100000;
       //std::cout << hp << std::endl;
       try_train(hp);
     }
-  }
+  } 
   
   // default
   {
-    auto dpath = model / "complete.csv";
+    auto dpath = model / "complete2.csv";
     auto hpath = model / "model_default.dat";
     auto mpath = model / "model_default.bin";
 
@@ -309,6 +349,7 @@ void regression_dnn(const std::filesystem::path& path, const std::filesystem::pa
       assert(std::filesystem::exists(dpath));
       HyperParameters hp {dpath, mpath};
       ifs >> hp.lrate >> hp.num_neurons >> hp.mini_batch >> hp.num_epochs;
+      //hp.num_epochs = 100000;
       try_train(hp);
     }
     else {

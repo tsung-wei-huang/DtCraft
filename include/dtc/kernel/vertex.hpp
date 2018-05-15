@@ -52,7 +52,9 @@ class Vertex {
 
     template <typename K, typename... T>
     void broadcast_to(K&&, T&&...) const;
-
+    
+    void remove_all_ostreams() const;
+    void remove_all_istreams() const;
     void remove_ostream(key_type) const;
     void remove_istream(key_type) const;
 

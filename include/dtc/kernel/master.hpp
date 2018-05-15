@@ -119,6 +119,7 @@ class Master : public KernelBase {
 
     size_t _dequeue();
     
+    void _init_cgroup();
     void _remove_agent(key_type);
     void _remove_graph(key_type);
     void _remove_webui(key_type);
@@ -161,6 +162,8 @@ class Master : public KernelBase {
     std::future<ClusterInfo> cluster_info();
 
   private:
+
+    ControlGroup _cgroup;
     
     std::unordered_map<key_type, Agent> _agents;
     std::unordered_map<key_type, Graph> _graphs;

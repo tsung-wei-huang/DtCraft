@@ -13,7 +13,7 @@
 
 #include <dtc/kernel/cgroup.hpp>
 
-namespace dtc::cg {
+namespace dtc {
 
 // Cgroup utility
 std::array<Subsystem, NUM_SUBSYSTEMS>& __subsystems__() {
@@ -125,19 +125,24 @@ ControlGroup::~ControlGroup() {
     }
     catch(const std::exception& e) {
       // This is possible because some subdirectories might not be unlinked properly.
-      LOGW("Failed to destroy cgroup (", e.what(), ")");
+      LOGW("Failed to unmount cgroup (", e.what(), ")");
     }
   }
 }
 
 // Function: memory_mount
-const std::filesystem::path ControlGroup::memory_mount() const {
+std::filesystem::path ControlGroup::memory_mount() const {
   return __subsystems__()[MEMORY].mount / _path;
 }
 
 // Function: cpuset_mount
-const std::filesystem::path ControlGroup::cpuset_mount() const {
+std::filesystem::path ControlGroup::cpuset_mount() const {
   return __subsystems__()[CPUSET].mount / _path;
+}
+
+// Function: blkio_mount
+std::filesystem::path ControlGroup::blkio_mount() const {
+  return __subsystems__()[BLKIO].mount / _path;
 }
 
 // Procedure: add
@@ -180,6 +185,11 @@ uintmax_t ControlGroup::memory_usage_in_bytes() const {
 // Function: memory_max_usage_in_bytes
 uintmax_t ControlGroup::memory_max_usage_in_bytes() const {
   return std::stoull(_get(__subsystems__()[MEMORY].mount / _path / "memory.max_usage_in_bytes"));
+}
+
+// Function: blkio_weight
+uintmax_t ControlGroup::blkio_weight() const {
+  return std::stoull(_get(__subsystems__()[BLKIO].mount / _path / "blkio.weight"));
 }
 
 // Function: cpuacct_usage

@@ -15,16 +15,15 @@
 #define DTC_KERNEL_AGENT_HPP_
 
 #include <dtc/kernel/manager.hpp>
-#include <dtc/kernel/container.hpp>
 
 namespace dtc {
 
-// Class: Clock
-class Clock {
+// Class: Timer
+class Timer {
   
   public:
 
-    Clock() = default;
+    Timer() = default;
 
     template <typename D>
     D elapsed_time() const;
@@ -41,27 +40,27 @@ class Clock {
 
 // Function: elapsed_time
 template <typename D>
-D Clock::elapsed_time() const {
+D Timer::elapsed_time() const {
   return std::chrono::duration_cast<D>(std::chrono::steady_clock::now() - _boot);
 }
 
 // Function: elapsed_time_in_seconds
-inline auto Clock::elapsed_time_in_seconds() const { 
+inline auto Timer::elapsed_time_in_seconds() const { 
   return elapsed_time<std::chrono::seconds>().count();
 }
 
 // Function: elapsed_time_in_milliseconds
-inline auto Clock::elapsed_time_in_milliseconds() const {
+inline auto Timer::elapsed_time_in_milliseconds() const {
   return elapsed_time<std::chrono::milliseconds>().count();
 }
 
 // Function: elapsed_time_in_microseconds
-inline auto Clock::elapsed_time_in_microseconds() const {
+inline auto Timer::elapsed_time_in_microseconds() const {
   return elapsed_time<std::chrono::microseconds>().count();
 }
 
 // Function: elapsed_time_in_nanoseconds
-inline auto Clock::elapsed_time_in_nanoseconds() const {
+inline auto Timer::elapsed_time_in_nanoseconds() const {
   return elapsed_time<std::chrono::nanoseconds>().count();
 }
 
@@ -70,8 +69,6 @@ inline auto Clock::elapsed_time_in_nanoseconds() const {
 // Class: Agent
 class Agent : public KernelBase {
 
-  using CGroup = cg::ControlGroup;
-  
   // ---- Internal data structure ---------------
 
   struct FrontierPacket {
@@ -102,7 +99,7 @@ class Agent : public KernelBase {
   struct Task {
     TaskID key;
     pb::Topology topology;
-    Clock clock;
+    Timer timer;
     std::variant<Hatchery, Executor> handle;
 
     Task(pb::Topology&&);
@@ -132,7 +129,7 @@ class Agent : public KernelBase {
   
   private:
 
-    CGroup _cgroup;
+    ControlGroup _cgroup;
     Master _master;
 
     pb::LoadInfo loadinfo;
@@ -151,7 +148,6 @@ class Agent : public KernelBase {
 
     bool _deploy(Task&);
     bool _insert_task(Task&);
-
 
   public:
     

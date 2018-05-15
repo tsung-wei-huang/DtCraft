@@ -675,7 +675,6 @@ float DataFrame::_get(size_t r, Index i) const {
       assert(false);
     break;
   };
-
 }
 
 // Function: trips
@@ -689,6 +688,16 @@ std::vector<Trip> DataFrame::trips(const std::vector<Index>& ids) const {
   }
 
   std::vector<Trip> trips;
+
+  int port_info {0};
+  for(const auto& id: ids){
+    if(id == ALL_PORT_DISTANCE or 
+       id == ALL_PORT_AVG_DISTANCE or 
+       id == ALL_PORT_X_DIR or 
+       id == ALL_PORT_Y_DIR or 
+       id == ALL_PORT_CUMULATIVE_DISTANCE)
+      port_info += 1;
+  }
   
   for(auto& [key, rows] : ships) {
 
@@ -697,37 +706,45 @@ std::vector<Trip> DataFrame::trips(const std::vector<Index>& ids) const {
       return _data(a, SHIP_TIMESTAMP) < _data(b, SHIP_TIMESTAMP);
     });
 
-    // Generate trips for this ship
+    // Generate trips for this ship 
     float preport = -1.0f;
     size_t count {0};
     
     // Create a new trip
     auto add_trip = [&] (size_t i, size_t count) {
-      Eigen::MatrixXf& mat = trips.emplace_back(key, count, ids.size()).route; 
+      //Eigen::MatrixXf& mat = trips.emplace_back(key, count, all_port_distance ? ids.size()+2*ports.size()-1: ids.size()).route;  
+      Eigen::MatrixXf& mat = trips.emplace_back(key, count, ids.size() + port_info*ports.size()-port_info).route; 
+
+      std::vector<float> cumulative_port_dist (ports.size(), 0.0f);
       for(size_t j=i-count, k=0; j<i; ++j, ++k) {
         trips.back().type = _get(rows[j], TYPE);
         //mat.row(k) = _data.row(rows[j]);
+
+        int nof_port_info {0};
         for(size_t f=0; f<ids.size(); ++f) {
+
+          int col = f + nof_port_info*ports.size() - nof_port_info;
+
           // Case 1: cumulative distance
           if(ids[f] == CUMULATIVE_DISTANCE) {
             if(k==0) {
-              mat(k, f) = _distance_from_departure(rows[j]);
+              mat(k, col) = _distance_from_departure(rows[j]);
             }
             else {
               float clng = _get(rows[j], LONGITUDE);
               float clat = _get(rows[j], LATITUDE);
               float plng = _get(rows[j-1], LONGITUDE);
               float plat = _get(rows[j-1], LATITUDE);
-              mat(k, f) = distance_on_earth(clat, clng, plat, plng) + mat(k-1, f);
+              mat(k, col) = distance_on_earth(clat, clng, plat, plng) + mat(k-1, col);
             }
           }
           // Case 2: adjacent bearing
           else if(ids[f] == BEARING) {
             if(k==0) {
-              mat(k, f) = 0.0f;
+              mat(k, col) = 0.0f;
             }
             else {
-              mat(k, f) = bearing_on_earth(
+              mat(k, col) = bearing_on_earth(
                 _get(rows[j-1], LATITUDE), 
                 _get(rows[j-1], LONGITUDE),
                 _get(rows[j], LATITUDE), 
@@ -738,43 +755,154 @@ std::vector<Trip> DataFrame::trips(const std::vector<Index>& ids) const {
           // Case 3: delta longitude
           else if(ids[f] == DELTA_LONGITUDE) {
             if(k == 0) {
-              mat(k, f) = 0.0f;
+              mat(k, col) = 0.0f;
             }
             else {
-              mat(k, f) = _get(rows[j], LONGITUDE) - _get(rows[j-1], LONGITUDE);
+              mat(k, col) = _get(rows[j], LONGITUDE) - _get(rows[j-1], LONGITUDE);
             }
           }
           // Case 4: delta latitude
           else if(ids[f] == DELTA_LATITUDE) {
             if(k == 0) {
-              mat(k, f) = 0.0f;
+              mat(k, col) = 0.0f;
             }
             else {
-              mat(k, f) = _get(rows[j], LATITUDE) - _get(rows[j-1], LATITUDE);
+              mat(k, col) = _get(rows[j], LATITUDE) - _get(rows[j-1], LATITUDE);
             }
           }
           // Case 5: delta timestamp
           else if(ids[f] == DELTA_TIMESTAMP) {
             if(k == 0) {
-              mat(k, f) = 0.0f;
+              mat(k, col) = 0.0f;
             }
             else {
-              mat(k, f) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP);
+              mat(k, col) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP);
             }
           }
           // Case 6: cumulative time
           else if(ids[f] == CUMULATIVE_TIME) {
             if(k==0) {
-              mat(k, f) = 0.0f;
+              mat(k, col) = 0.0f;
             }
             else {
-              mat(k, f) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP) + mat(k-1, f);
+              mat(k, col) = _get(rows[j], TIMESTAMP) - _get(rows[j-1], TIMESTAMP) + mat(k-1, col);
             }
+          }
+          // Case 7: Distance to all ports
+          else if(ids[f] == ALL_PORT_DISTANCE){
+            int temp {0};
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            for(const auto& p: ports){
+              mat(k, col+temp) = distance_on_earth(clat, clng, p.second.latitude, p.second.longitude);
+              temp += 1;
+            }
+            nof_port_info ++;
+          }
+          // Case 8: X vector to all ports
+          else if(ids[f] == ALL_PORT_X_DIR){
+            int temp {0};
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            for(const auto& p: ports){
+              float dist = std::sqrt((p.second.longitude-clng)*(p.second.longitude-clng) + 
+                                     (p.second.latitude-clat)*(p.second.latitude-clat));
+              mat(k, col+temp) = (clng - p.second.longitude)/dist;
+              temp += 1;
+            }
+            nof_port_info ++;
+          }
+          // Case 9: Y vector to all ports
+          else if(ids[f] == ALL_PORT_Y_DIR){
+            int temp {0};
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            for(const auto& p: ports){
+              float dist = std::sqrt((p.second.longitude-clng)*(p.second.longitude-clng) + 
+                                     (p.second.latitude-clat)*(p.second.latitude-clat));
+              mat(k, col+temp) = (clat - p.second.latitude)/dist;
+              temp += 1;
+            }
+            nof_port_info ++;
+          }
+          // Case 10: X vector to departure port
+          else if(ids[f] == X_DIR){
+            float plon = port_longitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float plat = port_latitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            float dist = std::sqrt((plon-clng)*(plon-clng) + (plat-clat)*(plat-clat));
+            mat(k, col) = (clng - plon)/dist;
+          }
+          // Case 11: Y vector to departure port
+          else if(ids[f] == Y_DIR){
+            float plon = port_longitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float plat = port_latitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            float dist = std::sqrt((plon-clng)*(plon-clng) + (plat-clat)*(plat-clat));
+            mat(k, col) = (clat - plat)/dist;
+          }
+          // Case 12: Cumulative X vector to departure port
+          else if(ids[f] == CUMULATIVE_X_DIR){
+            float plon = port_longitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float clng = _get(rows[j], LONGITUDE);
+            if(k == 0){
+              mat(k, col) = clng - plon;
+            }
+            else{
+              mat(k, col) = clng - plon + mat(k-1, col);
+            }
+          }
+          // Case 13: Cumulative Y vector to departure port
+          else if(ids[f] == CUMULATIVE_Y_DIR){
+            float plat = port_latitude((*this)(rows[j], SHIP_DEPARTURE_PORT));
+            float clat = _get(rows[j], LATITUDE);
+            if(k == 0){
+              mat(k, col) = clat - plat;
+            }
+            else{
+              mat(k, col) = clat - plat + mat(k-1, col);
+            }
+          }
+          // Case 14: Average distance to all ports
+          else if(ids[f] == ALL_PORT_AVG_DISTANCE){
+            int temp {0};
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            for(const auto &p: ports){
+              cumulative_port_dist[temp] += distance_on_earth(clat, clng, p.second.latitude, p.second.longitude);
+              mat(k, col + temp) = cumulative_port_dist[temp]/(k+1);
+              temp ++;
+            }
+            nof_port_info ++;
+          }
+          // Case 15: Cumulative distance to all ports
+          else if(ids[f] == ALL_PORT_CUMULATIVE_DISTANCE) {
+            float clng = _get(rows[j], LONGITUDE);
+            float clat = _get(rows[j], LATITUDE);
+            if(k == 0) {
+              int offset {0};  
+              for(const auto &p : ports) {
+                mat(k, col + offset) = distance_on_earth(clat, clng, p.second.latitude, p.second.longitude);
+                offset++;
+              }
+            }
+            else {
+              float plng = _get(rows[j-1], LONGITUDE);
+              float plat = _get(rows[j-1], LATITUDE);
+              float dist = distance_on_earth(clat, clng, plat, plng);
+              for(size_t i=0; i<ports.size(); ++i) {
+                mat(k, col + i) = mat(k-1, col + i) + dist;
+              }
+            }
+            nof_port_info++;
           }
           // others
           else {
-            mat(k, f) = _get(rows[j], ids[f]);
+            mat(k, col) = _get(rows[j], ids[f]);
           }
+
         }
       }
     };

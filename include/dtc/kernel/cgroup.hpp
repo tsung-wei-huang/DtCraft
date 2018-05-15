@@ -11,13 +11,13 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef DTC_UTILITY_CGROUP_HPP_
-#define DTC_UTILITY_CGROUP_HPP_
+#ifndef DTC_KERNEL_CGROUP_HPP_
+#define DTC_KERNEL_CGROUP_HPP_
 
 #include <dtc/headerdef.hpp>
 #include <dtc/static/logger.hpp>
 
-namespace dtc::cg {
+namespace dtc {
 
 // SubsystemType
 enum SubsystemType : int {
@@ -69,12 +69,14 @@ class ControlGroup {
     uintmax_t memory_limit_in_bytes() const;
     uintmax_t memory_usage_in_bytes() const;
     uintmax_t memory_max_usage_in_bytes() const;
+    uintmax_t blkio_weight() const;
     std::set<int> cpuset_cpus() const;
 
     inline const std::filesystem::path& path() const;
 
-    const std::filesystem::path memory_mount() const;
-    const std::filesystem::path cpuset_mount() const;
+    std::filesystem::path memory_mount() const;
+    std::filesystem::path cpuset_mount() const;
+    std::filesystem::path blkio_mount() const;
   
   private:  
 

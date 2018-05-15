@@ -4,7 +4,7 @@
 
 #include <dtc/dtc.hpp>
 
-// Procedure: text_stream_feeder
+/*// Procedure: text_stream_feeder
 // Create a feeder that generates a discrete text stream line by line from a given file
 // and create an operator that parses each line to a set of words.
 void text_stream_feeder() {
@@ -47,7 +47,7 @@ void text_stream_feeder() {
 
   // Dispatch the graph.
   dtc::Executor(G).run(); 
-}
+} */
 
 // ------------------------------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ void csv_stream_feeder() {
 int main(int argc, char* argv[]) {
 
   //text_stream_feeder();
-  csv_stream_feeder();
+  //csv_stream_feeder();
   
   return 0;
 }

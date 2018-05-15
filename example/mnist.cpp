@@ -26,17 +26,6 @@ void offline() {
     const int num_infers = std::max(10000, N/10);
     const int num_trains = N - num_infers;
 
-    auto tp_beg = std::chrono::steady_clock::now();
-
-    dtc::cerr(
-      "-------------------- Mnist-offline trainer --------------------\n",
-      "Image: ", mnist_image_file, '\n',
-      "Label: ", mnist_label_file, '\n',
-      "# images: ", N, '\n',
-      "# infers: ", num_infers, '\n',
-      "# trains: ", num_trains, '\n'
-    ).flush();
-
     Eigen::MatrixXf Dtr = images.middleRows(0, num_trains);
     Eigen::MatrixXf Dte = images.middleRows(num_trains, num_infers);
 
@@ -49,18 +38,10 @@ void offline() {
     nn.layer<dtc::ml::FullyConnectedLayer>(30, 10, dtc::ml::Activation::NONE);
 
     nn.train(Dtr, Ltr, 30, 64, 0.01f, [&, i=0] (auto& dnnc) mutable {
-         auto c = ((dnnc.infer(Dte) - Lte).array() == 0).count();
-         auto t = Dte.rows();
-         dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
-       });
-    
-    auto tp_end = std::chrono::steady_clock::now();
-
-    dtc::cout(
-      "---------------------------------------------------------------\n",
-      "Elapsed time: ", std::chrono::duration_cast<std::chrono::seconds>(tp_end - tp_beg).count(), "s\n"
-    ); 
-
+      auto c = ((dnnc.infer(Dte) - Lte).array() == 0).count();
+      auto t = Dte.rows();
+      printf("Accuracy at epoch %d: %f\n", i++, c/static_cast<float>(t));
+    });
   });
 
   G.container().add(v).memory(256_MB);
@@ -88,23 +69,24 @@ void online() {
 
   src.duration(1ms).frequency(1000);
 
-  auto dnn = G.insert<dtc::cell::Visitor1x1>(
-    [] (dtc::ml::DnnClassifier& c) {
-      dtc::cout("Creating a dnn classifier [784x30x10]\n").flush();
-      c.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
-      c.layer<dtc::ml::FullyConnectedLayer>(30, 10, dtc::ml::Activation::NONE);
-    },
-    [i=0] (dtc::ml::DnnClassifier& c, std::tuple<Eigen::MatrixXf, Eigen::VectorXi>& data) mutable {
-      auto& [images, labels] = data;
-      dtc::cout(
-        "Accuracy at training cycle ", i++, " [", images.rows(), " images]: ",
-        ((labels-c.infer(images)).array() == 0).count() / static_cast<float>(images.rows()), '\n'
-      ).flush();
-      c.train(images, labels, 10, 64, 0.01f, [](){});
+  auto dnn = G.vertex().on([] (dtc::Vertex& v) {
+    auto& c = v.any.emplace<dtc::ml::DnnClassifier>(); 
+    printf("CreatingDNN classifier [784x30x10] ...\n");
+    c.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
+    c.layer<dtc::ml::FullyConnectedLayer>(30, 10);
+  });
+
+  G.stream(src.out(), dnn).on([n=0] (dtc::Vertex& v, dtc::InputStream& is) mutable {
+    auto& c = std::any_cast<dtc::ml::DnnClassifier&>(v.any);
+    Eigen::MatrixXf images;
+    Eigen::VectorXi labels; 
+    while(is(images, labels) != -1) {
+      float accuracy = ((labels - c.infer(images)).array() == 0).count() / static_cast<float>(images.rows());
+      printf("Accuracy at cycle %d: %f\n", n++, accuracy);
+      c.train(images, labels, 1, 64, 0.01f, [] () {});
     }
-  );
-  
-  dnn.in(src.out());
+    return dtc::Event::DEFAULT;
+  });
 
   G.container().add(dnn);
   G.container().add(src);

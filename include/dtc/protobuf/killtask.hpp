@@ -23,7 +23,8 @@ namespace dtc::pb {
 struct KillTask {
   
   TaskID task_id;
-
+  
+  KillTask(const TaskID& tid) : task_id {tid} {}
   KillTask() = default;
   KillTask(const KillTask&) = default;
   KillTask(KillTask&&) = default;

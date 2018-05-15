@@ -124,7 +124,7 @@ inline const Agent::Executor& Agent::Task::executor() const {
 // Constructor
 Agent::Agent() : 
   KernelBase {env::agent_num_threads()},
-  _cgroup    {env::agent_cgroup()} {
+  _cgroup    {env::cgroup_mount()} {
   
   // Initialization
   _init_cgroup();
@@ -135,8 +135,9 @@ Agent::Agent() :
   LOGI("Agent @", env::this_host(), " [frontier:", env::frontier_listener_port(), "]");
 
   // Control group
-  LOGI("cg-subsys.memory ", _cgroup.memory_mount(), "[limit:", _cgroup.memory_limit_in_bytes(), "]");
-  LOGI("cg-subsys.cpuset ", _cgroup.cpuset_mount(), "[#cpus:", _cpuset.size(), "]");
+  LOGI("cg-subsys.memory ", _cgroup.memory_mount(), " [limit:", _cgroup.memory_limit_in_bytes(), "]");
+  LOGI("cg-subsys.cpuset ", _cgroup.cpuset_mount(), " [cpus:", _cpuset.size(), "]");
+  LOGI("cg-subsys.blkio ", _cgroup.blkio_mount(), " [weight:", _cgroup.blkio_weight(), "]");
 }
 
 // Destructor
@@ -187,6 +188,8 @@ void Agent::_init_master() {
   resource.space_limit_in_bytes = Statgrab::get().space_limit_in_bytes();
 
   (*_master.ostream)(pb::Protobuf(std::move(resource)));
+
+  // Write the loadinfo to the master
 }
 
 // Procedure: _init_frontier_listener
@@ -312,7 +315,7 @@ bool Agent::_deploy(Task& task) {
     devices.emplace_back(std::move(task.hatchery().stdout));
 
     // Hatch into the executor.
-    auto& executor = task.handle.emplace<Executor>(_cgroup.path() / task.key.to_string());
+    auto& executor = task.handle.emplace<Executor>(env::cgroup_mount() / task.key.to_string());
 
     // Extract the resource request.
     assert(task.topology.containers.size() == 1);
@@ -366,7 +369,7 @@ void Agent::_remove_task(Task& task, bool kill) {
   }    
   
   // Measure the elapsed time.
-  taskinfo.elapsed_time = task.clock.elapsed_time_in_nanoseconds();
+  taskinfo.elapsed_time = task.timer.elapsed_time_in_nanoseconds();
  
   // Send master the task information.
   (*_master.ostream)(pb::Protobuf{std::move(taskinfo)});

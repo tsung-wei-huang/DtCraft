@@ -11,7 +11,6 @@
  *                                                                            *
  ******************************************************************************/
 
-#include <dtc/kernel/scheduler.hpp>
 #include <dtc/kernel/master.hpp>
 
 namespace dtc {

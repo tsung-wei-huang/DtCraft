@@ -449,6 +449,13 @@ inline void stderr_listener_port(std::string_view str) {
   ::setenv("DTC_STDERR_LISTENER_PORT", str.data(), 1);
 }
 
+inline std::filesystem::path cgroup_mount() {
+  if(auto str = std::getenv("DTC_CGROUP_MOUNT"); str) {
+    return str;
+  }
+  return "dtc";
+}
+
 inline std::filesystem::path agent_cgroup() {
   if(auto str = std::getenv("DTC_AGENT_CGROUP"); str) {
     return str;

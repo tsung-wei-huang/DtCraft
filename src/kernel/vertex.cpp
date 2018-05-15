@@ -66,6 +66,20 @@ void Vertex::remove_ostream(key_type okey) const {
   _executor->remove_ostream(okey);
 }
 
+// Procedure: remove_all_ostreams
+void Vertex::remove_all_ostreams() const {
+  for(const auto& kvp : _ostreams) {
+    _executor->remove_ostream(kvp.first); 
+  }
+}
+
+// Procedure: remove_all_istreams
+void Vertex::remove_all_istreams() const {
+  for(const auto& kvp : _istreams) {
+    _executor->remove_istream(kvp.first);
+  }
+}
+
 // Function: program
 bool Vertex::program() const {
   return !_runtime.program().empty();

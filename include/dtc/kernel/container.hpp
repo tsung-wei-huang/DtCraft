@@ -45,7 +45,7 @@ class Container {
 
     inline pid_t pid() const;
     inline int status() const;
-    inline const cg::ControlGroup& cgroup() const;
+    inline const ControlGroup& cgroup() const;
     
     void spawn(const pb::Topology&);
     void kill();
@@ -59,7 +59,7 @@ class Container {
 
     std::unique_ptr<char[]> _stack;
 
-    cg::ControlGroup _cgroup;
+    ControlGroup _cgroup;
 
     static int _entrypoint(void*);
 };
@@ -75,7 +75,7 @@ inline int Container::status() const {
 }
 
 // Function: cgroup
-inline const cg::ControlGroup& Container::cgroup() const {
+inline const ControlGroup& Container::cgroup() const {
   return _cgroup;
 }
 

@@ -39,7 +39,7 @@ void Master::Agent::remove(const TaskID& tkey) {
 // Procedure: kill
 void Master::Agent::kill(const TaskID& tkey) {
   if(auto titr = tasks.find(tkey); titr != tasks.end()) {
-    (*ostream)(pb::Protobuf(pb::KillTask{tkey}));
+    (*ostream)(pb::Protobuf{std::in_place_type_t<pb::KillTask>(), tkey});
   }
 }
 
@@ -173,7 +173,11 @@ std::future<key_type> Master::insert_graph(std::shared_ptr<Socket> socket) {
 //-------------------------------------------------------------------------------------------------
 
 // Constructor
-Master::Master() : KernelBase {env::master_num_threads()} {
+Master::Master() : 
+  KernelBase {env::master_num_threads()},
+  _cgroup {env::cgroup_mount()} {
+
+  _init_cgroup();
 
   insert_listener(env::agent_listener_port())(
     [this] (std::shared_ptr<Socket> skt) { insert_agent(std::move(skt)); }
@@ -198,6 +202,12 @@ Master::Master() : KernelBase {env::master_num_threads()} {
 
 // Destructor
 Master::~Master() {
+}
+
+// Function: _init_cgroup
+void Master::_init_cgroup() {
+  // Group this process.
+  _cgroup.add(::getpid());
 }
 
 // Function: _on_taskinfo

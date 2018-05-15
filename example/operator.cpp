@@ -8,6 +8,8 @@
 
 int main(int argc, char* argv[]) {
 
+  using namespace std::literals;
+
   dtc::Graph G;
 
   constexpr int N = 10;
@@ -15,26 +17,33 @@ int main(int argc, char* argv[]) {
   auto v1 = G.vertex();
   auto v2 = G.vertex();
 
-  auto addone = G.insert<dtc::cell::Operator1x1>([](int n) { return n+1; });
+  dtc::cell::Operator1x1 addone(G,
+    [] (int n) -> std::variant<int, dtc::Event::Signal> {
+      printf("op received %d\n", n);
+      if(n == N) {
+        return dtc::Event::Signal::REMOVE;
+      }
+      else {
+        return n+1;
+      }
+    }
+  );
 
   addone.in(v1);
 
-  v1.on([v12a=addone.in()] (dtc::Vertex& v1) {
-    for(int i=0; i<N; ++i) {
-      int val = dtc::random<int>(0, 10);
-      std::cout << "v1 sent a random int (0~10): " << val << std::endl;
-      v1.broadcast(val);
+  v1.on([] (dtc::Vertex& v1) {
+    for(int i=1; i<=N; ++i) {
+      printf("v1 sent %d\n", i);
+      v1.broadcast(i);
     }
-    v1.remove_ostream(v12a);
   });
 
-  G.stream(addone.out(), v2).on([n=0] (dtc::Vertex& v2, dtc::InputStream& is) mutable {
-    int r;
-    while(is(r) != -1) {
-      std::cout << "v2 received " << r << " from addone" << std::endl;
-      ++n;
+  G.stream(addone.out(), v2).on([] (dtc::Vertex& v2, dtc::InputStream& is) {
+    int i;
+    while(is(i) != -1) {
+      printf("v2 received %d\n", i);
     }
-    return n == N ? dtc::Event::REMOVE : dtc::Event::DEFAULT;
+    return dtc::Event::DEFAULT;
   });
 
   G.container().add(v1);

@@ -26,6 +26,7 @@
 #include <dtc/kernel/container.hpp>
 #include <dtc/protobuf/protobuf.hpp>
 #include <dtc/webui/webui.hpp>
+#include <dtc/kernel/cgroup.hpp>
 
 namespace dtc {
 

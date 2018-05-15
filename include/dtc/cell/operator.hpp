@@ -22,14 +22,14 @@ namespace dtc::cell {
 template <typename F>
 class Operator1x1 {
 
-  static_assert(closure_traits<F>::arity::value == 1, "Operator1x1 must take one argument");
- 
-  using R = add_optionality_t<std::decay_t<typename closure_traits<F>::result_type>>;
-  using T = std::decay_t<typename closure_traits<F>::template arg<0>>;
-  
-  private:
+  using R = typename closure_traits<F>::result_type;
+  using T = typename closure_traits<F>::decay_args;
 
-    Graph* const _graph {nullptr};
+  static_assert(is_std_variant_v<R>, "return type must be a variant containing Event::Signal");
+
+  private:
+    
+    Graph& _graph;
 
     VertexBuilder _vertex;
 
@@ -38,10 +38,11 @@ class Operator1x1 {
     PlaceHolder _out;
 
     F _op;
+     
 
   public:
     
-    Operator1x1(Graph*, F&&);
+    Operator1x1(Graph&, F&&);
 
     Operator1x1(const Operator1x1&) = delete;
     Operator1x1(Operator1x1&&) = delete;
@@ -55,13 +56,14 @@ class Operator1x1 {
     Operator1x1& in(auto&&);
 
     PlaceHolder& out();
+
 };
 
 // Constructor
 template <typename F>
-Operator1x1<F>::Operator1x1(Graph* graph, F&& f) : 
+Operator1x1<F>::Operator1x1(Graph& graph, F&& f) : 
   _graph  {graph},
-  _vertex {_graph->vertex()},
+  _vertex {_graph.vertex()},
   _in     {-1},
   _out    {_vertex, {}},
   _op     {std::forward<F>(f)} {
@@ -93,19 +95,31 @@ Operator1x1<F>& Operator1x1<F>::in(auto&& tail) {
     DTC_THROW("Operator1x1:in already connected");
   }
 
-  _in = _graph->stream(tail, _vertex).on([&] (Vertex& v, InputStream& is) mutable { 
-    T din;
-    while(is(din) != -1) {
-      if constexpr(std::is_same_v<void, R>) {
-        _op(din);
-      }
-      else {
-        if(R dout = _op(din); dout) {
-          v.broadcast_to(_out.keys(), *dout);
+  _in = _graph.stream(tail, _vertex).on([&] (Vertex& v, InputStream& is) mutable { 
+    
+    T tuple;
+
+    while(is(tuple) != -1) {
+
+      auto sig = std::visit(Functors{
+        [] (Event::Signal sig) {
+          return sig;
+        },
+        [&] (auto&& others) {
+          v.broadcast_to(_out.keys(), others);        
+          return Event::Signal::DEFAULT;
+        } 
+      }, std::apply(_op, tuple));
+
+      if(sig == Event::Signal::REMOVE) {
+        for(const auto& okey : _out.keys()) {
+          v.remove_ostream(okey);
         }
+        return sig;
       }
     }
-    return Event::DEFAULT;
+
+    return Event::Signal::DEFAULT;
   });
 
   return *this;
@@ -113,11 +127,11 @@ Operator1x1<F>& Operator1x1<F>::in(auto&& tail) {
 
 // Deduction guide
 template <typename F>
-Operator1x1(Graph*, F&&) -> Operator1x1<F>;
+Operator1x1(Graph&, F&&) -> Operator1x1<F>;
 
 // --------------------------------------------------------------------------------------
 
-// Operator2x1
+/*// Operator2x1
 template <typename F>
 class Operator2x1 {
   
@@ -258,7 +272,7 @@ Operator2x1<F>& Operator2x1<F>::in2(auto&& tail) {
 
 // Deduction guide
 template <typename F>
-Operator2x1(Graph*, F&&) -> Operator2x1<F>;
+Operator2x1(Graph*, F&&) -> Operator2x1<F>;*/
 
 };  // end of namespace dtc::cell. ----------------------------------------------------------------
 

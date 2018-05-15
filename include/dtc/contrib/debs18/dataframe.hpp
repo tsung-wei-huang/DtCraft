@@ -72,7 +72,22 @@ inline static const std::unordered_map<std::string, Port> ports {
   {"TUZLA",             Port{"TUZLA",             21, 29.29471, 40.83438}},
   {"VALENCIA",          Port{"VALENCIA",          22, -0.31647, 39.44231}},
   {"VALLETTA",          Port{"VALLETTA",          23, 14.51505, 35.89301}},
-  {"YALOVA",            Port{"YALOVA",            24, 29.47632, 40.71889}}
+  {"YALOVA",            Port{"YALOVA",            24, 29.47632, 40.71889}},
+  {"CAGLIARI",          Port{"CAGLIARI",          25, 9.1140775, 39.206115}},
+  {"CASTELLON",         Port{"CASTELLON",         26, 0.020405295, 39.967005}},
+  {"FORMIA",            Port{"FORMIA",            27, 13.61156,  41.25555}},
+  {"JIJEL",             Port{"JIJEL",             28, 5.776,     36.822}},
+  {"IBIZA",             Port{"IBIZA",             29, 1.4423275, 38.91302}},
+  {"LAPSEKI",           Port{"LAPSEKI",           30, 26.687165, 40.351095}},
+  {"PALERMO",           Port{"PALERMO",           31, 13.37366,  38.13114}},
+  {"PIOMBINO",          Port{"PIOMBINO",          32, 10.54896,  42.932635}},
+  {"PLOCE",             Port{"PLOCE",             33, 17.43813,  43.04454}},
+  {"SANT ANTONI",       Port{"SANT ANTONI",       34, 1.301219,  38.97694}},
+  {"SKIKDA",            Port{"SKIKDA",            35, 6.924,     36.88537}},
+  {"TEL AVIV-YAFO",     Port{"TEL AVIV-YAFO",     36, 34.76864,  32.090425}},
+  {"TOBRUK",            Port{"TOBRUK",            37, 23.98058,  32.073635}},
+  {"TRAPANI",           Port{"TRAPANI",           38, 12.505615, 38.012}},
+  {"TRIPOLIS",          Port{"TRIPOLIS",          39, 13.17951,  32.89762}}
 };
 
 /*inline static const std::unordered_map<std::string, float> port_ids {
@@ -263,6 +278,15 @@ class DataFrame : public dtc::CsvFrame {
       DELTA_LONGITUDE,
       DELTA_LATITUDE,
       DELTA_TIMESTAMP,
+      ALL_PORT_AVG_DISTANCE,
+      ALL_PORT_DISTANCE,
+      ALL_PORT_X_DIR,
+      ALL_PORT_Y_DIR,
+      ALL_PORT_CUMULATIVE_DISTANCE,
+      X_DIR,
+      Y_DIR,
+      CUMULATIVE_X_DIR,
+      CUMULATIVE_Y_DIR,
       PLACEHOLDER
     };
 
