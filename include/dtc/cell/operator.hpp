@@ -38,7 +38,6 @@ class Operator1x1 {
     PlaceHolder _out;
 
     F _op;
-     
 
   public:
     
@@ -52,8 +51,7 @@ class Operator1x1 {
     operator key_type() const;
     
     key_type in() const;
-
-    Operator1x1& in(auto&&);
+    key_type in(auto&&);
 
     PlaceHolder& out();
 
@@ -89,7 +87,7 @@ key_type Operator1x1<F>::in() const {
 
 // Function: in
 template <typename F>
-Operator1x1<F>& Operator1x1<F>::in(auto&& tail) {
+key_type Operator1x1<F>::in(auto&& tail) {
   
   if(_in != -1) {
     DTC_THROW("Operator1x1:in already connected");
@@ -122,7 +120,7 @@ Operator1x1<F>& Operator1x1<F>::in(auto&& tail) {
     return Event::Signal::DEFAULT;
   });
 
-  return *this;
+  return _in;
 }
 
 // Deduction guide

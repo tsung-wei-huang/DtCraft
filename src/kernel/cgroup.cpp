@@ -209,7 +209,7 @@ void ControlGroup::_set(const std::filesystem::path& path, std::string_view valu
     ofs << value;
   }
   else {
-    LOGE("Failed to write ", value, " to ", path, " (", strerror(errno), ")");
+    DTC_THROW("failed to write ", value, " to ", path, " (", strerror(errno), ")");
   }
 }
 
@@ -221,8 +221,7 @@ std::string ControlGroup::_get(const std::filesystem::path& path) const {
     return oss.str();
   }
   else {
-    LOGE("Failed to open ", path, " (", strerror(errno), ")");
-    return "";
+    DTC_THROW("failed to open ", path, " (", strerror(errno), ")");
   }
 }
 

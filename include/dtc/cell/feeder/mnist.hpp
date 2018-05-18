@@ -20,165 +20,61 @@
 namespace dtc::cell {
 
 // Class: MnistStreamFeeder
-template <typename F>
 class MnistStreamFeeder {
-
-  using R = add_optionality_t<std::decay_t<typename closure_traits<F>::result_type>>;
-
-  static_assert(closure_traits<F>::arity::value == 2);
-
-  using M = std::decay_t<typename closure_traits<F>::template arg<0>>;
-  using L = std::decay_t<typename closure_traits<F>::template arg<1>>;
-
-  static_assert(
-    (is_eigen_matrix_v<M> && is_eigen_matrix_v<L>)
-  );
 
   struct Storage {
 
-    mutable M images;
-    mutable L labels;
+    mutable Eigen::MatrixXf images;
+    mutable Eigen::VectorXi labels;
 
     int cursor {0};
 
-    Storage(auto&&, auto&&);
+    Storage(const std::filesystem::path&, const std::filesystem::path&);
     Storage(const Storage&);
   };
 
   private:
     
-    Graph* const _graph {nullptr};
+    Graph& _graph;
 
     VertexBuilder _vertex;
-    ProberBuilder _prober;
 
+    key_type _in {-1};
     PlaceHolder _out;
 
-    F _op;
-
-    size_t _frequency {1};
-
-    Event::Signal _next_batch(Vertex& v);
+    Event::Signal _next_batch(Vertex&, InputStream&);
+    void _shuffle(Eigen::MatrixXf&, Eigen::VectorXi&);
 
   public:
 
-    MnistStreamFeeder(Graph*, auto&&, auto&&, F&&);
+    MnistStreamFeeder(Graph&, std::filesystem::path, std::filesystem::path);
     
     MnistStreamFeeder(const MnistStreamFeeder&) = delete;
     MnistStreamFeeder(MnistStreamFeeder&&) = delete;
     MnistStreamFeeder& operator = (const MnistStreamFeeder&) = delete;
     MnistStreamFeeder& operator = (MnistStreamFeeder&&) = delete;
-    
-    operator key_type() const;
 
     PlaceHolder& out();
 
-    template <typename D>
-    MnistStreamFeeder& duration(D&&);
-    
-    MnistStreamFeeder& frequency(size_t);
+    operator key_type () const;
+
+    key_type in() const;
+    key_type in(auto&&);
 };
 
-// Constructor
-template <typename F>
-MnistStreamFeeder<F>::Storage::Storage(auto&& m, auto&& l) :
-  images {ml::read_mnist_image<M>(m)},
-  labels {ml::read_mnist_label<L>(l)},
-  cursor {0} {
+// Function: in
+key_type MnistStreamFeeder::in(auto&& tail) {
   
-  assert(images.rows() == labels.rows());
-}
+  if(_in != -1) {
+    DTC_THROW("MnistStreamFeeder:in already connected");
+  }
 
-// Constructor
-template <typename F>
-MnistStreamFeeder<F>::Storage::Storage(const Storage& rhs) :
-  images {std::move(rhs.images)},
-  labels {std::move(rhs.labels)},
-  cursor {rhs.cursor} {
-}
-
-// Constructor
-template <typename F>
-MnistStreamFeeder<F>::MnistStreamFeeder(Graph* g, auto&& m, auto&& l, F&& op) : 
-  _graph  {g},
-  _vertex {_graph->vertex()},
-  _prober {_graph->prober(_vertex)},
-  _out    {_vertex, {}},
-  _op     {std::forward<F>(op)}
-{
-  _vertex.on(
-    [this, m=std::forward<decltype(m)>(m), l=std::forward<decltype(l)>(l)] (Vertex& v) { 
-      v.any.emplace<Storage>(m, l);
-    }
-  );
-  
-  _prober.on([this] (Vertex& v) { 
-    return _next_batch(v); 
+  _in = _graph.stream(tail, _vertex).on([&] (Vertex& v, InputStream& is) mutable { 
+    return _next_batch(v, is);
   });
+
+  return _in;
 }
-
-// Operator
-template <typename F>
-MnistStreamFeeder<F>::operator key_type() const {
-  return _vertex;
-}
-
-// Function: duration
-template <typename F>
-template <typename D>
-MnistStreamFeeder<F>& MnistStreamFeeder<F>::duration(D&& d) {
-  _prober.duration(std::forward<D>(d));
-  return *this;
-}
-
-// Function: out
-template <typename F>
-PlaceHolder& MnistStreamFeeder<F>::out() {
-  return _out;
-} 
-
-// Function: frequency
-template <typename F>
-MnistStreamFeeder<F>& MnistStreamFeeder<F>::frequency(size_t n) {
-  _frequency = n;
-  return *this;
-} 
-
-// Function: _next_batch
-template <typename F>
-Event::Signal MnistStreamFeeder<F>::_next_batch(Vertex& v) {
-
-  Storage& s = std::any_cast<Storage&>(v.any);
- 
-  size_t N = s.images.rows();
-  size_t b = s.cursor + _frequency < N ? _frequency : N - s.cursor;
-
-  M m = s.images.middleRows(s.cursor, b);
-  L l = s.labels.middleRows(s.cursor, b);
-
-  if constexpr(std::is_same_v<void, R>) {
-    _op(m, l);
-  }
-  else {
-    if(R dout = _op(m, l); dout) {
-      v.broadcast_to(_out.keys(), *dout);
-    }
-  }
-  
-  s.cursor += b;
-
-  if(s.cursor == s.images.rows()) { 
-    for(const auto& k : _out.keys()) {
-      v.remove_ostream(k);
-    }
-    v.any.reset();
-    return Event::REMOVE;
-  }
-  
-  return Event::DEFAULT;
-}
-
-// ------------------------------------------------------------------------------------------------
 
 
 };  // end of namespace dtc::cell. ----------------------------------------------------------------

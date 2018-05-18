@@ -1,6 +1,6 @@
 // Program: mnist
 // Authors: Tsung-Wei Huang
-// Date: 2018/02/15
+// Date: 2018/05/15
 
 #include <dtc/dtc.hpp>
 
@@ -44,7 +44,7 @@ void offline() {
     });
   });
 
-  G.container().add(v).memory(256_MB);
+  G.container().add(v).memory(1_GB);
 
   dtc::Executor(G).run();
 }
@@ -54,36 +54,31 @@ void offline() {
 // Procedure: online
 void online() {
 
-  using namespace std::literals;
-    
   dtc::Graph G;
 
-  auto src = G.insert<dtc::cell::MnistStreamFeeder>(
-    mnist_image_file,
-    mnist_label_file,
-    [] (Eigen::MatrixXf& images, Eigen::VectorXi& labels) {
-      images /= 255.0f;
-      return std::make_tuple(images, labels);
-    }
-  );
-
-  src.duration(1ms).frequency(1000);
-
-  auto dnn = G.vertex().on([] (dtc::Vertex& v) {
+  auto src = G.insert<dtc::cell::MnistStreamFeeder>(mnist_image_file, mnist_label_file);
+  auto dnn = G.vertex();
+  auto d2s = src.in(dnn);
+  
+  dnn.on([&] (dtc::Vertex& v) {
     auto& c = v.any.emplace<dtc::ml::DnnClassifier>(); 
     printf("CreatingDNN classifier [784x30x10] ...\n");
     c.layer<dtc::ml::FullyConnectedLayer>(784, 30, dtc::ml::Activation::RELU);
     c.layer<dtc::ml::FullyConnectedLayer>(30, 10);
+    (*v.ostream(d2s))(10000);
   });
 
-  G.stream(src.out(), dnn).on([n=0] (dtc::Vertex& v, dtc::InputStream& is) mutable {
+  G.stream(src.out(), dnn).on([n=0, d2s] (dtc::Vertex& v, dtc::InputStream& is) mutable {
     auto& c = std::any_cast<dtc::ml::DnnClassifier&>(v.any);
     Eigen::MatrixXf images;
     Eigen::VectorXi labels; 
     while(is(images, labels) != -1) {
-      float accuracy = ((labels - c.infer(images)).array() == 0).count() / static_cast<float>(images.rows());
-      printf("Accuracy at cycle %d: %f\n", n++, accuracy);
+      images /= 255.0;
+      n += images.rows();
+      float ac = ((labels - c.infer(images)).array() == 0).count() / static_cast<float>(images.rows());
+      printf("Accuracy after %d images: %f\n", n, ac);
       c.train(images, labels, 1, 64, 0.01f, [] () {});
+      (*v.ostream(d2s))(ac < 0.95f ? 10000 : -1);
     }
     return dtc::Event::DEFAULT;
   });

@@ -471,6 +471,7 @@ lib_libDtCraft_la_SOURCES += src/csv/csv.cpp
 lib_libDtCraft_la_SOURCES += src/contrib/debs18/feeder.cpp
 lib_libDtCraft_la_SOURCES += src/contrib/debs18/query2.cpp
 lib_libDtCraft_la_SOURCES += src/contrib/debs18/dataframe.cpp
+lib_libDtCraft_la_SOURCES += src/cell/feeder/mnist.cpp
 lib_libDtCraft_la_SOURCES += src/exit.cpp
 lib_libDtCraft_la_SOURCES += src/event/reactor.cpp
 lib_libDtCraft_la_SOURCES += src/event/event.cpp

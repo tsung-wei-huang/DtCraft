@@ -18,7 +18,7 @@
 
 namespace dtc::cell {
 
-// Class: Visitor1x1
+/*// Class: Visitor1x1
 template <typename P, typename F>
 class Visitor1x1 {
 
@@ -359,7 +359,7 @@ Visitor2x1<P, F1, F2>& Visitor2x1<P, F1, F2>::in2(auto&& tail) {
 // Deduction guide
 template <typename P, typename F1, typename F2, typename... ArgsT>
 Visitor2x1(Graph&, P&&, F1&&, F2&&, ArgsT&&...) -> Visitor2x1<P, F1, F2>;
-
+*/
 // ------------------------------------------------------------------------------------------------
 
 /*// Class: Visitor2x2

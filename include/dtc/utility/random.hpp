@@ -38,8 +38,7 @@ std::enable_if_t<std::is_floating_point<T>::value, T> random(
   const T from = -1.0, 
   const T to = 1.0
 ) {
-  thread_local std::mt19937 G {std::random_device{}()};
-  return std::uniform_real_distribution<T>(from, to)(G);
+  return std::uniform_real_distribution<T>(from, to)(this_thread::random_engine());
 }
 
 // Function: random
@@ -49,8 +48,7 @@ std::enable_if_t<std::is_integral<T>::value, T> random(
   const T from = std::numeric_limits<T>::lowest(), 
   const T to = std::numeric_limits<T>::max()
 ) {
-  thread_local std::mt19937 G {std::random_device{}()};
-  return std::uniform_int_distribution<T>(from, to)(G);
+  return std::uniform_int_distribution<T>(from, to)(this_thread::random_engine());
 } 
 
 // Function: random

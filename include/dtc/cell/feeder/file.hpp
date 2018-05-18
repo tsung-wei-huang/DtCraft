@@ -37,7 +37,7 @@ class FileStreamFeeder {
 
   private:
 
-    Graph* const _graph {nullptr};
+    Graph& _graph;
 
     VertexBuilder _vertex;
     ProberBuilder _prober;
@@ -84,8 +84,8 @@ FileStreamFeeder<F>::Storage::Storage(const Storage& rhs) : ifstream {std::move(
 template <typename F>
 FileStreamFeeder<F>::FileStreamFeeder(Graph* g, auto&& p, F&& f) :
   _graph  {g},
-  _vertex {_graph->vertex()},
-  _prober {_graph->prober(_vertex)},
+  _vertex {_graph.vertex()},
+  _prober {_graph.prober(_vertex)},
   _out    {_vertex, {}},
   _op     {std::forward<F>(f)} {
 
@@ -170,7 +170,7 @@ class TextStreamFeeder {
 
   private:
 
-    Graph* const _graph {nullptr};
+    Graph& _graph;
 
     VertexBuilder _vertex;
     ProberBuilder _prober;
@@ -218,8 +218,8 @@ TextStreamFeeder<F>::Storage::Storage(const Storage& rhs) :
 template <typename F>
 TextStreamFeeder<F>::TextStreamFeeder(Graph* g, auto&& p, F&& f) :
   _graph  {g},
-  _vertex {_graph->vertex()},
-  _prober {_graph->prober(_vertex)},
+  _vertex {_graph.vertex()},
+  _prober {_graph.prober(_vertex)},
   _out    {_vertex, {}},
   _op     {std::forward<F>(f)} {
 

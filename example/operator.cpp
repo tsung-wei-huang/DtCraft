@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
   auto v1 = G.vertex();
   auto v2 = G.vertex();
 
-  dtc::cell::Operator1x1 addone(G,
+  auto addone = G.insert<dtc::cell::Operator1x1>(
     [] (int n) -> std::variant<int, dtc::Event::Signal> {
       printf("op received %d\n", n);
       if(n == N) {

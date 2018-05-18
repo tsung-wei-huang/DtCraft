@@ -324,7 +324,7 @@ void try_train(HyperParameters& hp) {
 void regression_dnn(const std::filesystem::path& path, const std::filesystem::path& model) {
   
   // Per ship type
-  for(int type=70; type<=99; ++type) {
+  for(int type=0; type<70; ++type) {
     auto dpath = model / ("type_"s  + std::to_string(type) + ".csv");
     auto hpath = model / ("model_"s + std::to_string(type) + ".dat");
     auto mpath = model / ("model_"s + std::to_string(type) + ".bin");

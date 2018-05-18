@@ -171,23 +171,24 @@ am__dirstamp = $(am__leading_dot)dirstamp
 am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
 	src/csv/csv.lo src/contrib/debs18/feeder.lo \
 	src/contrib/debs18/query2.lo src/contrib/debs18/dataframe.lo \
-	src/exit.lo src/event/reactor.lo src/event/event.lo \
-	src/event/select.lo src/event/epoll.lo src/ipc/socket.lo \
-	src/ipc/block_file.lo src/ipc/ipc.lo src/ipc/domain.lo \
-	src/ipc/fifo.lo src/ipc/notifier.lo src/ipc/pipe.lo \
-	src/ipc/shm.lo src/ipc/streambuf.lo src/utility/os.lo \
-	src/utility/http_parser.lo src/utility/table.lo src/ml/loss.lo \
-	src/ml/rnn.lo src/ml/naive_bayes.lo src/ml/linear.lo \
-	src/ml/optimizer.lo src/ml/dnn.lo src/ml/layer.lo src/error.lo \
-	src/policy.lo src/protobuf/loadinfo.lo \
-	src/protobuf/resource.lo src/protobuf/frontier.lo \
-	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
-	src/protobuf/solution.lo src/protobuf/common.lo \
-	src/protobuf/topology.lo src/kernel/container.lo \
-	src/kernel/cgroup.lo src/kernel/manager.lo \
-	src/kernel/stream.lo src/kernel/scheduler.lo \
-	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
-	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
+	src/cell/feeder/mnist.lo src/exit.lo src/event/reactor.lo \
+	src/event/event.lo src/event/select.lo src/event/epoll.lo \
+	src/ipc/socket.lo src/ipc/block_file.lo src/ipc/ipc.lo \
+	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/notifier.lo \
+	src/ipc/pipe.lo src/ipc/shm.lo src/ipc/streambuf.lo \
+	src/utility/os.lo src/utility/http_parser.lo \
+	src/utility/table.lo src/ml/loss.lo src/ml/rnn.lo \
+	src/ml/naive_bayes.lo src/ml/linear.lo src/ml/optimizer.lo \
+	src/ml/dnn.lo src/ml/layer.lo src/error.lo src/policy.lo \
+	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
+	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
+	src/protobuf/protobuf.lo src/protobuf/solution.lo \
+	src/protobuf/common.lo src/protobuf/topology.lo \
+	src/kernel/container.lo src/kernel/cgroup.lo \
+	src/kernel/manager.lo src/kernel/stream.lo \
+	src/kernel/scheduler.lo src/kernel/vertex.lo \
+	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
+	src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -1143,15 +1144,15 @@ TESTS = unittest/archive.sh unittest/statgrab.sh unittest/webui.sh \
 lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/csv/csv.cpp src/contrib/debs18/feeder.cpp \
 	src/contrib/debs18/query2.cpp src/contrib/debs18/dataframe.cpp \
-	src/exit.cpp src/event/reactor.cpp src/event/event.cpp \
-	src/event/select.cpp src/event/epoll.cpp src/ipc/socket.cpp \
-	src/ipc/block_file.cpp src/ipc/ipc.cpp src/ipc/domain.cpp \
-	src/ipc/fifo.cpp src/ipc/notifier.cpp src/ipc/pipe.cpp \
-	src/ipc/shm.cpp src/ipc/streambuf.cpp src/utility/os.cpp \
-	src/utility/http_parser.cpp src/utility/table.cpp \
-	src/ml/loss.cpp src/ml/rnn.cpp src/ml/naive_bayes.cpp \
-	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
-	src/ml/layer.cpp src/error.cpp src/policy.cpp \
+	src/cell/feeder/mnist.cpp src/exit.cpp src/event/reactor.cpp \
+	src/event/event.cpp src/event/select.cpp src/event/epoll.cpp \
+	src/ipc/socket.cpp src/ipc/block_file.cpp src/ipc/ipc.cpp \
+	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/notifier.cpp \
+	src/ipc/pipe.cpp src/ipc/shm.cpp src/ipc/streambuf.cpp \
+	src/utility/os.cpp src/utility/http_parser.cpp \
+	src/utility/table.cpp src/ml/loss.cpp src/ml/rnn.cpp \
+	src/ml/naive_bayes.cpp src/ml/linear.cpp src/ml/optimizer.cpp \
+	src/ml/dnn.cpp src/ml/layer.cpp src/error.cpp src/policy.cpp \
 	src/protobuf/loadinfo.cpp src/protobuf/resource.cpp \
 	src/protobuf/frontier.cpp src/protobuf/taskinfo.cpp \
 	src/protobuf/protobuf.cpp src/protobuf/solution.cpp \
@@ -1342,6 +1343,14 @@ src/contrib/debs18/query2.lo: src/contrib/debs18/$(am__dirstamp) \
 	src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
 src/contrib/debs18/dataframe.lo: src/contrib/debs18/$(am__dirstamp) \
 	src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
+src/cell/feeder/$(am__dirstamp):
+	@$(MKDIR_P) src/cell/feeder
+	@: > src/cell/feeder/$(am__dirstamp)
+src/cell/feeder/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) src/cell/feeder/$(DEPDIR)
+	@: > src/cell/feeder/$(DEPDIR)/$(am__dirstamp)
+src/cell/feeder/mnist.lo: src/cell/feeder/$(am__dirstamp) \
+	src/cell/feeder/$(DEPDIR)/$(am__dirstamp)
 src/exit.lo: src/$(am__dirstamp) src/$(DEPDIR)/$(am__dirstamp)
 src/event/$(am__dirstamp):
 	@$(MKDIR_P) src/event
@@ -1918,6 +1927,8 @@ mostlyclean-compile:
 	-rm -f main/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/*.lo
+	-rm -f src/cell/feeder/*.$(OBJEXT)
+	-rm -f src/cell/feeder/*.lo
 	-rm -f src/contrib/debs18/*.$(OBJEXT)
 	-rm -f src/contrib/debs18/*.lo
 	-rm -f src/csv/*.$(OBJEXT)
@@ -1960,6 +1971,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/exit.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/policy.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@src/cell/feeder/$(DEPDIR)/mnist.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/dataframe.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/feeder.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/query2.Plo@am__quote@
@@ -2052,6 +2064,7 @@ clean-libtool:
 	-rm -rf example/.libs example/_libs
 	-rm -rf lib/.libs lib/_libs
 	-rm -rf src/.libs src/_libs
+	-rm -rf src/cell/feeder/.libs src/cell/feeder/_libs
 	-rm -rf src/contrib/debs18/.libs src/contrib/debs18/_libs
 	-rm -rf src/csv/.libs src/csv/_libs
 	-rm -rf src/event/.libs src/event/_libs
@@ -2757,6 +2770,8 @@ distclean-generic:
 	-rm -f main/$(am__dirstamp)
 	-rm -f src/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/$(am__dirstamp)
+	-rm -f src/cell/feeder/$(DEPDIR)/$(am__dirstamp)
+	-rm -f src/cell/feeder/$(am__dirstamp)
 	-rm -f src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/contrib/debs18/$(am__dirstamp)
 	-rm -f src/csv/$(DEPDIR)/$(am__dirstamp)
@@ -2793,7 +2808,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-libtool distclean-tags
@@ -2846,7 +2861,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -88,12 +88,12 @@ class Graph {
 
 template <template<typename...> class C, typename... ArgsT>
 auto Graph::insert(ArgsT&&... args) {
-  return C(this, std::forward<ArgsT>(args)...);
+  return C(*this, std::forward<ArgsT>(args)...);
 }
 
 template <typename C, typename... ArgsT>
 auto Graph::insert(ArgsT&&... args) {
-  return C(this, std::forward<ArgsT>(args)...);
+  return C(*this, std::forward<ArgsT>(args)...);
 }
 
 
