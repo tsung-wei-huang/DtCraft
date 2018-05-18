@@ -68,7 +68,7 @@ To install and run DtCraft, you only need the following:
 
 # Learn More
 + <a href="http://dtcraft.web.engr.illinois.edu/">Official website</a>
-+ <a href="http://dtcraft.web.engr.illinois.edu/papers/iccad17_paper.pdf">DtCraft ICCAD17 paper</a>
++ <a href="http://dtcraft.web.engr.illinois.edu/papers/tcad18_paper.pdf">DtCraft TCAD18 paper</a>
 
 # Get Involved
 + Report bugs/issues by submitting a <a href="https://github.com/twhuang-uiuc/DtCraft/issues">GitHub issue</a>.
