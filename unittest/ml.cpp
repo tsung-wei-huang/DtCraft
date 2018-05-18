@@ -69,7 +69,7 @@ TEST_CASE("ClassifierTest.Dnn") {
   nn1.train(Dtr, Ltr, 5, 64, 0.01f, [&, i=0] (auto& nn1) mutable {
         auto c = ((nn1.infer(Dte) - Lte).array() == 0).count();
         auto t = Dte.rows();
-        dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
+        //dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
       });
   
   auto acc1 = ((nn1.infer(Dte) - Lte).array() == 0).count() / static_cast<float>(Lte.rows());
@@ -104,7 +104,7 @@ TEST_CASE("RegressorTest.Dnn") {
   float pmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
 
   dnn.train(X, Y, 30, 15, 0.01f, [&, i=0] (dtc::ml::DnnRegressor& dnnr) mutable {
-    printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
+    //printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(X)-Y).array().square().sum() / (2.0f*X.rows()));
   });
 
   float cmse = (dnn.infer(X) - Y).array().square().sum() / (2.0f*X.rows());
