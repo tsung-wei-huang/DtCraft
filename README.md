@@ -1,7 +1,7 @@
 <img src="https://github.com/twhuang-uiuc/DtCraft/blob/master/logo.jpg" width="50%">
 
 # What's DtCraft?
-DtCraft is a modern C++-based programming engine to streamline cluster computing. It offers a new powerful programming model called *stream graph* to build parallel and distributed workloads. Once an application is cast into this framework, the kernel transparently performs job distribution for you. You don't have to worry about system programming and can focus on high-level development!
+DtCraft is a general-purpose distributed programming system based on data-parallel streams. It offers a new powerful programming model called *stream graph* to build parallel and distributed workloads. Once an application is cast into this framework, the kernel transparently performs job distribution for you. You don't have to worry about system programming and can focus on high-level development!
 
 |![](http://dtcraft.web.engr.illinois.edu/images/stream_graph.jpg)  |  ![](http://dtcraft.web.engr.illinois.edu/images/stream_graph_code.png)|
 |---|---|
