@@ -100,7 +100,7 @@ noinst_PROGRAMS = bin/master$(EXEEXT) bin/agent$(EXEEXT) \
 	example/kmeans$(EXEEXT) example/prime$(EXEEXT) \
 	example/operator$(EXEEXT) example/external$(EXEEXT) \
 	example/mnist$(EXEEXT) example/reduce_sum$(EXEEXT) \
-	app/debs18/debs18$(EXEEXT) unittest/archive$(EXEEXT) \
+	app/demo/demo$(EXEEXT) unittest/archive$(EXEEXT) \
 	unittest/statgrab$(EXEEXT) unittest/webui$(EXEEXT) \
 	unittest/ipc$(EXEEXT) unittest/reactor$(EXEEXT) \
 	unittest/utility$(EXEEXT) unittest/traits$(EXEEXT) \
@@ -169,26 +169,24 @@ LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 lib_libDtCraft_la_LIBADD =
 am__dirstamp = $(am__leading_dot)dirstamp
 am_lib_libDtCraft_la_OBJECTS = src/device.lo src/statgrab/statgrab.lo \
-	src/csv/csv.lo src/contrib/debs18/feeder.lo \
-	src/contrib/debs18/query2.lo src/contrib/debs18/dataframe.lo \
-	src/cell/feeder/mnist.lo src/exit.lo src/event/reactor.lo \
-	src/event/event.lo src/event/select.lo src/event/epoll.lo \
-	src/ipc/socket.lo src/ipc/block_file.lo src/ipc/ipc.lo \
-	src/ipc/domain.lo src/ipc/fifo.lo src/ipc/notifier.lo \
-	src/ipc/pipe.lo src/ipc/shm.lo src/ipc/streambuf.lo \
-	src/utility/os.lo src/utility/http_parser.lo \
-	src/utility/table.lo src/ml/loss.lo src/ml/rnn.lo \
-	src/ml/naive_bayes.lo src/ml/linear.lo src/ml/optimizer.lo \
-	src/ml/dnn.lo src/ml/layer.lo src/error.lo src/policy.lo \
-	src/protobuf/loadinfo.lo src/protobuf/resource.lo \
-	src/protobuf/frontier.lo src/protobuf/taskinfo.lo \
-	src/protobuf/protobuf.lo src/protobuf/solution.lo \
-	src/protobuf/common.lo src/protobuf/topology.lo \
-	src/kernel/container.lo src/kernel/cgroup.lo \
-	src/kernel/manager.lo src/kernel/stream.lo \
-	src/kernel/scheduler.lo src/kernel/vertex.lo \
-	src/kernel/graph.lo src/kernel/master.lo src/kernel/agent.lo \
-	src/kernel/executor.lo src/webui/webui.lo
+	src/csv/csv.lo src/cell/feeder/mnist.lo src/exit.lo \
+	src/event/reactor.lo src/event/event.lo src/event/select.lo \
+	src/event/epoll.lo src/ipc/socket.lo src/ipc/block_file.lo \
+	src/ipc/ipc.lo src/ipc/domain.lo src/ipc/fifo.lo \
+	src/ipc/notifier.lo src/ipc/pipe.lo src/ipc/shm.lo \
+	src/ipc/streambuf.lo src/utility/os.lo \
+	src/utility/http_parser.lo src/utility/table.lo src/ml/loss.lo \
+	src/ml/rnn.lo src/ml/naive_bayes.lo src/ml/linear.lo \
+	src/ml/optimizer.lo src/ml/dnn.lo src/ml/layer.lo src/error.lo \
+	src/policy.lo src/protobuf/loadinfo.lo \
+	src/protobuf/resource.lo src/protobuf/frontier.lo \
+	src/protobuf/taskinfo.lo src/protobuf/protobuf.lo \
+	src/protobuf/solution.lo src/protobuf/common.lo \
+	src/protobuf/topology.lo src/kernel/container.lo \
+	src/kernel/cgroup.lo src/kernel/manager.lo \
+	src/kernel/stream.lo src/kernel/scheduler.lo \
+	src/kernel/vertex.lo src/kernel/graph.lo src/kernel/master.lo \
+	src/kernel/agent.lo src/kernel/executor.lo src/webui/webui.lo
 lib_libDtCraft_la_OBJECTS = $(am_lib_libDtCraft_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -196,9 +194,9 @@ am__v_lt_0 = --silent
 am__v_lt_1 = 
 PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(pkglibexec_PROGRAMS) \
 	$(sbin_PROGRAMS)
-am_app_debs18_debs18_OBJECTS = app/debs18/debs18.$(OBJEXT)
-app_debs18_debs18_OBJECTS = $(am_app_debs18_debs18_OBJECTS)
-app_debs18_debs18_DEPENDENCIES = lib/libDtCraft.la
+am_app_demo_demo_OBJECTS = app/demo/demo.$(OBJEXT)
+app_demo_demo_OBJECTS = $(am_app_demo_demo_OBJECTS)
+app_demo_demo_DEPENDENCIES = lib/libDtCraft.la
 am_bin_agent_OBJECTS = main/agent.$(OBJEXT)
 bin_agent_OBJECTS = $(am_bin_agent_OBJECTS)
 bin_agent_DEPENDENCIES = lib/libDtCraft.la
@@ -308,7 +306,7 @@ AM_V_CXXLD = $(am__v_CXXLD_@AM_V@)
 am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
-SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_debs18_debs18_SOURCES) \
+SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(bin_agent_SOURCES) $(bin_master_SOURCES) \
 	$(example_external_SOURCES) $(example_feeder_SOURCES) \
 	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
@@ -320,19 +318,18 @@ SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_debs18_debs18_SOURCES) \
 	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
 	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
 	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
-DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) \
-	$(app_debs18_debs18_SOURCES) $(bin_agent_SOURCES) \
-	$(bin_master_SOURCES) $(example_external_SOURCES) \
-	$(example_feeder_SOURCES) $(example_hello_world_SOURCES) \
-	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
-	$(example_operator_SOURCES) $(example_pi_SOURCES) \
-	$(example_prime_SOURCES) $(example_prober_SOURCES) \
-	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
-	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
-	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
-	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
-	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
-	$(unittest_webui_SOURCES)
+DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
+	$(bin_agent_SOURCES) $(bin_master_SOURCES) \
+	$(example_external_SOURCES) $(example_feeder_SOURCES) \
+	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
+	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
+	$(example_pi_SOURCES) $(example_prime_SOURCES) \
+	$(example_prober_SOURCES) $(example_reduce_sum_SOURCES) \
+	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
+	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
+	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
+	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
+	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -769,11 +766,6 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/device.hpp include/dtc/exit.hpp \
 	include/dtc/statgrab/statgrab.hpp include/dtc/error.hpp \
 	include/dtc/csv/csv.hpp include/dtc/traits.hpp \
-	include/dtc/contrib/debs18/debs18.hpp \
-	include/dtc/contrib/debs18/query2.hpp \
-	include/dtc/contrib/debs18/feeder.hpp \
-	include/dtc/contrib/debs18/query1.hpp \
-	include/dtc/contrib/debs18/dataframe.hpp \
 	include/dtc/cell/cell.hpp include/dtc/cell/feeder/feeder.hpp \
 	include/dtc/cell/feeder/mnist.hpp \
 	include/dtc/cell/feeder/file.hpp \
@@ -1142,17 +1134,16 @@ TESTS = unittest/archive.sh unittest/statgrab.sh unittest/webui.sh \
 	unittest/traits.sh unittest/scheduler.sh unittest/ml.sh \
 	unittest/concurrent.sh
 lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
-	src/csv/csv.cpp src/contrib/debs18/feeder.cpp \
-	src/contrib/debs18/query2.cpp src/contrib/debs18/dataframe.cpp \
-	src/cell/feeder/mnist.cpp src/exit.cpp src/event/reactor.cpp \
-	src/event/event.cpp src/event/select.cpp src/event/epoll.cpp \
-	src/ipc/socket.cpp src/ipc/block_file.cpp src/ipc/ipc.cpp \
-	src/ipc/domain.cpp src/ipc/fifo.cpp src/ipc/notifier.cpp \
-	src/ipc/pipe.cpp src/ipc/shm.cpp src/ipc/streambuf.cpp \
-	src/utility/os.cpp src/utility/http_parser.cpp \
-	src/utility/table.cpp src/ml/loss.cpp src/ml/rnn.cpp \
-	src/ml/naive_bayes.cpp src/ml/linear.cpp src/ml/optimizer.cpp \
-	src/ml/dnn.cpp src/ml/layer.cpp src/error.cpp src/policy.cpp \
+	src/csv/csv.cpp src/cell/feeder/mnist.cpp src/exit.cpp \
+	src/event/reactor.cpp src/event/event.cpp src/event/select.cpp \
+	src/event/epoll.cpp src/ipc/socket.cpp src/ipc/block_file.cpp \
+	src/ipc/ipc.cpp src/ipc/domain.cpp src/ipc/fifo.cpp \
+	src/ipc/notifier.cpp src/ipc/pipe.cpp src/ipc/shm.cpp \
+	src/ipc/streambuf.cpp src/utility/os.cpp \
+	src/utility/http_parser.cpp src/utility/table.cpp \
+	src/ml/loss.cpp src/ml/rnn.cpp src/ml/naive_bayes.cpp \
+	src/ml/linear.cpp src/ml/optimizer.cpp src/ml/dnn.cpp \
+	src/ml/layer.cpp src/error.cpp src/policy.cpp \
 	src/protobuf/loadinfo.cpp src/protobuf/resource.cpp \
 	src/protobuf/frontier.cpp src/protobuf/taskinfo.cpp \
 	src/protobuf/protobuf.cpp src/protobuf/solution.cpp \
@@ -1187,8 +1178,8 @@ example_mnist_SOURCES = example/mnist.cpp
 example_mnist_LDADD = lib/libDtCraft.la
 example_reduce_sum_SOURCES = example/reduce_sum.cpp
 example_reduce_sum_LDADD = lib/libDtCraft.la
-app_debs18_debs18_LDADD = lib/libDtCraft.la
-app_debs18_debs18_SOURCES = app/debs18/debs18.cpp
+app_demo_demo_LDADD = lib/libDtCraft.la
+app_demo_demo_SOURCES = app/demo/demo.cpp
 unittest_archive_LDADD = lib/libDtCraft.la $(TEST_LIBS)
 unittest_archive_SOURCES = unittest/archive.cpp
 unittest_statgrab_LDADD = lib/libDtCraft.la $(TEST_LIBS)
@@ -1331,18 +1322,6 @@ src/csv/$(DEPDIR)/$(am__dirstamp):
 	@: > src/csv/$(DEPDIR)/$(am__dirstamp)
 src/csv/csv.lo: src/csv/$(am__dirstamp) \
 	src/csv/$(DEPDIR)/$(am__dirstamp)
-src/contrib/debs18/$(am__dirstamp):
-	@$(MKDIR_P) src/contrib/debs18
-	@: > src/contrib/debs18/$(am__dirstamp)
-src/contrib/debs18/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) src/contrib/debs18/$(DEPDIR)
-	@: > src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
-src/contrib/debs18/feeder.lo: src/contrib/debs18/$(am__dirstamp) \
-	src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
-src/contrib/debs18/query2.lo: src/contrib/debs18/$(am__dirstamp) \
-	src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
-src/contrib/debs18/dataframe.lo: src/contrib/debs18/$(am__dirstamp) \
-	src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
 src/cell/feeder/$(am__dirstamp):
 	@$(MKDIR_P) src/cell/feeder
 	@: > src/cell/feeder/$(am__dirstamp)
@@ -1649,18 +1628,18 @@ clean-sbinPROGRAMS:
 	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
 	echo " rm -f" $$list; \
 	rm -f $$list
-app/debs18/$(am__dirstamp):
-	@$(MKDIR_P) app/debs18
-	@: > app/debs18/$(am__dirstamp)
-app/debs18/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) app/debs18/$(DEPDIR)
-	@: > app/debs18/$(DEPDIR)/$(am__dirstamp)
-app/debs18/debs18.$(OBJEXT): app/debs18/$(am__dirstamp) \
-	app/debs18/$(DEPDIR)/$(am__dirstamp)
+app/demo/$(am__dirstamp):
+	@$(MKDIR_P) app/demo
+	@: > app/demo/$(am__dirstamp)
+app/demo/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) app/demo/$(DEPDIR)
+	@: > app/demo/$(DEPDIR)/$(am__dirstamp)
+app/demo/demo.$(OBJEXT): app/demo/$(am__dirstamp) \
+	app/demo/$(DEPDIR)/$(am__dirstamp)
 
-app/debs18/debs18$(EXEEXT): $(app_debs18_debs18_OBJECTS) $(app_debs18_debs18_DEPENDENCIES) $(EXTRA_app_debs18_debs18_DEPENDENCIES) app/debs18/$(am__dirstamp)
-	@rm -f app/debs18/debs18$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(app_debs18_debs18_OBJECTS) $(app_debs18_debs18_LDADD) $(LIBS)
+app/demo/demo$(EXEEXT): $(app_demo_demo_OBJECTS) $(app_demo_demo_DEPENDENCIES) $(EXTRA_app_demo_demo_DEPENDENCIES) app/demo/$(am__dirstamp)
+	@rm -f app/demo/demo$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(app_demo_demo_OBJECTS) $(app_demo_demo_LDADD) $(LIBS)
 main/$(am__dirstamp):
 	@$(MKDIR_P) main
 	@: > main/$(am__dirstamp)
@@ -1922,15 +1901,13 @@ uninstall-nodist_sbinSCRIPTS:
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f app/debs18/*.$(OBJEXT)
+	-rm -f app/demo/*.$(OBJEXT)
 	-rm -f example/*.$(OBJEXT)
 	-rm -f main/*.$(OBJEXT)
 	-rm -f src/*.$(OBJEXT)
 	-rm -f src/*.lo
 	-rm -f src/cell/feeder/*.$(OBJEXT)
 	-rm -f src/cell/feeder/*.lo
-	-rm -f src/contrib/debs18/*.$(OBJEXT)
-	-rm -f src/contrib/debs18/*.lo
 	-rm -f src/csv/*.$(OBJEXT)
 	-rm -f src/csv/*.lo
 	-rm -f src/event/*.$(OBJEXT)
@@ -1954,7 +1931,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@app/debs18/$(DEPDIR)/debs18.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@app/demo/$(DEPDIR)/demo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/external.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/feeder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/hello_world.Po@am__quote@
@@ -1972,9 +1949,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/exit.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/policy.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/cell/feeder/$(DEPDIR)/mnist.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/dataframe.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/feeder.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@src/contrib/debs18/$(DEPDIR)/query2.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/csv/$(DEPDIR)/csv.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/epoll.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/event/$(DEPDIR)/event.Plo@am__quote@
@@ -2059,13 +2033,12 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-	-rm -rf app/debs18/.libs app/debs18/_libs
+	-rm -rf app/demo/.libs app/demo/_libs
 	-rm -rf bin/.libs bin/_libs
 	-rm -rf example/.libs example/_libs
 	-rm -rf lib/.libs lib/_libs
 	-rm -rf src/.libs src/_libs
 	-rm -rf src/cell/feeder/.libs src/cell/feeder/_libs
-	-rm -rf src/contrib/debs18/.libs src/contrib/debs18/_libs
 	-rm -rf src/csv/.libs src/csv/_libs
 	-rm -rf src/event/.libs src/event/_libs
 	-rm -rf src/ipc/.libs src/ipc/_libs
@@ -2760,8 +2733,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f app/debs18/$(DEPDIR)/$(am__dirstamp)
-	-rm -f app/debs18/$(am__dirstamp)
+	-rm -f app/demo/$(DEPDIR)/$(am__dirstamp)
+	-rm -f app/demo/$(am__dirstamp)
 	-rm -f bin/$(am__dirstamp)
 	-rm -f example/$(DEPDIR)/$(am__dirstamp)
 	-rm -f example/$(am__dirstamp)
@@ -2772,8 +2745,6 @@ distclean-generic:
 	-rm -f src/$(am__dirstamp)
 	-rm -f src/cell/feeder/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/cell/feeder/$(am__dirstamp)
-	-rm -f src/contrib/debs18/$(DEPDIR)/$(am__dirstamp)
-	-rm -f src/contrib/debs18/$(am__dirstamp)
 	-rm -f src/csv/$(DEPDIR)/$(am__dirstamp)
 	-rm -f src/csv/$(am__dirstamp)
 	-rm -f src/event/$(DEPDIR)/$(am__dirstamp)
@@ -2808,7 +2779,7 @@ clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
-	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/demo/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-hdr distclean-libtool distclean-tags
@@ -2861,7 +2832,7 @@ installcheck-am:
 maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
-	-rm -rf app/debs18/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/contrib/debs18/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
+	-rm -rf app/demo/$(DEPDIR) example/$(DEPDIR) main/$(DEPDIR) src/$(DEPDIR) src/cell/feeder/$(DEPDIR) src/csv/$(DEPDIR) src/event/$(DEPDIR) src/ipc/$(DEPDIR) src/kernel/$(DEPDIR) src/ml/$(DEPDIR) src/protobuf/$(DEPDIR) src/statgrab/$(DEPDIR) src/utility/$(DEPDIR) src/webui/$(DEPDIR) unittest/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

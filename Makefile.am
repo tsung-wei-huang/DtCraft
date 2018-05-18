@@ -62,11 +62,6 @@ nobase_pkginclude_HEADERS += include/dtc/statgrab/statgrab.hpp
 nobase_pkginclude_HEADERS += include/dtc/error.hpp
 nobase_pkginclude_HEADERS += include/dtc/csv/csv.hpp
 nobase_pkginclude_HEADERS += include/dtc/traits.hpp
-nobase_pkginclude_HEADERS += include/dtc/contrib/debs18/debs18.hpp
-nobase_pkginclude_HEADERS += include/dtc/contrib/debs18/query2.hpp
-nobase_pkginclude_HEADERS += include/dtc/contrib/debs18/feeder.hpp
-nobase_pkginclude_HEADERS += include/dtc/contrib/debs18/query1.hpp
-nobase_pkginclude_HEADERS += include/dtc/contrib/debs18/dataframe.hpp
 nobase_pkginclude_HEADERS += include/dtc/cell/cell.hpp
 nobase_pkginclude_HEADERS += include/dtc/cell/feeder/feeder.hpp
 nobase_pkginclude_HEADERS += include/dtc/cell/feeder/mnist.hpp
@@ -468,9 +463,6 @@ lib_libDtCraft_la_SOURCES  =
 lib_libDtCraft_la_SOURCES += src/device.cpp
 lib_libDtCraft_la_SOURCES += src/statgrab/statgrab.cpp
 lib_libDtCraft_la_SOURCES += src/csv/csv.cpp
-lib_libDtCraft_la_SOURCES += src/contrib/debs18/feeder.cpp
-lib_libDtCraft_la_SOURCES += src/contrib/debs18/query2.cpp
-lib_libDtCraft_la_SOURCES += src/contrib/debs18/dataframe.cpp
 lib_libDtCraft_la_SOURCES += src/cell/feeder/mnist.cpp
 lib_libDtCraft_la_SOURCES += src/exit.cpp
 lib_libDtCraft_la_SOURCES += src/event/reactor.cpp
@@ -584,12 +576,12 @@ example_reduce_sum_LDADD    = lib/libDtCraft.la
 
 #### App ####
 
-# Application app/debs18/debs18
-noinst_PROGRAMS += app/debs18/debs18
-app_debs18_debs18_LDADD =
-app_debs18_debs18_LDADD += lib/libDtCraft.la
-app_debs18_debs18_SOURCES =
-app_debs18_debs18_SOURCES += app/debs18/debs18.cpp
+# Application app/demo/demo
+noinst_PROGRAMS += app/demo/demo
+app_demo_demo_LDADD =
+app_demo_demo_LDADD += lib/libDtCraft.la
+app_demo_demo_SOURCES =
+app_demo_demo_SOURCES += app/demo/demo.cpp
 
 #### Unittest ####
 
