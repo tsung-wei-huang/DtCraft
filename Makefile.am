@@ -454,7 +454,6 @@ nobase_pkginclude_HEADERS += include/dtc/kernel/scheduler.hpp
 nobase_pkginclude_HEADERS += include/dtc/kernel/master.hpp
 nobase_pkginclude_HEADERS += include/dtc/kernel/agent.hpp
 nobase_pkginclude_HEADERS += include/dtc/kernel/stream.hpp
-nobase_pkginclude_HEADERS += include/dtc/kernel/.agent.hpp.swp
 nobase_pkginclude_HEADERS += include/dtc/policy.hpp
 nobase_pkginclude_HEADERS += include/dtc/webui/webui.hpp
 

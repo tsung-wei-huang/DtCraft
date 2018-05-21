@@ -1113,8 +1113,7 @@ nobase_pkginclude_HEADERS = include/dtc/archive/binary.hpp \
 	include/dtc/kernel/vertex.hpp include/dtc/kernel/graph.hpp \
 	include/dtc/kernel/scheduler.hpp include/dtc/kernel/master.hpp \
 	include/dtc/kernel/agent.hpp include/dtc/kernel/stream.hpp \
-	include/dtc/kernel/.agent.hpp.swp include/dtc/policy.hpp \
-	include/dtc/webui/webui.hpp
+	include/dtc/policy.hpp include/dtc/webui/webui.hpp
 dist_bin_SCRIPTS = 
 dist_pkglibexec_SCRIPTS = 
 nobase_dist_pkgdata_DATA = 
