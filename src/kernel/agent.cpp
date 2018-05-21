@@ -324,6 +324,7 @@ bool Agent::_deploy(Task& task) {
     // Set up the memory
     executor.container.cgroup().memory_limit_in_bytes(resource.memory_limit_in_bytes);
 
+    // TODO
     // Set up the cpu
     
     // Spawn the container.

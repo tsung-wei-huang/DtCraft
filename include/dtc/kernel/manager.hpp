@@ -23,10 +23,10 @@
 #include <dtc/concurrent/unique_guard.hpp>
 #include <dtc/concurrent/shared_guard.hpp>
 #include <dtc/archive/binary.hpp>
-#include <dtc/kernel/container.hpp>
+#include <dtc/lxc/container.hpp>
 #include <dtc/protobuf/protobuf.hpp>
 #include <dtc/webui/webui.hpp>
-#include <dtc/kernel/cgroup.hpp>
+#include <dtc/lxc/cgroup.hpp>
 
 namespace dtc {
 

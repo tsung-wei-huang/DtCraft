@@ -11,7 +11,7 @@
  *                                                                            *
  ******************************************************************************/
 
-#include <dtc/kernel/cgroup.hpp>
+#include <dtc/lxc/cgroup.hpp>
 
 namespace dtc {
 
