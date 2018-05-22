@@ -20,7 +20,7 @@ sbin=`cd $sbin; pwd`
 # Source the utilities.
 if [ ! -f $sbin/common.sh ]; then
   echo "$sbin/common.sh not found"
-  exit -1
+  exit 1
 fi
 
 . $sbin/common.sh
