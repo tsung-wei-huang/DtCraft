@@ -215,14 +215,16 @@ void ControlGroup::_set(const std::filesystem::path& path, std::string_view valu
 
 // Function: _get
 std::string ControlGroup::_get(const std::filesystem::path& path) const {
-  if(std::ifstream ifs(path); ifs.good()) {
-    std::ostringstream oss;
-    oss << ifs.rdbuf();
-    return oss.str();
-  }
-  else {
+
+  std::ifstream ifs(path);
+
+  if(!ifs.good()) {
     DTC_THROW("failed to open ", path, " (", strerror(errno), ")");
   }
+
+  std::ostringstream oss;
+  oss << ifs.rdbuf();
+  return oss.str();
 }
 
 // Function: cpuset_cpus

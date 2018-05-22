@@ -131,6 +131,7 @@ inline FileLogPolicy::~FileLogPolicy() {
 // Procedure: write
 inline void FileLogPolicy::_write(const std::string& msg) {
   *(_os) << msg;
+  _os->flush();
 }
 
 // Procedure: open

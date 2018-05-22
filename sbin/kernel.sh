@@ -75,34 +75,8 @@ kernel() {
         # (TODO: ideally we only have to synchronize conf folder) - now for debugging purpose.
         rsync_src=$DTC_HOME/conf/
         rsync_dst=$user@$host:$home/conf/
-        ssh_cmd="cd ${home}/sbin; ./daemonize.sh --action=$action --target=$target --host=$host"
+        ssh_cmd="sudo ${home}/sbin/daemonize.sh --action=$action --target=$target --host=$host"
       ;;
-
-      # remove_logs
-      # remove all log files
-      remove_logs)
-        logi "remove $atpeer/workspace/log/*"  
-        ssh_cmd="rm -rf ${home}/workspace/log/*"
-      ;;
-
-      # list
-      # list all master and agents
-      list)
-        logi "$target $atpeer"
-      ;;
-      
-      # bootstrap
-      #
-      # Synchronize all remote dtc projects with the local machine (this)
-      #
-      #bootstrap)
-
-      #  logi "$action $target $atpeer"
-      #  rsync_src=$DTC_HOME/
-      #  rsync_dst=$user@$host:$home/
-      #  ssh_cmd="cd ${home}; \
-      #           ./configure &> /dev/null; make clean &> /dev/null; make &> /dev/null"
-      #;;
 
       # Unknown options.
       *)
@@ -115,15 +89,15 @@ kernel() {
 
       if [[ ! -z $rsync_src && ! -z $rsync_dst ]]; then
         rsync -ar --delete --exclude=".*" -e ssh --rsync-path="mkdir -p $home && rsync" \
-            $rsync_src $rsync_dst || loge "rsync $atpeer $FAILED"
+            $rsync_src $rsync_dst || loge "rsync conf/ $FAILED"
       fi
        
       if [[ ! -z $ssh_cmd ]]; then
-        ssh $ssh_opt $user@$host $ssh_cmd || loge "$ssh_cmd $atpeer $FAILED"
+        ssh $ssh_opt $user@$host "$ssh_cmd" || loge "$ssh_cmd $FAILED"
       fi
     }
     
-    # Invoke the task in background (for parallel processing).
+    # run the task
     task &
 
   done
@@ -132,6 +106,6 @@ kernel() {
   wait
 }
 
-kernel masters 1 master
-kernel agents num_agents agent
+kernel masters 1 dtc-master
+kernel agents num_agents dtc-agent
 

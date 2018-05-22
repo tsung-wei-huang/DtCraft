@@ -104,9 +104,10 @@ echo""
 
 for f in `find main -name *.cpp`
 do
-  filename=$(basename "$f" .cpp)
+  filename=`echo $(basename "$f" .cpp) | sed -e 's/-/_/g'`
   echo "# Program: $f"
-  echo "noinst_PROGRAMS += bin/$filename"
+  echo "noinst_PROGRAMS += bin/$(basename "$f" .cpp)"
+  echo "bin_${filename}_SOURCES  = $f"
   echo "bin_${filename}_SOURCES  = $f"
   echo "bin_${filename}_LDADD    = lib/libDtCraft.la"
   echo ""

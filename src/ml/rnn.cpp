@@ -15,14 +15,14 @@
 
 namespace dtc::ml {
 
-// Function: __clip
-static void __clip(Eigen::MatrixXf& x, float l, float u) {
-  for(Eigen::MatrixXf::Index c=0; c<x.cols(); ++c) {
-    for(Eigen::MatrixXf::Index r=0; r<x.rows(); ++r) {
-      x(r, c) = std::clamp(x(r, c), l, u);
-    }
-  }
-}
+//// Function: __clip
+//static void __clip(Eigen::MatrixXf& x, float l, float u) {
+//  for(Eigen::MatrixXf::Index c=0; c<x.cols(); ++c) {
+//    for(Eigen::MatrixXf::Index r=0; r<x.rows(); ++r) {
+//      x(r, c) = std::clamp(x(r, c), l, u);
+//    }
+//  }
+//}
 
 // ------------------------------------------------------------------------------------------------
 

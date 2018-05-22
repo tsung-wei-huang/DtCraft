@@ -3,8 +3,6 @@
 # -------------------------------------------------------------------------------------------------
 # Color setting.
 # -------------------------------------------------------------------------------------------------
-sbin=`dirname $0`
-
 if [ $TERM != "xterm*" ]; then
   export TERM=xterm-256color
 fi
@@ -31,27 +29,12 @@ RUNNING=$bdcyan"[RUNNING]"$reset
 STOPPED=$bdcyan"[STOPPED]"$reset
 
 logi() {
-  #printf "✔ `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$@"
   printf "%s${reset}\n" "$@"
 }
 
 loge() {
-  #printf "${bold}${red}✖ %5s `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$$" "$@"
-  #printf "${bold}${red}✖ `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$@"
   printf "${bold}${red}%s${reset}\n" "$@"
-  exit -1
-}
-
-logw() { 
-  #printf "${bold}${yellow}➜ %5s `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$$" "$@"
-  #printf "${bold}${yellow}➜ `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$@"
-  printf "${bold}${yellow}%s${reset}\n" "$@"
-}
-
-logd() {
-  #printf "${bold}${cyan}○ %5s `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$$" "$@"
-  #printf "${bold}${cyan}○ `date +%Y-%m-%d\ %H:%M:%S`] %s${reset}\n" "$@"
-  printf "${bold}${cyan}%s${reset}\n" "$@"
+  exit 1
 }
 
 # Procedure: sync
@@ -65,8 +48,6 @@ sync() {
     loge "Failed to synchronize $2"
   fi
 }
-
-
 
 # Procedure: read_hosts
 # $1: host file
@@ -125,7 +106,7 @@ ssh_opt="-n -x -o StrictHostKeyChecking=no"
 # -------------------------------------------------------------------------------------------------
 # Set the nohup options.
 # -------------------------------------------------------------------------------------------------
-nohup_opt="nice -n 0"
+#nohup_opt="nice -n 0"
 
 # -------------------------------------------------------------------------------------------------
 # Read the masterlist

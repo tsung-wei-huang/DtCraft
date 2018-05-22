@@ -94,7 +94,7 @@ build_triplet = @build@
 host_triplet = @host@
 sbin_PROGRAMS =
 bin_PROGRAMS =
-noinst_PROGRAMS = bin/master$(EXEEXT) bin/agent$(EXEEXT) \
+noinst_PROGRAMS = bin/dtc-master$(EXEEXT) bin/dtc-agent$(EXEEXT) \
 	example/pi$(EXEEXT) example/hello_world$(EXEEXT) \
 	example/feeder$(EXEEXT) example/prober$(EXEEXT) \
 	example/kmeans$(EXEEXT) example/prime$(EXEEXT) \
@@ -197,12 +197,12 @@ PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS) $(pkglibexec_PROGRAMS) \
 am_app_demo_demo_OBJECTS = app/demo/demo.$(OBJEXT)
 app_demo_demo_OBJECTS = $(am_app_demo_demo_OBJECTS)
 app_demo_demo_DEPENDENCIES = lib/libDtCraft.la
-am_bin_agent_OBJECTS = main/agent.$(OBJEXT)
-bin_agent_OBJECTS = $(am_bin_agent_OBJECTS)
-bin_agent_DEPENDENCIES = lib/libDtCraft.la
-am_bin_master_OBJECTS = main/master.$(OBJEXT)
-bin_master_OBJECTS = $(am_bin_master_OBJECTS)
-bin_master_DEPENDENCIES = lib/libDtCraft.la
+am_bin_dtc_agent_OBJECTS = main/dtc-agent.$(OBJEXT)
+bin_dtc_agent_OBJECTS = $(am_bin_dtc_agent_OBJECTS)
+bin_dtc_agent_DEPENDENCIES = lib/libDtCraft.la
+am_bin_dtc_master_OBJECTS = main/dtc-master.$(OBJEXT)
+bin_dtc_master_OBJECTS = $(am_bin_dtc_master_OBJECTS)
+bin_dtc_master_DEPENDENCIES = lib/libDtCraft.la
 am_example_external_OBJECTS = example/external.$(OBJEXT)
 example_external_OBJECTS = $(am_example_external_OBJECTS)
 example_external_DEPENDENCIES = lib/libDtCraft.la
@@ -307,7 +307,7 @@ am__v_CXXLD_ = $(am__v_CXXLD_@AM_DEFAULT_V@)
 am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
-	$(bin_agent_SOURCES) $(bin_master_SOURCES) \
+	$(bin_dtc_agent_SOURCES) $(bin_dtc_master_SOURCES) \
 	$(example_external_SOURCES) $(example_feeder_SOURCES) \
 	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
 	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
@@ -319,7 +319,7 @@ SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
 	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
 DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
-	$(bin_agent_SOURCES) $(bin_master_SOURCES) \
+	$(bin_dtc_agent_SOURCES) $(bin_dtc_master_SOURCES) \
 	$(example_external_SOURCES) $(example_feeder_SOURCES) \
 	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
 	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
@@ -1153,10 +1153,10 @@ lib_libDtCraft_la_SOURCES = src/device.cpp src/statgrab/statgrab.cpp \
 	src/kernel/graph.cpp src/kernel/master.cpp \
 	src/kernel/agent.cpp src/kernel/executor.cpp \
 	src/webui/webui.cpp
-bin_master_SOURCES = main/master.cpp
-bin_master_LDADD = lib/libDtCraft.la
-bin_agent_SOURCES = main/agent.cpp
-bin_agent_LDADD = lib/libDtCraft.la
+bin_dtc_master_SOURCES = main/dtc-master.cpp
+bin_dtc_master_LDADD = lib/libDtCraft.la
+bin_dtc_agent_SOURCES = main/dtc-agent.cpp
+bin_dtc_agent_LDADD = lib/libDtCraft.la
 example_pi_SOURCES = example/pi.cpp
 example_pi_LDADD = lib/libDtCraft.la
 example_hello_world_SOURCES = example/hello_world.cpp
@@ -1651,21 +1651,21 @@ main/$(am__dirstamp):
 main/$(DEPDIR)/$(am__dirstamp):
 	@$(MKDIR_P) main/$(DEPDIR)
 	@: > main/$(DEPDIR)/$(am__dirstamp)
-main/agent.$(OBJEXT): main/$(am__dirstamp) \
+main/dtc-agent.$(OBJEXT): main/$(am__dirstamp) \
 	main/$(DEPDIR)/$(am__dirstamp)
 bin/$(am__dirstamp):
 	@$(MKDIR_P) bin
 	@: > bin/$(am__dirstamp)
 
-bin/agent$(EXEEXT): $(bin_agent_OBJECTS) $(bin_agent_DEPENDENCIES) $(EXTRA_bin_agent_DEPENDENCIES) bin/$(am__dirstamp)
-	@rm -f bin/agent$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(bin_agent_OBJECTS) $(bin_agent_LDADD) $(LIBS)
-main/master.$(OBJEXT): main/$(am__dirstamp) \
+bin/dtc-agent$(EXEEXT): $(bin_dtc_agent_OBJECTS) $(bin_dtc_agent_DEPENDENCIES) $(EXTRA_bin_dtc_agent_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/dtc-agent$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_dtc_agent_OBJECTS) $(bin_dtc_agent_LDADD) $(LIBS)
+main/dtc-master.$(OBJEXT): main/$(am__dirstamp) \
 	main/$(DEPDIR)/$(am__dirstamp)
 
-bin/master$(EXEEXT): $(bin_master_OBJECTS) $(bin_master_DEPENDENCIES) $(EXTRA_bin_master_DEPENDENCIES) bin/$(am__dirstamp)
-	@rm -f bin/master$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(bin_master_OBJECTS) $(bin_master_LDADD) $(LIBS)
+bin/dtc-master$(EXEEXT): $(bin_dtc_master_OBJECTS) $(bin_dtc_master_DEPENDENCIES) $(EXTRA_bin_dtc_master_DEPENDENCIES) bin/$(am__dirstamp)
+	@rm -f bin/dtc-master$(EXEEXT)
+	$(AM_V_CXXLD)$(CXXLINK) $(bin_dtc_master_OBJECTS) $(bin_dtc_master_LDADD) $(LIBS)
 example/$(am__dirstamp):
 	@$(MKDIR_P) example
 	@: > example/$(am__dirstamp)
@@ -1949,8 +1949,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prober.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/reduce_sum.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/agent.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/master.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/dtc-agent.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/dtc-master.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/device.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/error.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@src/$(DEPDIR)/exit.Plo@am__quote@
