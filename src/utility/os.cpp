@@ -472,7 +472,7 @@ pid_t spawn(const char* file, char *const argv[], char *const envp[]) {
       ::close(fd[0]);
       assert(::waitpid(pid, nullptr, 0) == pid);
       pid = -1;
-      throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)), "Exec failed");
+      throw std::system_error(std::make_error_code(static_cast<std::errc>(e)), "Exec failed");
     }
     ::close(fd[0]);
   }

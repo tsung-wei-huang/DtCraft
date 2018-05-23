@@ -75,20 +75,20 @@ int Container::_entrypoint(void* arg) {
   //assert(geteuid() == 0 && getegid() == 0);
 
   //printf("ready to execve\n");
-  if(::mount(nullptr, "/proc", "proc", 0, nullptr) == -1) {
-    LOGE("Failed to cmount /proc (", strerror(errno), ")");
-    return EXIT_CONTAINER_SPAWN_FAILED;
-  }
+  //if(::mount(nullptr, "/proc", "proc", 0, nullptr) == -1) {
+  //  LOGE("Failed to cmount /proc (", strerror(errno), ")");
+  //  return EXIT_CONTAINER_SPAWN_FAILED;
+  //}
 
-  if(::mount(nullptr, "/sys", "sysfs", 0, nullptr) == -1) {
-    LOGE("Failed to cmount /sys (", strerror(errno), ")");
-    return EXIT_CONTAINER_SPAWN_FAILED;
-  }
+  //if(::mount(nullptr, "/sys", "sysfs", 0, nullptr) == -1) {
+  //  LOGE("Failed to cmount /sys (", strerror(errno), ")");
+  //  return EXIT_CONTAINER_SPAWN_FAILED;
+  //}
 
-  if(::mount(nullptr, std::filesystem::temp_directory_path().c_str(), "tmpfs", 0, nullptr) == -1) {
-    LOGE("Failed to mount ", std::filesystem::temp_directory_path(), "(", strerror(errno), ")");
-    return EXIT_CONTAINER_SPAWN_FAILED;
-  }
+  //if(::mount(nullptr, std::filesystem::temp_directory_path().c_str(), "tmpfs", 0, nullptr) == -1) {
+  //  LOGE("Failed to mount ", std::filesystem::temp_directory_path(), "(", strerror(errno), ")");
+  //  return EXIT_CONTAINER_SPAWN_FAILED;
+  //}
 
   // Initialize container attributes.
   ::execve(
@@ -132,7 +132,7 @@ void Container::spawn(const pb::Topology& tpg) {
   // Create a new process under new namespaces. NEWNET is the most time-consuming.
   _pid = ::clone(
     _entrypoint, _stack.get() + STACK_SIZE, 
-    CLONE_NEWUSER | CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, 
+    /*CLONE_NEWUSER | */CLONE_NEWUTS | CLONE_NEWIPC | CLONE_NEWPID | CLONE_NEWNS | CLONE_NEWNET | SIGCHLD, 
     &C
   );
     
