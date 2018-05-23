@@ -57,7 +57,7 @@ export DTC_THIS_HOST=$host
 
 # Prepare log directory
 mkdir -p $DTC_HOME/workspace/log
-export DTC_LOG_FILE="$DTC_HOME/workspace/log/$target@$host.log"
+export DTC_LOG_FILE="$DTC_HOME/workspace/log/$target@$host"
 
 # -------------------------------------------------------------------------------------------------
 # Daemonize the program
