@@ -35,7 +35,7 @@ std::string Solution::to_string() const {
   os << "[Graph " << graph << "]\n";
 
   //table.add("Task (graph-topology) information").end_of_row();
-  table.add("Task", "Agent", "Status", "Elapsed (s)", "Memory (peek/limit)").end_of_row();
+  table.add("Task", "Agent", "Status", "Elapsed (s)", "Memory (peak/limit)").end_of_row();
 
   for(const auto& t : taskinfos) {
     table.add(t.task_id.to_string())
