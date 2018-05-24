@@ -20,12 +20,7 @@
 namespace dtc {
 
 // Global declaration and macro usage.
-inline static Logger<FileLogPolicy> logger(env::log_file());
-
-#define LOG_REMOVE_FIRST_HELPER(N, ...) __VA_ARGS__
-#define LOG_GET_FIRST_HELPER(N, ...) N
-#define LOG_GET_FIRST(...) LOG_GET_FIRST_HELPER(__VA_ARGS__)
-#define LOG_REMOVE_FIRST(...) LOG_REMOVE_FIRST_HELPER(__VA_ARGS__)
+inline Logger<std::mutex> logger(env::log_file());
 
 #define LOGTO(...) logger.redir (__VA_ARGS__)
 
