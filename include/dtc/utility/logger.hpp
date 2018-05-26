@@ -169,7 +169,7 @@ void Logger<L>::redir(const std::string& fpath) {
     return;
   }
 
-  int fd = ::open(fpath.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+  int fd = ::open(fpath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 
   if (fd == -1) {
     return;
