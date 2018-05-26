@@ -515,12 +515,10 @@ lib_libDtCraft_la_SOURCES += src/webui/webui.cpp
 # Program: main/dtc-master.cpp
 noinst_PROGRAMS += bin/dtc-master
 bin_dtc_master_SOURCES  = main/dtc-master.cpp
-bin_dtc_master_SOURCES  = main/dtc-master.cpp
 bin_dtc_master_LDADD    = lib/libDtCraft.la
 
 # Program: main/dtc-agent.cpp
 noinst_PROGRAMS += bin/dtc-agent
-bin_dtc_agent_SOURCES  = main/dtc-agent.cpp
 bin_dtc_agent_SOURCES  = main/dtc-agent.cpp
 bin_dtc_agent_LDADD    = lib/libDtCraft.la
 

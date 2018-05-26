@@ -108,7 +108,6 @@ do
   echo "# Program: $f"
   echo "noinst_PROGRAMS += bin/$(basename "$f" .cpp)"
   echo "bin_${filename}_SOURCES  = $f"
-  echo "bin_${filename}_SOURCES  = $f"
   echo "bin_${filename}_LDADD    = lib/libDtCraft.la"
   echo ""
 done
