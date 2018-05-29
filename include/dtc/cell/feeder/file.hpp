@@ -18,7 +18,7 @@
 
 namespace dtc::cell {
 
-// Class: FileStreamFeeder
+/*// Class: FileStreamFeeder
 template <typename F>
 class FileStreamFeeder {
   
@@ -283,9 +283,9 @@ PlaceHolder& TextStreamFeeder<F>::out() {
 // Deduction guide
 template <typename F>
 TextStreamFeeder(Graph*, auto&&, F&&) -> TextStreamFeeder<F>;
+*/
 
 };  // end of namespace dtc::cell. ----------------------------------------------------------------
-
 
 #endif
 

@@ -72,11 +72,11 @@ size_t Executor::num_vertices() const {
   return _graph._vertices.size();
 }
 
-// Function: num_probers
-// Query the number of probers associated to this executor.
-size_t Executor::num_probers() const {
-  return _graph._probers.size();
-}
+//// Function: num_probers
+//// Query the number of probers associated to this executor.
+//size_t Executor::num_probers() const {
+//  return _graph._probers.size();
+//}
 
 // Function: graph_size
 // Query the number of streams and vertices associated to this executor.
@@ -103,6 +103,11 @@ void Executor::_remove_istream(key_type key) {
   }
 }
 
+// Function: remove_istream
+std::future<void> Executor::remove_istream(key_type key) {
+  return promise([this, key] () mutable { _remove_istream(key); });
+}
+
 // Procedure: _remove_ostream
 // Remove the stream from the ostream side.
 void Executor::_remove_ostream(key_type key) {
@@ -126,6 +131,16 @@ void Executor::_remove_ostream(key_type key) {
     }
   }
 }
+
+// Function: remove_ostream
+std::future<void> Executor::remove_ostream(key_type key) {
+  return promise([this, key] () mutable { _remove_ostream(key); });
+}
+
+//// Function: remove_prober
+//std::future<void> Executor::remove_prober(key_type key) {
+//  return promise([this, key] () mutable { _remove_prober(key); });
+//}
 
 // Procedure: _setup_local
 // Launch the graph in local mode. Local mode is the default execution policy running from user's
@@ -265,7 +280,7 @@ void Executor::_make_graph(pb::Topology* tpg) {
   _insert_streams(tpg);
 
   // Create prober events.
-  _insert_probers(tpg);
+  //_insert_probers(tpg);
 
   // Create vertex events (this must come after streams).
   _insert_vertices(tpg);
@@ -326,7 +341,7 @@ void Executor::_spawn(Vertex::Program& program) {
       int s;
       assert(::read(ev.device()->fd(), &s, sizeof(s)) == 0); 
       assert(::waitpid(pid, &s, 0) == pid);
-      if((WIFEXITED(s) && WEXITSTATUS(s)!=EXIT_SUCCESS) || WIFSIGNALED(s)) {
+      if((WIFEXITED(s) && WEXITSTATUS(s) != EXIT_SUCCESS) || WIFSIGNALED(s)) {
         std::exit(s);
       }
       LOGI("Vertex program sccessfully exited");
@@ -339,25 +354,25 @@ void Executor::_spawn(Vertex::Program& program) {
   }
 }
 
-// Procedure: _insert_probers
-// Create a periodic event for each prober vertex.
-void Executor::_insert_probers(pb::Topology* tpg) {
-
-  for(auto& kvp : _graph._probers) {
-    if(auto& s = kvp.second; s._on == nullptr) {
-      continue;
-    }
-    else {
-      s._event = insert<PeriodicEvent>(
-        s._duration,
-        true,
-        [this, &s=s] (Event& e) {
-          return s();
-        }
-      ).get();
-    }
-  }
-}
+//// Procedure: _insert_probers
+//// Create a periodic event for each prober vertex.
+//void Executor::_insert_probers(pb::Topology* tpg) {
+//
+//  for(auto& kvp : _graph._probers) {
+//    if(auto& s = kvp.second; s._on == nullptr) {
+//      continue;
+//    }
+//    else {
+//      s._event = insert<PeriodicEvent>(
+//        s._duration,
+//        true,
+//        [this, &s=s] (Event& e) {
+//          return s();
+//        }
+//      ).get();
+//    }
+//  }
+//}
 
 // Procedure: _insert_streams
 // Create an IO event for each stream of the graph. The stream and fd information is stored 

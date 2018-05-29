@@ -45,7 +45,7 @@ class Graph {
 
     std::unordered_map<key_type, Vertex> _vertices;
     std::unordered_map<key_type, Stream> _streams;
-    std::unordered_map<key_type, Prober> _probers;
+    //std::unordered_map<key_type, Prober> _probers;
     
     std::deque<std::function<void(pb::Topology*)>> _tasks;
 
@@ -64,7 +64,7 @@ class Graph {
     StreamBuilder stream(PlaceHolder&, key_type);
     StreamBuilder stream(key_type, PlaceHolder&);
     ContainerBuilder container();
-    ProberBuilder prober(key_type);
+    //ProberBuilder prober(key_type);
 
     template <template<typename...> class C, typename... ArgsT>
     auto insert(ArgsT&&...);
@@ -79,7 +79,7 @@ class Graph {
 
     Vertex* _vertex(key_type);
     Stream* _stream(key_type);
-    Prober* _prober(key_type);
+    //Prober* _prober(key_type);
 
     key_type _generate_key() const;
 
@@ -261,62 +261,62 @@ ContainerBuilder& ContainerBuilder::preferred_hosts(auto&&... ts) {
 
 //-------------------------------------------------------------------------------------------------
 
-// Class: ProberBuilder
-class ProberBuilder {
+//// Class: ProberBuilder
+//class ProberBuilder {
+//
+//  friend class Graph;
+//
+//  private:
+//
+//    Graph* const _graph;
+//
+//  public:
+//
+//    ProberBuilder(Graph*, key_type);
+//    ProberBuilder(const ProberBuilder&);
+//
+//    const key_type vertex {-1};
+//
+//    template <typename C>
+//    ProberBuilder& on(C&&);
+//
+//    template <typename D>
+//    ProberBuilder& duration(D&&);
+//
+//    ProberBuilder& tag(std::string);
+//};
 
-  friend class Graph;
-
-  private:
-
-    Graph* const _graph;
-
-  public:
-
-    ProberBuilder(Graph*, key_type);
-    ProberBuilder(const ProberBuilder&);
-
-    const key_type vertex {-1};
-
-    template <typename C>
-    ProberBuilder& on(C&&);
-
-    template <typename D>
-    ProberBuilder& duration(D&&);
-
-    ProberBuilder& tag(std::string);
-};
-
-// Function: on
-template <typename C>
-ProberBuilder& ProberBuilder::on(C&& c) {
-  _graph->_tasks.emplace_back(
-    [G=_graph, key=vertex, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
-      // Case 1: vertex needs to be initialized (local/distributed mode)
-      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
-        assert(G->_probers.find(key) != G->_probers.end());
-        G->_probers.at(key)._on = std::move(c);
-      }
-      // Case 2: no need to handle submit mode.
-    }
-  );
-  return *this;
-}
-
-// Function: duration
-template <typename D>
-ProberBuilder& ProberBuilder::duration(D&& d) {
-  _graph->_tasks.emplace_back(
-    [G=_graph, key=vertex, d=std::forward<D>(d)] (pb::Topology* tpg) mutable {
-      // Case 1: vertex needs to be initialized (local/distributed mode)
-      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
-        assert(G->_probers.find(key) != G->_probers.end());
-        G->_probers.at(key)._duration = std::move(d);
-      }
-      // Case 2: no need to handle submit mode.
-    }
-  ); 
-  return *this;
-}
+//// Function: on
+//template <typename C>
+//ProberBuilder& ProberBuilder::on(C&& c) {
+//  _graph->_tasks.emplace_back(
+//    [G=_graph, key=vertex, c=std::forward<C>(c)] (pb::Topology* tpg) mutable {
+//      // Case 1: vertex needs to be initialized (local/distributed mode)
+//      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+//        assert(G->_probers.find(key) != G->_probers.end());
+//        G->_probers.at(key)._on = std::move(c);
+//      }
+//      // Case 2: no need to handle submit mode.
+//    }
+//  );
+//  return *this;
+//}
+//
+//// Function: duration
+//template <typename D>
+//ProberBuilder& ProberBuilder::duration(D&& d) {
+//  _graph->_tasks.emplace_back(
+//    [G=_graph, key=vertex, d=std::forward<D>(d)] (pb::Topology* tpg) mutable {
+//      // Case 1: vertex needs to be initialized (local/distributed mode)
+//      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+//        assert(G->_probers.find(key) != G->_probers.end());
+//        G->_probers.at(key)._duration = std::move(d);
+//      }
+//      // Case 2: no need to handle submit mode.
+//    }
+//  ); 
+//  return *this;
+//}
 
 };  // End of namespace dtc::graph. -------------------------------------------------------
 

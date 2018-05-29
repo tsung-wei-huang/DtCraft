@@ -166,6 +166,10 @@ template <typename L>
 void Logger<L>::redir(const std::string& fpath) {
 
   if(fpath.empty()) {
+    if(_handle) {
+      std::fclose(_handle);
+      _handle = nullptr;
+    }
     return;
   }
 
@@ -178,7 +182,7 @@ void Logger<L>::redir(const std::string& fpath) {
   // Mark the file close-on-exec.
   ::fcntl(fd, F_SETFD, FD_CLOEXEC);
 
-  if(_handle = ::fdopen(fd, "wa"); _handle == nullptr) {
+  if(_handle = ::fdopen(fd, "w"); _handle == nullptr) {
     ::close(fd);
     ::unlink(fpath.c_str());
   }

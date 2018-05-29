@@ -52,13 +52,11 @@ class Executor : public KernelBase {
     void _setup_distributed();
     void _make_graph(pb::Topology*);
     void _insert_vertices(pb::Topology*);
-    void _insert_probers(pb::Topology*);
     void _insert_streams(pb::Topology*);
     void _insert_istream(Stream&, std::shared_ptr<Device>);
     void _insert_ostream(Stream&, std::shared_ptr<Device>);
     void _remove_ostream(key_type);
     void _remove_istream(key_type);
-    void _remove_prober(key_type);
     void _spawn(Vertex::Program&);
 
   public:
@@ -68,38 +66,17 @@ class Executor : public KernelBase {
     Executor(Graph&);
     ~Executor();
 
-    std::future<void> remove_ostream(auto&&... ks);
-    std::future<void> remove_istream(auto&&... ks);
-    std::future<void> remove_prober(auto&&... ks);
+    std::future<void> remove_ostream(key_type);
+    std::future<void> remove_istream(key_type);
     std::future<void> make_graph(pb::Topology&&);
 
     size_t num_streams() const;
     size_t num_vertices() const;
-    size_t num_probers() const;
     size_t graph_size() const;
 
     void run();
 };
 
-// Function: remove_istream
-std::future<void> Executor::remove_istream(auto&&... ks) {
-  return promise([this, ks...] () mutable { (_remove_istream(ks), ...); });
-}
-
-// Function: remove_ostream
-std::future<void> Executor::remove_ostream(auto&&... ks) {
-  return promise([this, ks...] () mutable { (_remove_ostream(ks), ...); });
-}
-
-//// Function: remove_vertex
-//std::future<void> Executor::remove_vertex(auto&&... ks) {
-//  return promise([this, ks...] () mutable { (_remove_vertex(ks), ...); });
-//}
-
-// Function: remove_prober
-std::future<void> Executor::remove_prober(auto&&... ks) {
-  return promise([this, ks...] () mutable { (_remove_prober(ks), ...); });
-}
 
 
 };  // End of namespace dtc::executor. ----------------------------------------------------

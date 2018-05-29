@@ -169,27 +169,27 @@ ContainerBuilder& ContainerBuilder::cpu(uintmax_t n) {
 // ProberBuilder
 //-------------------------------------------------------------------------------------------------
 
-// Constructor
-ProberBuilder::ProberBuilder(Graph* g, key_type v) : _graph{g}, vertex{v} {
-}
-
-// Copy constructor
-ProberBuilder::ProberBuilder(const ProberBuilder& rhs) : _graph{rhs._graph}, vertex{rhs.vertex} {
-}
-
-// Function: on
-ProberBuilder& ProberBuilder::tag(std::string t) {
-  _graph->_tasks.emplace_back(
-    [G=_graph, key=vertex, t=std::move(t)] (pb::Topology* tpg) mutable {
-      // Case 1: vertex needs to be initialized (local/distributed mode)
-      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
-        G->_probers.at(key)._tag = std::move(t);
-      }
-      // Case 2: no need to handle submit mode.
-    }
-  );
-  return *this;
-}
+//// Constructor
+//ProberBuilder::ProberBuilder(Graph* g, key_type v) : _graph{g}, vertex{v} {
+//}
+//
+//// Copy constructor
+//ProberBuilder::ProberBuilder(const ProberBuilder& rhs) : _graph{rhs._graph}, vertex{rhs.vertex} {
+//}
+//
+//// Function: on
+//ProberBuilder& ProberBuilder::tag(std::string t) {
+//  _graph->_tasks.emplace_back(
+//    [G=_graph, key=vertex, t=std::move(t)] (pb::Topology* tpg) mutable {
+//      // Case 1: vertex needs to be initialized (local/distributed mode)
+//      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(key))) {
+//        G->_probers.at(key)._tag = std::move(t);
+//      }
+//      // Case 2: no need to handle submit mode.
+//    }
+//  );
+//  return *this;
+//}
 
 //-------------------------------------------------------------------------------------------------
 // Graph
@@ -296,13 +296,13 @@ Stream* Graph::_stream(key_type key) {
   else return nullptr;
 }
 
-// Function: _prober
-Prober* Graph::_prober(key_type key) {
-  if(auto itr = _probers.find(key); itr != _probers.end()) {
-    return &(itr->second);
-  }
-  else return nullptr;
-}
+//// Function: _prober
+//Prober* Graph::_prober(key_type key) {
+//  if(auto itr = _probers.find(key); itr != _probers.end()) {
+//    return &(itr->second);
+//  }
+//  else return nullptr;
+//}
 
 // Function: generate_key
 // Generate a unique key on each call for graph components, i.e., vertex, stream, and container.
@@ -311,25 +311,25 @@ key_type Graph::_generate_key() const {
   return k++;
 }
 
-// Function: prober
-ProberBuilder Graph::prober(key_type vkey) {
-
-  _tasks.emplace_back(
-    [G=this, vkey] (pb::Topology* tpg) {
-      // Case 1: vertex needs to be initiated (local/distributed mode)
-      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(vkey))) {
-        //LOGI("creating a vertex: ", k);
-        if(auto ptr = G->_vertex(vkey); ptr == nullptr) {
-          DTC_THROW("Failed to create a prober on ", vkey);
-        }
-        else G->_probers.try_emplace(vkey, vkey, ptr);
-      }
-      // Case 2: topology needs to be modified (submit mode)
-    }
-  ); 
-  
-  return ProberBuilder(this, vkey);
-}
+//// Function: prober
+//ProberBuilder Graph::prober(key_type vkey) {
+//
+//  _tasks.emplace_back(
+//    [G=this, vkey] (pb::Topology* tpg) {
+//      // Case 1: vertex needs to be initiated (local/distributed mode)
+//      if(tpg == nullptr || (tpg->topology != -1 && tpg->has_vertex(vkey))) {
+//        //LOGI("creating a vertex: ", k);
+//        if(auto ptr = G->_vertex(vkey); ptr == nullptr) {
+//          DTC_THROW("Failed to create a prober on ", vkey);
+//        }
+//        else G->_probers.try_emplace(vkey, vkey, ptr);
+//      }
+//      // Case 2: topology needs to be modified (submit mode)
+//    }
+//  ); 
+//  
+//  return ProberBuilder(this, vkey);
+//}
 
 // Procedure: _make
 // Initialize the graph from a given topology. There are three difference cases:
