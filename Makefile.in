@@ -96,16 +96,15 @@ sbin_PROGRAMS =
 bin_PROGRAMS =
 noinst_PROGRAMS = bin/dtc-master$(EXEEXT) bin/dtc-agent$(EXEEXT) \
 	example/pi$(EXEEXT) example/hello_world$(EXEEXT) \
-	example/feeder$(EXEEXT) example/prober$(EXEEXT) \
-	example/kmeans$(EXEEXT) example/prime$(EXEEXT) \
-	example/operator$(EXEEXT) example/external$(EXEEXT) \
-	example/mnist$(EXEEXT) example/reduce_sum$(EXEEXT) \
-	app/demo/demo$(EXEEXT) unittest/archive$(EXEEXT) \
-	unittest/statgrab$(EXEEXT) unittest/webui$(EXEEXT) \
-	unittest/ipc$(EXEEXT) unittest/reactor$(EXEEXT) \
-	unittest/utility$(EXEEXT) unittest/traits$(EXEEXT) \
-	unittest/scheduler$(EXEEXT) unittest/ml$(EXEEXT) \
-	unittest/concurrent$(EXEEXT)
+	example/prober$(EXEEXT) example/kmeans$(EXEEXT) \
+	example/prime$(EXEEXT) example/operator$(EXEEXT) \
+	example/external$(EXEEXT) example/mnist$(EXEEXT) \
+	example/reduce_sum$(EXEEXT) app/demo/demo$(EXEEXT) \
+	unittest/archive$(EXEEXT) unittest/statgrab$(EXEEXT) \
+	unittest/webui$(EXEEXT) unittest/ipc$(EXEEXT) \
+	unittest/reactor$(EXEEXT) unittest/utility$(EXEEXT) \
+	unittest/traits$(EXEEXT) unittest/scheduler$(EXEEXT) \
+	unittest/ml$(EXEEXT) unittest/concurrent$(EXEEXT)
 pkglibexec_PROGRAMS =
 check_PROGRAMS =
 subdir = .
@@ -206,9 +205,6 @@ bin_dtc_master_DEPENDENCIES = lib/libDtCraft.la
 am_example_external_OBJECTS = example/external.$(OBJEXT)
 example_external_OBJECTS = $(am_example_external_OBJECTS)
 example_external_DEPENDENCIES = lib/libDtCraft.la
-am_example_feeder_OBJECTS = example/feeder.$(OBJEXT)
-example_feeder_OBJECTS = $(am_example_feeder_OBJECTS)
-example_feeder_DEPENDENCIES = lib/libDtCraft.la
 am_example_hello_world_OBJECTS = example/hello_world.$(OBJEXT)
 example_hello_world_OBJECTS = $(am_example_hello_world_OBJECTS)
 example_hello_world_DEPENDENCIES = lib/libDtCraft.la
@@ -308,28 +304,28 @@ am__v_CXXLD_0 = @echo "  CXXLD   " $@;
 am__v_CXXLD_1 = 
 SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(bin_dtc_agent_SOURCES) $(bin_dtc_master_SOURCES) \
-	$(example_external_SOURCES) $(example_feeder_SOURCES) \
-	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
-	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
-	$(example_pi_SOURCES) $(example_prime_SOURCES) \
-	$(example_prober_SOURCES) $(example_reduce_sum_SOURCES) \
-	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
-	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
-	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
-	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
-	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
+	$(example_external_SOURCES) $(example_hello_world_SOURCES) \
+	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
+	$(example_operator_SOURCES) $(example_pi_SOURCES) \
+	$(example_prime_SOURCES) $(example_prober_SOURCES) \
+	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
+	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
+	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
+	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
+	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
+	$(unittest_webui_SOURCES)
 DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(bin_dtc_agent_SOURCES) $(bin_dtc_master_SOURCES) \
-	$(example_external_SOURCES) $(example_feeder_SOURCES) \
-	$(example_hello_world_SOURCES) $(example_kmeans_SOURCES) \
-	$(example_mnist_SOURCES) $(example_operator_SOURCES) \
-	$(example_pi_SOURCES) $(example_prime_SOURCES) \
-	$(example_prober_SOURCES) $(example_reduce_sum_SOURCES) \
-	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
-	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
-	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
-	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
-	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
+	$(example_external_SOURCES) $(example_hello_world_SOURCES) \
+	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
+	$(example_operator_SOURCES) $(example_pi_SOURCES) \
+	$(example_prime_SOURCES) $(example_prober_SOURCES) \
+	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
+	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
+	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
+	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
+	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
+	$(unittest_webui_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -1161,8 +1157,6 @@ example_pi_SOURCES = example/pi.cpp
 example_pi_LDADD = lib/libDtCraft.la
 example_hello_world_SOURCES = example/hello_world.cpp
 example_hello_world_LDADD = lib/libDtCraft.la
-example_feeder_SOURCES = example/feeder.cpp
-example_feeder_LDADD = lib/libDtCraft.la
 example_prober_SOURCES = example/prober.cpp
 example_prober_LDADD = lib/libDtCraft.la
 example_kmeans_SOURCES = example/kmeans.cpp
@@ -1678,12 +1672,6 @@ example/external.$(OBJEXT): example/$(am__dirstamp) \
 example/external$(EXEEXT): $(example_external_OBJECTS) $(example_external_DEPENDENCIES) $(EXTRA_example_external_DEPENDENCIES) example/$(am__dirstamp)
 	@rm -f example/external$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(example_external_OBJECTS) $(example_external_LDADD) $(LIBS)
-example/feeder.$(OBJEXT): example/$(am__dirstamp) \
-	example/$(DEPDIR)/$(am__dirstamp)
-
-example/feeder$(EXEEXT): $(example_feeder_OBJECTS) $(example_feeder_DEPENDENCIES) $(EXTRA_example_feeder_DEPENDENCIES) example/$(am__dirstamp)
-	@rm -f example/feeder$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(example_feeder_OBJECTS) $(example_feeder_LDADD) $(LIBS)
 example/hello_world.$(OBJEXT): example/$(am__dirstamp) \
 	example/$(DEPDIR)/$(am__dirstamp)
 
@@ -1940,7 +1928,6 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@app/demo/$(DEPDIR)/demo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/external.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/feeder.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/hello_world.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/kmeans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/mnist.Po@am__quote@

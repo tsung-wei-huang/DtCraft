@@ -534,11 +534,6 @@ noinst_PROGRAMS += example/hello_world
 example_hello_world_SOURCES  = example/hello_world.cpp
 example_hello_world_LDADD    = lib/libDtCraft.la
 
-# Program: example/feeder.cpp
-noinst_PROGRAMS += example/feeder
-example_feeder_SOURCES  = example/feeder.cpp
-example_feeder_LDADD    = lib/libDtCraft.la
-
 # Program: example/prober.cpp
 noinst_PROGRAMS += example/prober
 example_prober_SOURCES  = example/prober.cpp
