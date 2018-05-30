@@ -232,8 +232,8 @@ void Executor::_setup_distributed() {
   );
 
   // Build standard stream channels.
-  _agent->stdout = duplicate_fd(STDOUT_FILENO);
-  _agent->stderr = duplicate_fd(STDERR_FILENO);
+  _agent->stdout_fd = duplicate_fd(STDOUT_FILENO);
+  _agent->stderr_fd = duplicate_fd(STDERR_FILENO);
 
   assert(is_fd_valid(env::stdout_fd()));
   assert(is_fd_valid(env::stderr_fd()));
@@ -251,10 +251,10 @@ void Executor::_teardown_distributed() {
   std::cerr.flush();
   ::fsync(STDOUT_FILENO);
   ::fsync(STDERR_FILENO);
-  redirect_fd(STDOUT_FILENO, _agent->stdout);
-  redirect_fd(STDERR_FILENO, _agent->stderr);
-  _agent->stdout = STDOUT_FILENO;
-  _agent->stderr = STDERR_FILENO;
+  redirect_fd(STDOUT_FILENO, _agent->stdout_fd);
+  redirect_fd(STDERR_FILENO, _agent->stderr_fd);
+  _agent->stdout_fd = STDOUT_FILENO;
+  _agent->stderr_fd = STDERR_FILENO;
   
   remove(_agent->ostream, _agent->istream);
 }
@@ -296,7 +296,7 @@ void Executor::_make_graph(pb::Topology* tpg) {
 void Executor::_insert_vertices(pb::Topology* tpg) {
 
   for(auto& kvp : _graph._vertices) {
-    
+
     // Assign the executor pointer.
     kvp.second._executor = this;
     
@@ -353,26 +353,6 @@ void Executor::_spawn(Vertex::Program& program) {
     std::exit(EXIT_VERTEX_PROGRAM_FAILED);
   }
 }
-
-//// Procedure: _insert_probers
-//// Create a periodic event for each prober vertex.
-//void Executor::_insert_probers(pb::Topology* tpg) {
-//
-//  for(auto& kvp : _graph._probers) {
-//    if(auto& s = kvp.second; s._on == nullptr) {
-//      continue;
-//    }
-//    else {
-//      s._event = insert<PeriodicEvent>(
-//        s._duration,
-//        true,
-//        [this, &s=s] (Event& e) {
-//          return s();
-//        }
-//      ).get();
-//    }
-//  }
-//}
 
 // Procedure: _insert_streams
 // Create an IO event for each stream of the graph. The stream and fd information is stored 

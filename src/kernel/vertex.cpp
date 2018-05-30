@@ -111,10 +111,12 @@ Vertex::Program Vertex::_prespawn() {
   _runtime.merge(environment_variables())
           .submit_file(cmd.substr(0, cmd.find_first_of(' ')))
           .submit_argv(cmd)
+          .bridges(oss.str())
           .remove_vertex_hosts()
           .remove_frontiers()
           .remove_topology_fd()
-          .bridges(oss.str());
+          .remove_stderr_listener_port()
+          .remove_stdout_listener_port();
 
   return Program{key, _runtime.c_file(), _runtime.c_argv(), _runtime.c_envp(), std::move(B)};
 }

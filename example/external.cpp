@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
 
   dtc::Graph G;
 
-  auto A = G.vertex().program("/bin/ls / -al");
+  auto A = G.vertex().program("/usr/bin/printenv");
   auto B = G.vertex().program("/usr/bin/gcc -v");
 
   G.stream(A, B).tag("AB");

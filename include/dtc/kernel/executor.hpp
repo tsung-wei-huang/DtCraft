@@ -28,8 +28,8 @@ class Executor : public KernelBase {
   };
 
   struct Agent {
-    int stderr {STDERR_FILENO};    
-    int stdout {STDOUT_FILENO};
+    int stderr_fd {STDERR_FILENO};    
+    int stdout_fd {STDOUT_FILENO};
     std::shared_ptr<InputStream> istream;
     std::shared_ptr<OutputStream> ostream;
   }; 

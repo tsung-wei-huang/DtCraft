@@ -181,6 +181,16 @@ std::string Runtime::stderr_listener_port() const {
 //
 //}
 
+Runtime& Runtime::remove_stderr_listener_port() {
+  _map.erase("DTC_STDERR_LISTENER_PORT");
+  return *this;
+}
+
+Runtime& Runtime::remove_stdout_listener_port() {
+  _map.erase("DTC_STDOUT_LISTENER_PORT");
+  return *this;
+}
+
 // Procedure: bridges
 Runtime& Runtime::bridges(std::string str) {
   _map.insert_or_assign("DTC_BRIDGES", std::move(str));

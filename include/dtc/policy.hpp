@@ -260,6 +260,8 @@ class Runtime {
     Runtime& remove_vertex_hosts();
     Runtime& remove_topology_fd();
     Runtime& remove_frontiers();
+    Runtime& remove_stdout_listener_port();
+    Runtime& remove_stderr_listener_port();
 
     std::string master_host() const;
     std::string this_host() const;

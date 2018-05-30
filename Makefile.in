@@ -96,15 +96,15 @@ sbin_PROGRAMS =
 bin_PROGRAMS =
 noinst_PROGRAMS = bin/dtc-master$(EXEEXT) bin/dtc-agent$(EXEEXT) \
 	example/pi$(EXEEXT) example/hello_world$(EXEEXT) \
-	example/prober$(EXEEXT) example/kmeans$(EXEEXT) \
-	example/prime$(EXEEXT) example/operator$(EXEEXT) \
-	example/external$(EXEEXT) example/mnist$(EXEEXT) \
-	example/reduce_sum$(EXEEXT) app/demo/demo$(EXEEXT) \
-	unittest/archive$(EXEEXT) unittest/statgrab$(EXEEXT) \
-	unittest/webui$(EXEEXT) unittest/ipc$(EXEEXT) \
-	unittest/reactor$(EXEEXT) unittest/utility$(EXEEXT) \
-	unittest/traits$(EXEEXT) unittest/scheduler$(EXEEXT) \
-	unittest/ml$(EXEEXT) unittest/concurrent$(EXEEXT)
+	example/kmeans$(EXEEXT) example/prime$(EXEEXT) \
+	example/operator$(EXEEXT) example/external$(EXEEXT) \
+	example/mnist$(EXEEXT) example/reduce_sum$(EXEEXT) \
+	app/demo/demo$(EXEEXT) unittest/archive$(EXEEXT) \
+	unittest/statgrab$(EXEEXT) unittest/webui$(EXEEXT) \
+	unittest/ipc$(EXEEXT) unittest/reactor$(EXEEXT) \
+	unittest/utility$(EXEEXT) unittest/traits$(EXEEXT) \
+	unittest/scheduler$(EXEEXT) unittest/ml$(EXEEXT) \
+	unittest/concurrent$(EXEEXT)
 pkglibexec_PROGRAMS =
 check_PROGRAMS =
 subdir = .
@@ -223,9 +223,6 @@ example_pi_DEPENDENCIES = lib/libDtCraft.la
 am_example_prime_OBJECTS = example/prime.$(OBJEXT)
 example_prime_OBJECTS = $(am_example_prime_OBJECTS)
 example_prime_DEPENDENCIES = lib/libDtCraft.la
-am_example_prober_OBJECTS = example/prober.$(OBJEXT)
-example_prober_OBJECTS = $(am_example_prober_OBJECTS)
-example_prober_DEPENDENCIES = lib/libDtCraft.la
 am_example_reduce_sum_OBJECTS = example/reduce_sum.$(OBJEXT)
 example_reduce_sum_OBJECTS = $(am_example_reduce_sum_OBJECTS)
 example_reduce_sum_DEPENDENCIES = lib/libDtCraft.la
@@ -307,25 +304,23 @@ SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(example_external_SOURCES) $(example_hello_world_SOURCES) \
 	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
 	$(example_operator_SOURCES) $(example_pi_SOURCES) \
-	$(example_prime_SOURCES) $(example_prober_SOURCES) \
-	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
-	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
-	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
-	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
-	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
-	$(unittest_webui_SOURCES)
+	$(example_prime_SOURCES) $(example_reduce_sum_SOURCES) \
+	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
+	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
+	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
+	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
+	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
 DIST_SOURCES = $(lib_libDtCraft_la_SOURCES) $(app_demo_demo_SOURCES) \
 	$(bin_dtc_agent_SOURCES) $(bin_dtc_master_SOURCES) \
 	$(example_external_SOURCES) $(example_hello_world_SOURCES) \
 	$(example_kmeans_SOURCES) $(example_mnist_SOURCES) \
 	$(example_operator_SOURCES) $(example_pi_SOURCES) \
-	$(example_prime_SOURCES) $(example_prober_SOURCES) \
-	$(example_reduce_sum_SOURCES) $(unittest_archive_SOURCES) \
-	$(unittest_concurrent_SOURCES) $(unittest_ipc_SOURCES) \
-	$(unittest_ml_SOURCES) $(unittest_reactor_SOURCES) \
-	$(unittest_scheduler_SOURCES) $(unittest_statgrab_SOURCES) \
-	$(unittest_traits_SOURCES) $(unittest_utility_SOURCES) \
-	$(unittest_webui_SOURCES)
+	$(example_prime_SOURCES) $(example_reduce_sum_SOURCES) \
+	$(unittest_archive_SOURCES) $(unittest_concurrent_SOURCES) \
+	$(unittest_ipc_SOURCES) $(unittest_ml_SOURCES) \
+	$(unittest_reactor_SOURCES) $(unittest_scheduler_SOURCES) \
+	$(unittest_statgrab_SOURCES) $(unittest_traits_SOURCES) \
+	$(unittest_utility_SOURCES) $(unittest_webui_SOURCES)
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -1157,8 +1152,6 @@ example_pi_SOURCES = example/pi.cpp
 example_pi_LDADD = lib/libDtCraft.la
 example_hello_world_SOURCES = example/hello_world.cpp
 example_hello_world_LDADD = lib/libDtCraft.la
-example_prober_SOURCES = example/prober.cpp
-example_prober_LDADD = lib/libDtCraft.la
 example_kmeans_SOURCES = example/kmeans.cpp
 example_kmeans_LDADD = lib/libDtCraft.la
 example_prime_SOURCES = example/prime.cpp
@@ -1708,12 +1701,6 @@ example/prime.$(OBJEXT): example/$(am__dirstamp) \
 example/prime$(EXEEXT): $(example_prime_OBJECTS) $(example_prime_DEPENDENCIES) $(EXTRA_example_prime_DEPENDENCIES) example/$(am__dirstamp)
 	@rm -f example/prime$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(example_prime_OBJECTS) $(example_prime_LDADD) $(LIBS)
-example/prober.$(OBJEXT): example/$(am__dirstamp) \
-	example/$(DEPDIR)/$(am__dirstamp)
-
-example/prober$(EXEEXT): $(example_prober_OBJECTS) $(example_prober_DEPENDENCIES) $(EXTRA_example_prober_DEPENDENCIES) example/$(am__dirstamp)
-	@rm -f example/prober$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(example_prober_OBJECTS) $(example_prober_LDADD) $(LIBS)
 example/reduce_sum.$(OBJEXT): example/$(am__dirstamp) \
 	example/$(DEPDIR)/$(am__dirstamp)
 
@@ -1934,7 +1921,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/operator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/pi.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prime.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/prober.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@example/$(DEPDIR)/reduce_sum.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/dtc-agent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@main/$(DEPDIR)/dtc-master.Po@am__quote@
