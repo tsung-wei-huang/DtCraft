@@ -242,8 +242,8 @@ std::set<int> ControlGroup::cpuset_cpus() const {
     }
     // Range
     else {
-      auto beg = std::stof(str.substr(0, pos));
-      auto end = std::stof(str.substr(pos+1));
+      auto beg = std::stoi(str.substr(0, pos));
+      auto end = std::stoi(str.substr(pos+1));
       for(int i=beg; i<=end; ++i) {
         cpus.insert(i);
       }
