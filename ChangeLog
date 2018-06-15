@@ -1,5 +1,12 @@
 ## 2018/TBD: DtCraft-0.2.3 developing branch
 
+#---- Summary ----#
+1. Added support for cgroup
+2. Added lxc project
+
+### Change
+- [lxc/*] Added side-project for linux container. Most are under construction
+- [ml/*] Refactored DNN regressor and DNN classifier.
 
 ## 2018/3/2: DtCraft-0.2.2 released
 
