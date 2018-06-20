@@ -63,6 +63,52 @@ auto FullyConnectedLayer::archive(ArchiverT& ar) {
 
 // ------------------------------------------------------------------------------------------------
 
+// Struct: BatchNormLayer
+struct BatchNormLayer {
+
+  BatchNormLayer() = default;
+  BatchNormLayer(size_t, size_t, std::optional<Activation> = {});
+
+  size_t layer;
+  
+  Eigen::MatrixXf X;
+  Eigen::MatrixXf W;
+  Eigen::MatrixXf B;
+  Eigen::MatrixXf dW;
+  Eigen::MatrixXf dB;
+
+  Eigen::MatrixXf gamma;
+  Eigen::MatrixXf beta;
+  Eigen::MatrixXf mean;
+  Eigen::MatrixXf var;
+  Eigen::MatrixXf isqrtvar;
+  Eigen::MatrixXf hhat;
+  Eigen::MatrixXf dgamma;
+  Eigen::MatrixXf dbeta;
+  Eigen::MatrixXf rmean;
+  Eigen::MatrixXf rvar;
+  
+  std::optional<Activation> activation;
+
+  Eigen::MatrixXf infer(const Eigen::MatrixXf&) const;
+
+  void fprop(const Eigen::MatrixXf&);
+  void bprop(const Eigen::MatrixXf&, Eigen::MatrixXf&);
+  void update(Optimizer&, float);
+
+  template <typename ArchiverT>
+  auto archive(ArchiverT&);
+};
+
+// Function: archive
+template <typename ArchiverT>
+auto BatchNormLayer::archive(ArchiverT& ar) {
+  return ar(layer, X, W, B, dW, dB, gamma, beta, mean, var, isqrtvar, hhat, dgamma, dbeta, rmean, rvar, activation);
+}
+
+
+// ------------------------------------------------------------------------------------------------
+
 // Struct: DropoutLayer
 struct DropoutLayer {
   
@@ -97,7 +143,8 @@ auto DropoutLayer::archive(ArchiverT& ar) {
 
 using Layer = std::variant<
   FullyConnectedLayer,
-  DropoutLayer
+  DropoutLayer,
+  BatchNormLayer
 >;
 
 
