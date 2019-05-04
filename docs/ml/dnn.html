@@ -1,0 +1,391 @@
+  <!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>DtCraft - High-performance Cluster Computing Engine</title>
+  <base href="../">
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+  
+  <h1>Deep Neural Network</h1>
+  <p>This page gives you an overview of our deep neural network (DNN) APIs.
+  Our goal is to simplify machine learning programming in common use cases.
+  You will learn how to create 
+  a <em>DNN regressor</em> for regression and a <em>DNN classifier</em> for classification.
+  The key difference between a regressor and a classifier is the output value.
+  The regressor predicts a continuous value in the output layer, while the classifier predicts a discrete label.</p>
+  <p>
+  The source code of both the DNN regressor and classifier is placed in <code>include/dtc/ml/dnn.hpp</code> and 
+  <code>src/ml/dnn.cpp</code>, respectively.
+  </p>
+
+  <h3>Preliminaries</h3>
+
+  <p>There are a great deal amount of DNN tutorials on the web.
+  Some great resources are 
+  <a href="https://www.youtube.com/playlist?list=PLBAGcD3siRDguyYYzhVwZ3tLvOyyG5k6K">Deep Learning Course</a> 
+  by Andrew Ng,
+  Tensorflow machine learning 
+  <a href="https://www.tensorflow.org/versions/r1.1/get_started/mnist/beginners">Beginner Guide</a>, and
+  <a href="https://machinelearningmastery.com/blog/">Machine Learning Mastery</a> by Jason Brownlee.
+  We will focus on how to use our API to create DNN estimators.</p>
+
+  <h3>Input and Output Data Types</h3>
+  <p>All DNN estimators in MLCraft use <a href="http://eigen.tuxfamily.org/index.php?title=Main_Page">
+  Eigen Library</a> for matrix operations. You need to convert the data into an Eigen matrix 
+  in order to use our DNN estimators.
+  You can find the tutorial about Eigen library 
+  <a href="https://eigen.tuxfamily.org/dox/group__TutorialMatrixClass.html">here</a>.
+  </p>
+
+  <h3>DNN Regressor</h3>
+  <p>The best way to learn to use our DNN regressor is to go through an example.
+  We created two matrices, 
+  <code>Eigen::MatrixXf data(30, 3)</code> and <code>Eigen::MatrixXf gold(30, 1)</code>,
+  and initialize them with random values.
+  The matrix <code>data</code> has 30 samples each of three features and
+  the matrix <code>gold</code> stores the observed value of each sample.
+  The goal is to train a DNN model to look at the a sample and predict its label value.</p>
+
+  <p>We create a DNN regressor with three layers:
+    <ul>
+     <li>1st layer: input layer with size equal to the feature size</li> 
+     <li>2nd layer: hidden layer with ten neurons followed by sigmoid activation</li>  
+     <li>3rd layer: output layer with one neuron to generate the measurement</li> 
+    </ul>
+  </p>
+
+  <p>Next, train the model by calling the method <code>train</code>, which takes six arguments, 
+  <code>data</code>, <code>gold</code>, <code>num_epochs</code>, <code>mini_batch_size</code>, 
+  <code>learning_rate</code>, and a lambda to call at the end of each epoch.
+  When training completes, call <code>infer</code> to see the result of the model.
+  </p> 
+
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">// Create a 30 x 3 matrix to store the samples
+Eigen::MatrixXf data(30, 3); 
+
+// Create a 30 x 1 matrix to store the labels.
+Eigen::MatrixXf gold(30, 1);
+
+// For simplicity, we fill matrices with random values.
+data = Eigen::MatrixXf::Random(30, 3);
+gold = Eigen::MatrixXf::Random(30, 1);
+
+// Declare a DNN regressor
+dtc::ml::DnnRegressor dnn; 
+
+// Add layers into the regressor
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(data.cols(), 10, dtc::ml::Activation::SIGMOID);
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, gold.cols());
+
+// Parameters to train the model
+const int num_epochs {30};
+const int mini_batch_size {15};
+const float learning_rate {0.01f};
+
+// Start training
+dnn.train(data, gold, num_epochs, mini_batch_size, learning_rate, [&, i=0] (dtc::ml::DnnRegressor& dnn) mutable {
+  // In each epoch, we evaluate the regressor by computing the mean square error 
+  printf("epoch %d: mse=%.4f\n", i++, (dnn.infer(data)-gold).array().square().sum() / (2.0f*data.rows()));
+}); </code></pre>
+  </div>
+
+
+  <h3>DNN Classifier</h3>
+  <p>The best way to learn to use our DNN classifier is to go through an example. 
+  We demonstrate how to create a DNN classifier for digit classification on the famous
+  <a href="http://yann.lecun.com/exdb/mnist/">MNIST dataset</a>. 
+  The MNIST dataset contains a set of handwritten digit images.
+  The goal is to train a DNN model to look at an image and predict which digit (0-9) it is.</p>
+
+  <p>
+  Images and labels are stored in two matrices of type <code>Eigen::MatrixXf</code> and <code>Eigen::VectorXi</code>, 
+  respectively. 
+  We create a DNN classifier with three layers:
+  <ul>
+     <li>1st layer: input layer with size equal to the feature size (# pixels per image)</li> 
+     <li>2nd layer: hidden layer with 30 neurons followed by ReLU activation</li>  
+     <li>3rd layer: output layer with 10 neurons corresponding to 10 digits</li> 
+    </ul>
+  </p>
+
+  <p>Next, train the model by calling the method <code>train</code>, which takes six arguments, 
+  <code>images</code>, <code>labels</code>, <code>num_epochs</code>, <code>mini_batch_size</code>, 
+  <code>learning_rate</code>, and a lambda to call at the end of each epoch.
+  When training finishes, call <code>infer</code> to see the result of the model.
+  </p> 
+
+
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">// Load and store the images and labels in a matrix and a vector
+Eigen::MatrixXf images = dtc::ml::read_mnist_image<Eigen::MatrixXf>("train-images.idx3-ubyte") / 255.0;
+Eigen::VectorXi labels = dtc::ml::read_mnist_label<Eigen::VectorXi>("train-labels.idx1-ubyte");
+
+// Create a DNN classifier
+dtc::ml::DnnClassifier dnn;
+
+// Add layers into the classifier
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(images.cols(), 30, dtc::ml::Activation::RELU);
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(30, 10);
+
+// Parameters to train the model
+const int num_epochs {5};
+const int mini_batch_size {64};
+const float learning_rate {0.01f};
+
+// Start training
+dnn.train(images, labels, num_epochs, mini_batch_size, learning_rate, [&, i=0] (auto& dnn) mutable {
+  // predict the labels of images and count the number of correct predictions.
+  auto c = ((dnn.infer(images) - labels).array() == 0).count();
+  auto t = images.rows();
+  dtc::cout("[Accuracy at epoch ", i++, "]: ", c, "/", t, "=", c/static_cast<float>(t), '\n').flush();
+}); </code></pre>
+  </div>
+
+  <h3>DNN Modifier</h3>
+  <p>The classes <code>DnnClassifier</code> and <code>DnnRegressor</code> share a lot of similarities
+  in the network creation. 
+  The main difference is the output layer and the loss function used to generate the prediction.
+  Here we summarize these class methods and their usages:</p>
+
+
+
+
+  <h4>Layer</h4>
+  <p>The <code>layer</code> method allows you to add a layer into the DNN. 
+     A DNN layer is a <code>std::variant</code> of the following types:</p>
+    <ul>
+      <li><p>Fully connected layer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a 10x5 FullyConnectedLayer with RELU as the activation function
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, 5, dtc::ml::Activation::RELU);</code></pre>
+      </div></p></li>
+
+      <li><p>Dropout layer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a DropOutLayer with keep probability = 0.5
+dnn.layer&lt;dtc::ml::DropOutLayer&gt;(0.5);</code></pre>
+      </div></p></li>
+    </ul>
+
+
+  <div class="info notes">
+  <b>Note:</b> A dropout layer can only be added after another layer. The library will automatically decide
+  the number of neurons based on its previous layer.
+  </div>
+
+  <h4>Activation</h4>
+  <p>The <code>Activation</code> enum allows you to attach different activation functions to a layer. 
+     We currently support the following activation types:
+    <ul>
+      <li><p>Sigmoid
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a 10x5 FullyConnectedLayer with SIGMOID as the activation function
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, 5, dtc::ml::Activation::SIGMOID);</code></pre></div>     
+      </p></li>
+
+      <li><p>Tanh
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a 10x5 FullyConnectedLayer with TANH as the activation function
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, 5, dtc::ml::Activation::TANH);</code></pre></div>     
+      </p></li>
+
+      <li><p>Rectified linear unit (ReLU)
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a 10x5 FullyConnectedLayer with ReLU as the activation function
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, 5, dtc::ml::Activation::ReLU);</code></pre></div>     
+      </p></li>
+
+
+      <li><p>Leaky ReLU
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Add a FullyConnectedLayer with leaky ReLU as the activation function
+dnn.layer&lt;dtc::ml::FullyConnectedLayer&gt;(10, 5, dtc::ml::Activation::LEAKY_RELU);</code></pre></div>     
+      </p></li>
+    </ul>
+  </p>
+
+
+  <h4>Optimizer</h4>
+  <p>The <code>optimizer</code> method allows you to associate different optimization methods with a DNN estimator. 
+     An optimizer is a <code>std::variant</code> of the following types:
+    <ul>
+      <li><p>AdamOptimizer (default optimizer in DNN)
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to AdamOptimizer 
+dnn.optimizer&lt;dtc::ml::AdamOptimizer&gt;();</code></pre></div>
+      <p></li>
+
+      <li><p>GradientDescentOptimizer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to GradientDescentOptimizer
+dnn.optimizer&lt;dtc::ml::GradientDescentOptimizer&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>AdagradOptimizer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to AdagradOptimizer
+dnn.optimizer&lt;dtc::ml::AdagradOptimizer&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>AdamaxOptimizer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to AdamaxOptimizer 
+dnn.optimizer&lt;dtc::ml::AdamaxOptimizer&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>RMSpropOptimizer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to RMSpropOptimizer
+dnn.optimizer&lt;dtc::ml::RMSpropOptimizer&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>MomentumOptimizer
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// Set the optimizer to MomentumOptimizer
+dnn.optimizer&lt;dtc::ml::MomentumOptimizer&gt;();</code></pre></div>
+      </p></li>
+
+    </ul>
+  </p>
+
+  <h4>Loss</h4>
+  <p>The <code>loss</code> method allows you to set the loss function of a DNN estimator. 
+     A loss function is a <code>std::variant</code> of the following types:
+    <ul>
+      <li><p>MeanSquaredError (default in DNN regressor)
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// MeanSquaredError
+dnn.loss&lt;dtc::ml::MeanSquaredError&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>MeanAbsoluteError
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// MeanAbsoluteError
+dnn.loss&lt;dtc::ml::MeanAbsoluteError&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>SoftmaxCrossEntropy (default in DNN classifier)
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// SoftmaxCrossEntropy
+dnn.loss&lt;dtc::ml::SoftmaxCrossEntropy&gt;();</code></pre></div>
+      </p></li>
+
+      <li><p>HuberLoss
+      <div class="tab-content">
+      <pre><code class="prettyprint lang-cpp">// HuberLoss
+dnn.loss&lt;dtc::ml::HuberLoss&gt;();</code></pre></div>
+      </p></li>
+
+    </ul>
+  </p>
+
+
+
+
+
+  <h3>Training</h3>
+
+  <p>Training a DNN regressor and a DNN classifier is different in label types.
+  Labels in a DNN regressor are stored in <code>Eigen::MatrixXf</code>,
+  while labels in a DNN classifier are stored in <code>Eigen::VectorXi</code>.
+  Each row corresponds to an example's label.
+  Because of problem nature, we allow multiple labels in a regressor.
+  For DNN classifier, each label is an integer of range <code>0</code> to <code>N-1</code>, where <code>N</code>
+  is the number of neurons at the last layer.
+  </p>
+  
+  <p>The signature of DNN regressor's <code>train</code> method is as follows:</p>
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">train(Eigen::MatrixXf& features, Eigen::MatrixXf& label, size_t num_epochs, size_t mini_batch_size, float learning_rate, C&& callback)</code></pre></div>
+  </p>
+
+  <p>The signature of DNN classifier's <code>train</code> method in as follows:</p>
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">train(Eigen::MatrixXf& features, Eigen::VectorXi& label, size_t num_epochs, size_t mini_batch_size, float learning_rate, C&& callback)</code></pre></div>
+  </p>
+  
+  <p>Both methods take a callable object that will be invoked at the end of each epoch.
+  This is useful when you intend to present per-epoch information such as debugging and logging, 
+  or apply per-epoch update such as weight decay and early stop.</p>
+  
+  <div class="info notes">
+  <b>Note:</b> We do not apply <em>one-hot</em> encoding for classification label because of
+  its large and redundant space consumption.
+  </div>
+
+  <h3>Inference</h3>
+  <p>The difference of inference stage between a DNN regressor and a DNN classifier is the return value.
+  The return value from the DNN regressor is of type <code>Eigen::MatrixXf</code>, 
+  while the return value from the DNN classifier is of type <code>Eigen::VectorXi</code>.
+  Each row corresponds to an estimated label of the example.
+  For DNN classifier, each label is an integer of range <code>0</code> to <code>N-1</code>, where <code>N</code>
+  is the number of neurons at the last layer.
+  </p>
+  
+  <p>The signature of DNN regressor's <code>infer</code> method is as follows:</p>
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">Eigen::MatrixXf infer(Eigen::MatrixXf& features) const</code></pre></div>
+  </p>
+
+  <p>The signature of DNN classifier's <code>infer</code> method in as follows:</p>
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">Eigen::VectorXi infer(Eigen::MatrixXf& features) const</code></pre></div>
+  </p>
+
+  
+  <h3>Save/Load Model</h3>
+  <p>The methods <code>save</code> and <code>load</code> allow you to export a model to a binary file 
+  and restore an existing model.
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">// Save the model to the binary file "my_dnn_model"
+dnn.save("my_dnn_model");
+
+// Load an existing model from the binary file "my_dnn_model"
+dnn.load("my_dnn_model");</code></pre></div>
+
+  </p>
+
+  </div>  <!-- end of content -->
+
+  <h1>Where to Go from Here?</h1>
+  <p>Congratulations! You have just accomplished the DNN tutorial in MLCraft. 
+  Please refer to other pages of MLCraft to learn more machine learning API.
+  </p>
+
+
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+</div>
+
+</body>
+
+
+</html>
+
+

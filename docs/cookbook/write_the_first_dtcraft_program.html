@@ -1,0 +1,300 @@
+  <!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>DtCraft - High-performance Cluster Computing Engine</title>
+  <base href="../">
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+  
+  <h1>Write the First DtCraft Program</h1>
+  <p>This page gives you an overview of DtCraft architecture and a quick guide 
+  to get your first DtCraft application up and running.
+  We assume you know modern C++11, C++14, or C++17, and basic Linux network concepts, socket, TCP, IO-multiplexing, etc. For a complete guide and API tutorial, please refer to other chapters in the cookbook.
+  </p>
+  <!--<p>This page gives you a high-level overview on DtCraft architecture and essential steps
+  to create a DtCraft application through our stream graph programming model. 
+  We assume:</p>
+
+    <ul>
+      <li>You know modern C++11, C++14, or C++17.</li>
+      <li>You know the basic Linux networking concepts, socket, TCP, etc.</li>
+      <li>You know event-driven programming, reactor vs proactor.</li>
+    </ul>
+
+  <p>For a complete guide and API, please refer to other chapters in our cookbook.</p> -->
+  
+  <h3>DtCraft from 10,000 Feet</h3>
+  
+  <p>We developed DtCraft from the ground up using modern C++17 to achieve the best performance and
+  programmability. The figure below shows the main components of the DtCraft system. 
+  The DtCraft kernel consists of a master daemon and one agent daemon per working machine. 
+  You describe an application in terms of a sequential <em>stream graph</em> and 
+  submit the executable to the master through our submission script. 
+  The kernel transparently deals with difficult concurrency controls including job scheduling, 
+  workload distribution, and process communication. 
+  Data is transferred through either TCP socket streams on inter-edges or shared memory on intra-edges,
+  depending on the deployment by the scheduler.
+  </p>
+  
+  <p><img src="images/overview.png" width="100%"></p>
+
+  <p>When a graph is submitted to the master, the scheduler will partition the graph into a set of <em>topologies</em> depending on
+  the resource requirements described by users.
+  In DtCraft, a topology is the <em>basic unit</em> of a task (container) that is launched by an executor process on an agent node.
+  Once the scheduler has decided the deployment, each topology is marshaled along with graph parameters to form a closure and
+  sent to the corresponding agent for remote execution.</p>
+
+  <p>You can understand more about DtCraft in our technical <a href="papers/tcad18_paper.pdf">paper</a>
+  to appear in IEEE TCAD 2018.</p>
+
+
+  <h3>A Simple Program</h3>
+  <p>Our first DtCraft program <code>program.cpp</code> is a simple graph consisting of two vertices 
+  connected with one stream. Vertex <code>A</code> sends a string <code>"test"</code> to vertex
+  <code>B</code> through the stream <code>S</code>.
+  The program stops when vertex <code>B</code> received the message.</p>
+
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">#include &lt;dtc/dtc.hpp&gt;
+  
+using namespace std::literals;  // for the use of string literal
+using namespace dtc::literals;  // for the use of memory literal
+
+int main(int argc, char* argv[]) {
+  
+  // define a stream graph
+  dtc::Graph G;
+  dtc::VertexBuilder A = G.vertex();     
+  dtc::VertexBuilder B = G.vertex();
+  dtc::StreamBuilder S = G.stream(A, B);
+
+  // callback on vertex
+  A.on([&] (dtc::Vertex& v) { (*v.ostream(S))("test"s); });
+
+  // callback on input stream
+  S.on([&] (dtc::Vertex& B, dtc::InputStream& is) {
+    if(std::string s; is(s) != -1) {
+      std::cout &lt;&lt; "Received: " &lt;&lt; s &lt;&lt; '\n';
+      return dtc::Event::REMOVE; 
+    }
+    return dtc::Event::DEFAULT;
+  });
+  
+  // request resources
+  G.container().add(A).cpu(1).memory(1_GB);
+  G.container().add(B).cpu(1).memory(1_GB); 
+  
+  // execute the stream graph
+  dtc::Executor(G).run();
+}
+</code></pre>
+  </div>
+  
+  </p>In general, there is only a couple lines of code to enable a fully distributed program. 
+  Vertex <code>A</code> and vertex <code>B</code> will go to two different processes that could sit on the same machine or two different machines. 
+  DtCraft transparently handles the workload distribution and concurrency controls for you.</p>
+  
+  <h3>Compile and Link</h3> 
+  <p>After you successfully built DtCraft, the library can be found under <code>$DTC_HOME/lib/</code>.
+  The variable <code>$DTC_HOME</code> denotes the path to your DtCraft folder.
+  Compile your code together with DtCraft headers and library.</p>
+
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-bash"># Compile the DtCraft application
+$ g++ program.cpp -o program -O2 -std=c++1z -I $DTC_HOME/include/ -L $DTC_HOME/lib/.libs/ -lDtCraft -lpthread
+</code></pre>
+  </div>
+
+  <p>Remember to add the DtCraft library path to your environment variable <code>LD_LIBRARY_PATH</code>
+  of searching list for dynamically linkable libraries.
+  To run this program, follow the steps described in <a href="quickstart.html">QuickStart</a>.</p>
+  
+
+  <h3>Stream Graph</h3>
+  <p>Every DtCraft application runs the user's <code>main</code> function and executes the stream graph described in the context.
+  The <code>dtc::Graph</code> is the main entry to create a stream graph for your application.
+  A stream graph consists of vertices, streams, and containers that are instantiated from the graph API.
+  By default, the stream graph persists in memory and continues to operate until all streams are closed.
+  Let's create a stream graph of two vertices with a single connection.</p>
+
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">dtc::Graph G;
+dtc::VertexBuilder A = G.vertex();      # Create a vertex A in the graph
+dtc::VertexBuilder B = G.vertex();      # Create a vertex B in the graph
+dtc::StreamBuilder S = G.stream(A, B);  # Create a stream A-&gt;B in the graph
+</code></pre>
+  </div>
+  
+  <p>The return is a builder object where you can associate different attributes to these graph components
+  (vertex, stream, container) step by step. 
+  Each component is assigned a unique integer key that is deterministic at construction and 
+  universal to all executions.
+  The key is implicitly convertible from every builder and is useful in accessing a stream adjacent to a vertex.
+  </p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">VertexBuilder::operator key_type() const; 
+StreamBuilder::operator key_type() const;
+ContainerBuilder::operator key_type() const;
+</code></pre>
+  </div>
+  
+
+  <p>You can define the computation callback for each vertex and stream.
+  The vertex callback is a constructor-like barrier to synchronize all adjacent stream callbacks.
+  The stream callback consists of two types, <em>output stream</em> and <em>input stream</em>.
+  Normally we only define the callback on the input stream side.
+  In the following example, vertex <code>A</code> sends a string <code>"test"</code>
+  to vertex <code>B</code> through stream <code>S</code>.</p>
+
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp"># Define vertex callback.
+A.on([&] (dtc::Vertex& v) { (*v.ostream(S))("test"s); });
+
+# Define the input stream callback.
+S.on([&] (dtc::Vertex& B, dtc::InputStream& is) {
+  if(std::string s; is(s) != -1) {
+    std::cout &lt;&lt; "Received: " &lt;&lt; s &lt;&lt; '\n';
+    return dtc::Event::REMOVE;  # Stream must be closed for program to exit.
+  }
+  return dtc::Event::DEFAULT;
+});
+</code></pre>
+  </div>
+
+  <p>The stream graph <em>persists</em> in memory and continues to operate until all streams are closed.
+  Closing one end of the stream will subsequently close the other end. 
+  Because of this property, it is important to ensure all streams are properly closed in your control flows
+  or the program will hang forever!
+  Every vertex has a hash map where you can index its output stream pointers and send the data through the operator <code>()</code>.
+  Similarly, you can retrieve the data from an input stream through the operator <code>()</code>.
+  The data type on both sides should match exactly to ensure correct serialization and deserialization.
+  Once the stream graph is decided, you can post resource requirements on different pieces of the graph via the method <code>container</code>.
+  </p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp"># Request resources.
+G.container().add(A).cpu(1).memory(1_GB);  # Give A 1 CPU and 1 GB RAM.
+G.container().add(B).cpu(1).memory(1_GB);  # Give B 1 CPU and 1 GB RAM.
+</code></pre>
+  </div>
+
+  <p>Our container interface is a thin layer for resource control and runtime isolation.
+  When you add a vertex to a container, all its adjacent streams will be included as well.
+  You can optimize your container partitions to guide the scheduler toward the best deployment.
+  By default, we will create a container to include un-containerized vertices.
+  Finally, you dispatch the stream graph through <code>Executor</code>.</p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp"># Dispatch the stream graph.
+dtc::Executor(G).run();
+</code></pre>
+  </div>
+  
+
+  <h3>Vertex Storage</h3>
+  <p>DtCraft uses C++ <code>any</code> to replace the C-style <code>void*</code> pointer in accessing user-space data during the callback. 
+  Each vertex has a public member <code>any</code> that can be assigned and modified at any time during a callback to implement the control flow of an application. 
+  </p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp"># Create a vertex-specific storage.
+v.on(
+  [] (dtc::Vertex& v) {
+    v.any = my_data_type();
+    auto& ref = std::any_cast&lt;my_data_type&&gt;(v.any);
+    // access the data through ref
+  }
+);
+</code></pre>
+  </div>
+
+  <h3>Stream Access</h3>
+  <p>The invocation of I/O stream is <em>asynchronous</em>. 
+  On the read side, the callback is invoked when data is available in the corresponding stream channel. 
+  Similarly, the write callback happens at the moment data is flushed to the kernel buffer. 
+  Applications normally do not define the write callback, except for diagnostic purpose.
+  Writing data to our output stream autonomously triggers a write event to deal with the synchronization betwee our stream buffer and the associated device.
+  You can access any output stream adjacent to a vertex through the corresponding key.
+   </p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp"># Access an adjacent output stream
+v.on(
+  [key] (dtc::Vertex& v) {
+    (*v.ostream(key))("write through stream 'key'");
+  }
+);
+</code></pre>
+  </div>
+
+
+  <p>DtCraft has a built-in serialization and deserialization library for streaming the data between two ends.
+  The library provides default methods for all arithmetics and most C++ STL objects on top of our streaming interface,
+  <code>dtc::OutputStream</code> and <code>dtc::InputStream</code>.
+  Most complex objects can be created combining these basics. To pass your data through our stream interface, 
+  simply add a public method <code>archive</code> to your object and include members in need.
+  </p>
+  
+  <div class="tab-content">
+  <pre><code class="prettyprint lang-cpp">struct Data {
+  int id1, id2, id3;
+  std::string name;
+  
+  template &lt;typename T&gt;
+  auto archive(T& ar) {  // ar takes a variadic argument list
+    return ar(id1, id2, id3, name); 
+  }
+}
+</code></pre>
+  </div>
+
+
+
+
+
+  <h1>Where to Go from Here?</h1>
+  <p>Congratulations! You have just accomplished the first DtCraft application.
+  Follow the steps described in <a href="quickstart.html">QuickStart</a> to deploy your application
+  in either local mode or cluster mode.</p>
+
+  <p>For an in-depth overview of the DtCraft, head to other chapters in the cookbook.</p>
+
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+</div>
+
+</body>
+
+
+</html>
+
+

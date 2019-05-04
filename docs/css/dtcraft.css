@@ -1,0 +1,316 @@
+h5 {
+  font-weight: bold;
+}
+
+.tagline {
+  display: inline-block;
+  color: rgb(0, 0, 0);
+  padding-bottom: 7px;
+  padding-left: 10px;
+  font-style: italic;
+}
+
+.tagline {
+  font-size: 18px;
+}
+
+.slogan {
+  padding: 5px 5px;
+  margin-bottom: 20px;
+  background: #e7f3fe;
+  text-align: center;
+  line-height: inherit;
+  font-size: 20px;
+}
+
+.notes { 
+  margin-bottom: 15px; 
+  padding: 4px 12px; 
+} 
+ 
+.danger { 
+  background-color: #ffdddd; 
+  border-left: 6px solid #f44336; 
+} 
+ 
+.success { 
+  background-color: #ddffdd; 
+  border-left: 6px solid #4CAF50; 
+} 
+ 
+.info { 
+  background-color: #e7f3fe; 
+  border-left: 6px solid #2196F3; 
+} 
+ 
+.warning { 
+  background-color: #ffffcc; 
+  border-left: 6px solid #ffeb3b; 
+} 
+
+.danger_rounded { 
+  background-color: #ffdddd; 
+  border-left: 6px solid #f44336; 
+  border-radius: 0px 10px 10px 0px; 
+} 
+ 
+.success_rounded { 
+  background-color: #ddffdd; 
+  border-left: 6px solid #4CAF50; 
+  border-radius: 0px 10px 10px 0px; 
+} 
+ 
+.info_rounded { 
+  background-color: #e7f3fe; 
+  border-left: 6px solid #2196F3; 
+  border-radius: 0px 10px 10px 0px; 
+} 
+ 
+ 
+.warning_rounded { 
+  background-color: #ffffcc; 
+  border-left: 6px solid #ffeb3b; 
+  border-radius: 0px 10px 10px 0px; 
+}
+
+.news {
+  background: rgb(228,255,255);
+  border-radius: 6px;
+  padding: 4px 12px 4px 12px;
+  margin-bottom: 20px;
+}
+
+.sponsor img {
+  height: 100px;
+  margin: auto;
+  display:block;
+  text-align: center;
+}
+
+/*.navbar {
+  background: #ababab;
+  border: none;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: bold;
+}*/
+
+/*     background-color: #ADD8E6;  */
+.sidenav {
+    height: 100%; /* 100% Full-height */
+    width: 120px; /* 0 width - change this with JavaScript */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Stay on top */
+    top: 52px;
+    left: 0;
+    background-color: #f5f5f5;
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 10px; /* Place content 60px from the top */
+    transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+}
+
+/*     padding: 8px 8px 8px 32px; top, right, bottom, left */
+/* The navigation menu links */
+.sidenav a {
+    padding: 8px 0px 0px 0px;
+    text-decoration: none;
+    font-size: 20px;
+    color: #000000;
+    display: block;
+    transition: 0.3s
+}
+
+/* When you mouse over the navigation links, change their color */
+/* color: #F08080; */
+/* box-shadow: 10px 10px 5px #888888; */
+.sidenav a:hover, .offcanvas a:focus{
+  color: #DC143C;
+  display: block;
+  font-weight: bold;
+  box-shadow: 5px 5px 5px #000000;
+}
+
+.centerImage {
+  text-align: center;
+  display: block;
+}
+
+.profile_card {
+  max-width: 150px;
+  margin: auto;
+  text-align: center;
+}
+
+.profile_card img {
+  border-radius:50%;
+}
+
+.bio_image {
+  border-radius: 50%;
+}
+
+.bio_photo{
+  text-align:center;
+}
+
+.bio_photo img{
+  width:150px;
+  display:block;
+  max-height:200px;
+  border-radius:50%;
+}
+
+.bio_content{
+  padding-left:220px
+}
+
+
+/* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+#main {
+    transition: margin-left .5s;
+    padding: 20px;
+}
+
+.active {
+    background-color: #FFFFFF;
+}
+
+
+footer {
+  text-align: center;
+  color: #8f8f8f;
+  padding-bottom: 18px;
+  font-size: 12px;
+}
+
+footer a {
+  color: rgb(41, 132, 181);
+}
+
+.feature-list {
+  margin-bottom: 25px;
+  margin-top: 25px;
+}
+
+.feature-item h4 {
+  font-family: sans-serif;
+  font-weight: bold;
+}
+
+.col-center {
+  text-align: center;
+}
+
+.col-padded-top {
+  margin-top: 30px;
+  margin-bottom: 18px;
+}
+
+input[type=contact_text], select, textarea {
+  width: 100%; /* Full width */
+  padding: 12px; /* Some padding */  
+  border: 1px solid #ccc; /* Gray border */
+  border-radius: 4px; /* Rounded borders */
+  box-sizing: border-box; /* Make sure that padding and width stays in place */
+  margin-top: 6px; /* Add a top margin */
+  margin-bottom: 16px; /* Bottom margin */
+  resize: vertical /* Allow the user to vertically resize the textarea (not horizontally) */
+}
+
+/* Style the submit button with a specific background color etc */
+input[type=submit] {
+/*  background-color: #4CAF50; */ 
+  background-color: #000000; 
+  color: white;
+  padding: 4px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 120%;
+  /*width: 85px;*/
+}
+
+/* When moving the mouse over the submit button, add a darker green color */
+input[type=submit]:hover {
+  background-color: #555555;
+}
+
+.input_basic_css{
+  width: 100%; /* Full width */
+  padding: 12px; /* Some padding */  
+  border: 1px solid #ccc; /* Gray border */
+  border-radius: 4px; /* Rounded borders */
+  box-sizing: border-box; /* Make sure that padding and width stays in place */
+  margin-top: 6px; /* Add a top margin */
+  margin-bottom: 16px; /* Bottom margin */
+  resize: vertical /* Allow the user to vertically resize the textarea (not horizontally) */
+}
+
+ul.nav li.dropdown:hover > ul.dropdown-menu {
+  display: block;    
+}
+
+.entry-date {
+  color: #888;
+  font-size: 14px;
+}
+
+
+/* Below are for nested dropdown menu */
+.dropdown-submenu {
+  position: relative;
+}
+
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  -webkit-border-radius: 0 6px 6px 6px;
+  -moz-border-radius: 0 6px 6px;
+  border-radius: 0 6px 6px 6px;
+}
+
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #ccc;
+  margin-top: 5px;
+  margin-right: -10px;
+} 
+
+
+/* Below are for function Table */
+#dnn_api_table {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 70%;
+}
+
+#dnn_api_table td, #dnn_api_table th {
+  /*border: 1px solid #ddd;*/
+  padding: 5px;
+}
+
+#dnn_api_table tr:nth-child(even){background-color: #f2f2f2;}
+
+#dnn_api_table tr:hover {background-color: #FF4;}
+
+#dnn_api_table th {
+  text-align: left;
+  background-color: #EEEEEE;
+  color: black;
+  height: 1px;
+}
+
+

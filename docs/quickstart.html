@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+     DtCraft - High-performance Cluster Computing Engine
+  </title>
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+
+
+	<h1>Quick Start</h1>
+  <p>This page gets you up and running the DtCraft system in minutes.</p>
+
+  <h3>System Requirements</h3>
+  <p>DtCraft is quite self-contained and requires only a few packages to install.
+     You only need:</p>
+  <ul>
+    <li>64-bit Linux machines (Ubuntu recommended)</li>
+    <li>GNU C++17 compiler G++ v7.2 or newer</li>
+    <li>Linux kernel version 3.8 or higher</li>
+    <li>GNU Autotool (<a href="http://www.gnu.org/software/autoconf/autoconf.html">autoconf</a>, 
+                      <a href="http://www.gnu.org/software/automake/automake.html">automake</a>, and
+                      <a href="http://www.gnu.org/software/libtool/libtool.html">libtool</a>)</li>
+  </ul>
+
+  <p>You also need the privilege (sudo) for DtCraft to launch Linux containers and manage cluster resources.</p>
+
+  <h3>Download</h3>
+  <p>Download the latest release from <a href="download.html">here</a>.</p>
+  
+  <h3>Contents</h3>
+  <p>The source of DtCraft is placed in folders <code>include</code>, <code>src</code>, and <code>webui</code>, respectively.
+  The folder <code>bin</code> contains the core kernel binaries.
+  Kernel execution scripts and configuration files are stored in folders <code>conf</code> and <code>sbin</code>.
+
+  <pre><code class="prettyprint lang-bash"># Directory tree
+├── bin        # Kernel binaries
+├── conf       # Configuration file
+├── example    # Tutorial examples
+├── include    # Header files
+│   └── dtc
+│       ├── archive
+│       ├── concurrent
+├──     ...
+├── lib        # Library to link
+├── main       # Kernel source
+├── sbin       # Scripts
+├── src        # CPP source
+│   ├── event
+│   ├── ipc
+│   ├── kernel
+│   ...
+├── unittest   # Unit test source
+└── webui      # Web UI HTML source
+</code></pre> 
+  </p> 
+
+  <h3>Build</h3>
+  <p>We use GNU Autotool to manage the DtCraft package.
+
+  <pre><code class="prettyprint lang-bash"># Change the working directory
+$ cd DtCraft 
+
+# Configure and build
+$ ./configure
+$ make</code></pre>
+  
+  You can also run <code>make -j &lt;core count&gt;</code> to speed up the build process.
+  </p>
+
+
+  <h3>Regression</h3>
+  <p>After the build process is completed, you can run the regression 
+  to test the code base on your machine.
+  <pre><code class="prettyprint lang-bash"># Unit testing
+$ make check
+PASS: unittest/statgrab.sh
+PASS: unittest/utility.sh
+...
+============================================================================
+Testsuite summary for DtCraft
+============================================================================
+...
+</code></pre>
+  </p>
+
+
+
+  <h3>DtCraft Local Mode</h3>
+
+  <p>Running a DtCraft application on a local machine is as easy as running a binary at your terminal.
+  <pre><code class="prettyprint lang-bash"># Run the hello-world example in local mode
+$ ./example/hello_world 
+Sent 'hello world from B' to stream 5
+Sent 'hello world from A' to stream 4
+Received: hello world from A
+Received: hello world from B
+</code></pre>
+  Notice that DtCraft is by default <em>parallel</em> and <em>asynchronous</em>. 
+  Different runs might give you different results in terms of output order.
+  In practice, the local mode is particularly useful for diagnostics purpose.
+  You can get a quick run on your stream graph and check whether the result is desirable.
+  </p>
+
+
+  
+  <h3 id="distributed_mode_single_host">DtCraft Distributed Mode (Single Host)</h3>
+	<p>Distributing your DtCraft application to a computer cluster is fairly simple through our scripts.
+  To avoid steep learning curve, we start from a single host.
+  On your local host (127.0.0.1), open three terminals.
+  We will use one for master, one for agent, and one for executor in the foreground.
+  In one terminal, start the master.
+	<pre><code class="prettyprint lang-bash"># Terminal 1: Launch the master
+$ sudo ./bin/master
+I 65280 2017-11-27 11:57:22 master.cpp:178] Master @127.0.0.1 [agent:9909|graph:9910|webui:9912]
+</code></pre></p>
+  
+  <p>Switch to another terminal and start the agent.
+	<pre><code class="prettyprint lang-bash"># Terminal 2: Launch the agent
+$ sudo ./bin/agent
+I 42880 2018-05-15 19:22:31 agent.cpp:135] Agent @127.0.0.1 [frontier:9913]
+I 42880 2018-05-15 19:22:31 agent.cpp:138] cg-subsys.memory "/sys/fs/cgroup/memory/dtc" [limit:24993161216]
+I 42880 2018-05-15 19:22:31 agent.cpp:139] cg-subsys.cpuset "/sys/fs/cgroup/cpuset/dtc" [cpus:4]
+I 42880 2018-05-15 19:22:31 agent.cpp:140] cg-subsys.blkio "/sys/fs/cgroup/blkio/dtc" [weight:500]
+</code></pre>
+  </p>
+
+  <p>Now submit your DtCraft application through our submission script <code>sbin/submit.sh</code>.
+	<pre><code class="prettyprint lang-bash"># Terminal 3: Run the hello-world example in distributed mode
+$ ./sbin/submit.sh --master=127.0.0.1 /home/dtcraft/DtCraft/example/hello_world
+I 26496 2018-05-15 19:24:58 executor.cpp:159] Executor @csl-408-08.csl.illinois.edu [stdout:45137|stderr:45741]
+I 26496 2018-05-15 19:24:58 executor.cpp:161] Submit graph to master @127.0.0.1:9910
+Sent 'hello world from A' to stream 3
+Received: hello world from B
+Sent 'hello world from B' to stream 4
+Received: hello world from A
+I 38656 2018-05-15 19:24:58 executor.cpp:173] Solution received
+[Graph 0]
++----+---------+---------+-----------+-------------------+
+|Task|    Agent|   Status|Elapsed (s)|Memory (peak/limit)|
++----+---------+---------+-----------+-------------------+
+| 0-5|127.0.0.1|exited ok|   0.067994| 1921024/1073741824|
++----+---------+---------+-----------+-------------------+
+| 0-2|127.0.0.1|exited ok|   0.068002| 2166784/1073741824|
++----+---------+---------+-----------+-------------------+
+Graph finished with 0 error(s)
+</code></pre>
+  </p>
+
+  
+  <h3>DtCraft Distributed Mode (Cluster)</h3>
+	<p>The steps to distribute a DtCraft application to multiple machines is by and large the same as 
+  <a href="#distributed_mode_single_host">Distributed Mode (Single Host)</a>,
+  except we provide scripts to simplify the process. 
+  Here, we demonstrate an example of submitting a program to a cluster of two machines, A and B.
+  A will be the master and both A and B have an agent.
+  To avoid error by password prompt,
+  enable <a href="http://www.linuxproblem.org/art_9.html">automatic ssh login</a> without password from A to B,
+  and <a href="https://askubuntu.com/questions/147241/execute-sudo-without-password">password-less privilege</a> for each login user.</p>
+
+    <table class="table table-bordered">
+      <tr>
+        <th></th>
+        <th>Hostname (DNS resolvable)</th>
+        <th>User login</th>
+        <th>DtCraft home</th>
+      </tr>
+      <tr>
+        <td>Machine A</td>
+        <td>cluster-host-A</td>
+        <td>dtcraft</td>
+        <td>/home/dtcraft/DtCraft</td>
+      </tr>
+      <tr>
+        <td>Machine B</td>
+        <td>cluster-host-B</td>
+        <td>dtcraft</td>
+        <td>/home/dtcraft/DtCraft</td>
+      </tr>
+    </table>
+  
+
+  <p>Modify the cluster host files <code>conf/master</code> and <code>conf/agents</code> on machine A.
+	<pre><code class="prettyprint lang-bash"># user host DtCraft-home
+dtcraft cluster-host-A /home/dtcraft/DtCraft
+</code></pre>
+  </p>
+	
+  <p><pre><code class="prettyprint lang-bash"># user host DtCraft-home
+dtcraft cluster-host-A /home/dtcraft/DtCraft
+dtcraft cluster-host-B /home/dtcraft/DtCraft
+</code></pre>
+  </p>
+  
+  <p>Start the DtCraft kernel through the kernel script <code>sbin/kernel.sh</code>. 
+This will daemonize the master on machine A, and agents on machines A and B. 
+You can inspect the kernel log file in the folder <code>workspace/log</code> of respective machines.
+<pre><code class="prettyprint lang-bash"># Machine A: Start the kernel
+$ ./sbin/kernel.sh --action=start
+start dtc-master @cluster-host-A
+start dtc-agent @cluster-host-A
+start dtc-agent @cluster-host-B
+
+# Machine A: Ping the kernel
+$ ./sbin/kernel.sh --action=ping
+dtc-master is running @cluster-host-A
+dtc-agent is running @cluster-host-A
+dtc-agent is running @cluster-host-B
+
+# Machine A: workspace/log/
+workspace/
+└── log
+    ├── dtc-agent@cluster-host-A
+    └── dtc-master@cluster-host-B
+
+# Machine B: workspace/log/
+workspace/
+└── log
+    └── dtc-agent@cluster-host-B
+</code></pre>
+  </p>
+
+  <p>Now submit your DtCraft application through our submission script <code>sbin/submit.sh</code>. 
+The path to your binary must be <em>visible to all cluster nodes</em>.
+In a production environment, this is typically handled by a uniform resource identifier (URI) or a network file system (NFS).
+	<pre><code class="prettyprint lang-bash"># Machine A: Run the hello-world example in distributed mode
+$ ./sbin/submit.sh --master=cluster-host-A /home/dtcraft/DtCraft/example/hello_world
+
+# Machine A: Stop the kernel
+$ ./sbin/kernel.sh --action=stop
+stop dtc-master @cluster-host-A
+stop dtc-agent @cluster-host-A
+stop dtc-agent @cluster-host-B
+</code></pre></p>
+
+
+  <h1>Web UI</h1>
+  <p>You can inspect the cluster status through our web-based interface at 
+  <a href="http://localhost:9912/">http://localhost:9912/</a>.</p>
+
+  <h1>Troubleshooting</h1>
+  
+  <h3>Kernel script failed to start</h3>
+  <p>If you are getting error on password prompt or permission denied when launching <code>kernel.sh</code>,
+  it is very likely you forget to enable 
+  <a href="http://www.linuxproblem.org/art_9.html">automatic ssh login</a> and
+  <a href="https://askubuntu.com/questions/147241/execute-sudo-without-password">password-less privilege</a>.
+  The script is just a wrapper that executes the commands described in 
+  <a href="#distributed_mode_single_host">Distributed Mode (Single Host)</a> at each remote machine.
+  Make sure you successfully launch a local DtCraft cluster before going distributed.</p>
+
+
+  <h3>Execution error on no such file</h3>
+  <p>The executable to submit to a DtCraft cluster must be visible to all machines.
+  This includes the file path, runtime libraries, and other input files required by the executable.
+  In a production cloud, engineers typically install a shared storage such as
+  <a href="https://help.ubuntu.com/lts/serverguide/network-file-system.html.en">Network File System (NFS)</a>.</p>
+
+  <h3>More questions?</h3>
+  <p>Please post your questions on our github <a href="https://github.com/twhuang-uiuc/DtCraft/issues">issue tracker</a>,
+  or <a href="about.html#contact_form">contact us</a> directly.
+
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+
+</div>
+
+</body>
+
+
+</html>
+
+

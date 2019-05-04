@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+     DtCraft - High-performance Cluster Computing Engine
+  </title>
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+  
+  <div class="content">
+
+
+	<h1>DtCraft Examples</h1>
+  <p>This page gives you a quick overview of a few DtCraft programs using our stream graph programming API.</p>
+
+
+  <h3>Hello World</h3>
+  <p>In this example, we create a stream graph with two vertices A and B. The two vertices send a string <code>"Hello world"</code> to 
+each other and close the stream after receiving the string from the other.</p>
+
+  <div class="tab-content">
+    <div id="hello_world_cpp" class="tab-pane fade in active">
+      <pre><code class="prettyprint lang-cpp">dtc::Graph G;
+
+auto A = G.vertex();
+auto B = G.vertex();
+
+auto lambda = [] (dtc::Vertex& v, dtc::InputStream& is) {
+  if(std::string s; is(s) != -1) {
+    std::cout &lt;&lt; "Received: " &lt;&lt; s &lt;&lt; '\n';
+    return dtc::Event::REMOVE;
+  }
+  return dtc::Event::DEFAULT;
+};
+
+auto AB = G.stream(A, B).on(lambda);
+auto BA = G.stream(B, A).on(lambda); 
+
+A.on([&AB] (dtc::Vertex& v) { (*v.ostream(AB))("hello world from A"s); });  
+B.on([&BA] (dtc::Vertex& v) { (*v.ostream(BA))("hello world from B"s); });
+
+dtc::Executor(G).run();
+
+</code></pre>
+    </div>
+  </div>
+
+
+
+  
+  <h3>Pi Estimation</h3>
+  <p>In this example, we estimate &pi; by using a <a href="https://en.wikipedia.org/wiki/Monte_Carlo_method">Monte Carlo</a> method. 
+  The stream graph contains a master vertex and three slave vertices. We create four containers each of 1 CPU for each vertex and its
+  adjacent streams to enable parallel execution.
+  Each slave vertex randomly generates points in a 1x1 square and reports the number of points that fall in the unit circle enclosed by the 
+square. Then the master derives &pi; based on the reported numbers from slaves.</p>
+  <div class="tab-content">
+    <div id="pi_cpp" class="tab-pane fade in active">
+      <pre><code class="prettyprint lang-cpp">struct Result{
+  std::atomic&lt;int&gt; value {0};
+  std::atomic&lt;int&gt; count {0};
+  Result(const Result& r) : value{r.value.load()}, count{r.count.load()} {}
+};
+
+constexpr int num_slaves = 3;
+constexpr int num_samples = 3000;
+
+dtc::Graph G;
+
+std::vector&lt;dtc::VertexBuilder&gt; slaves;
+std::vector&lt;dtc::StreamBuilder&gt; m2s, s2m;
+
+auto master = G.vertex();
+
+for(auto i=0; i&lt;num_slaves; ++i) {
+  slaves.emplace_back(G.vertex());
+  m2s.emplace_back(G.stream(master, slaves.back()));
+  s2m.emplace_back(G.stream(slaves.back(), master));
+}
+
+master.on(
+  [&] (dtc::Vertex& v) {
+    v.any = Result();
+    for(auto &s: m2s){
+      (*v.ostream(s))(num_samples/num_slaves);
+    }
+  }
+);
+
+// Stream: master to slave
+for(int i=0; i&lt;num_slaves; ++i) {
+  m2s[i].on(
+    [other=s2m[i]] (dtc::Vertex& slave, dtc::InputStream& is) {
+      if(int num_samples = 0, count = 0; is(num_samples) != -1) {
+        for(int i = 0; i &lt; num_samples; ++i){
+          auto x = dtc::random&lt;double&gt;(-1.,1.);
+          auto y = dtc::random&lt;double&gt;(-1.,1.);
+          if( x*x + y*y &lt;= 1.0 ){
+            ++count;
+          }
+        }
+        (*slave.ostream(other))(count);
+        return dtc::Event::REMOVE;
+      }
+      return dtc::Event::DEFAULT;
+    }
+  );
+}
+
+// Stream: slave to master
+for(int i=0; i&lt;num_slaves; ++i) {
+  s2m[i].on(
+    [&m2s, num_samples] (dtc::Vertex& master, dtc::InputStream& is) {
+      if(int value = 0; is(value) != -1) {
+        auto& result = std::any_cast&lt;Result&&gt;(master.any);
+        if(result.value += value; ++result.count == num_slaves) {
+          std::cout &lt;&lt; "pi estimation : " &lt;&lt; 4.0*result.value/num_samples &lt;&lt; '\n';
+        }
+        return dtc::Event::REMOVE;
+      }
+      return dtc::Event::DEFAULT;
+    }
+  );
+}
+
+G.container().num_cpus(1).add(master);
+G.container().num_cpus(1).add(slaves[0]);
+G.container().num_cpus(1).add(slaves[1]);
+G.container().num_cpus(1).add(slaves[2]);
+
+dtc::Executor(G).run();
+</code></pre>
+    </div>
+  </div>
+  
+  <h3>External Program</h3>
+<p>In this example, we demonstrate DtCraft's capability of working with external programs. 
+This can be extremely useful for those to integrate existing applications with legacy code or so. 
+The stream graph creates two vertices and launch two simple programs 
+to print the root directory and gcc version.</p>
+  <div class="tab-content">
+    <div id="hello_world_cpp" class="tab-pane fade in active">
+      <pre><code class="prettyprint lang-cpp">dtc::Graph G;
+dtc::Graph G;
+
+auto A = G.vertex().program("/bin/ls / -al");
+auto B = G.vertex().program("/usr/bin/gcc -v");
+
+G.stream(A, B).tag("AB");
+
+G.container().add(A);
+G.container().add(B);
+
+dtc::Executor(G).run();
+</code></pre>
+    </div>
+  </div>
+
+  <h1>Additional Examples</h1>
+  Additional examples are packaged with DtCraft source under the folder <code>examples/</code>.
+
+  </div>  <!-- end of content -->
+
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+
+</div>
+
+</body>
+
+
+</html>
+
+

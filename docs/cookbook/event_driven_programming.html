@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>DtCraft - High-performance Cluster Computing Engine</title>
+  <base href="../">
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+  
+  <h1>Event-driven Programming</h1>
+  <p>DtCraft applies <em>event</em>-driven programming to enable efficient IO multiplexing. 
+  Event-driven programming is a programming paradigm where events (input, output, timeout) determines
+  the program flow. Instead of using famous 3rd-party library such as 
+  <a href="http://libevent.org/">Libevent</a> and 
+  <a href="http://software.schmorp.de/pkg/libev.html">Libev</a>, we developed our own <em>reactor</em> class
+  to dispatch events. The reactor is the core of DtCraft. 
+  All kernel components, master, agent, and executor are derived from the reactor.
+  In fact, people also use DtCraft to develop event-driven applications with modern C++.
+  </p>
+
+  <h3>Example: Timout Event</h3>
+  
+  <p>The example below shows how to create a timeout event that expires after one second
+  and a periodic event that expires at every 100 milliseconds in DtCraft.</p> 
+  
+  <pre><code class="prettyprint lang-cpp">// create a reactor with 2 threads
+dtc::Reactor reactor(2);
+
+// create a timeout event of 1 s
+auto ev1 = reactor.insert&lt;dtc::TimeoutEvent&gt;(
+  std::chrono::seconds(1),
+  [] (dtc::Event& e) {
+    std::cout &lt;&lt; "1 s passed" &lt;&lt;'\n';
+  }
+);
+
+// create a periodic event running every 100 ms
+auto ev2 = reactor.insert&lt;dtc::TimeoutEvent&gt;(
+  std::chrono::milliseconds(100),
+  true,  // true to include the moment of this call
+  [] (dtc::Event& e) {
+    std::cout &lt;&lt; "100 ms passed" &lt;&lt;'\n';
+  }
+);
+
+// dispatch events
+reactor.dispatch();
+</code></pre>
+
+  <h3>Example: I/O Event</h3>
+
+  <p>The example below shows how to create a read event that operates on a domain socket pair in DtCraft.</p>
+
+  <pre><code class="prettyprint lang-cpp">// create a reactor with 4 threads
+dtc::Reactor reactor(4);
+
+// create a domain socket device pair (std::shared_ptr)
+auto [rdev, wdev] = dtc::make_socket_pair();
+
+// create a read event
+auto rev = reactor.insert&lt;dtc::ReadEvent&gt;(
+  std::move(rdev),
+  [] (dtc::Event& ev) {
+    std::cout &lt;&lt; "read event on fd=" &lt;&lt; ev.device()-&gt;fd() &lt;&lt; '\n';
+  }
+);
+
+// write one byte to the socket
+auto one {'a'};
+wdev-&gt;write(&one, sizeof(one));
+
+// dispatch events
+reactor.dispatch();
+</code></pre>
+
+
+  
+  <h1>Reactor</h1>
+  <p>Reactor is the main gateway to create events, remove events, and dispatch your program to 
+  an event-driven loop. Our reactor is written in modern C++ and has many distinct features compared to existing libraries:</p>
+
+  <ul>
+  <li>DtCraft reactor is multi-threaded and thread-pooled by default.</li>
+  <li>DtCraft reactor uses <code>std::shared_ptr</code> to manage ownership of events.</li>
+  <li>DtCraft reactor applies task-based parallelism via <code>std::future</code> and <code>std::promise</code>.</li>
+  <li>DtCraft reactor allows users to customize events through class inheritance.</li>
+  <li>DtCraft event is flat in types, requiring no confusing bitwise operator <code>|</code> to union different types.</li>
+  <li>DtCraft event stores callback in powerful and flexible <code>std::function</code>.</li>
+  <li>DtCraft event uses handy <code>std::chrono</code> to determine timeout.</li>
+  </ul>
+
+	<p>The code below shows a list of commonly used methods of the reactor.
+  All methods are <em>thread-safe</em>.</p>
+
+
+<pre><code class="prettyprint lang-cpp">class Reactor {
+  const std::thread::id owner {std::this_thread::get_id()};
+
+  size_t num_events() const;
+  size_t num_workers() const;
+
+  template &lt;typename C&gt;
+  void break_loop_on(C&&);
+
+  auto break_loop();
+
+  void threshold(size_t);
+
+  template &lt;typename T, typename... ArgsT&gt;
+  auto insert(ArgsT&&... args);
+
+  template &lt;typename C&gt;
+  auto promise(C&&);
+
+  template &lt;typename C&gt;
+  auto async(C&&);
+
+  void dispatch();                                        
+  bool is_owner() const;
+  auto remove(auto&&... events);
+  auto freeze(auto&&... events);
+  auto thaw(auto&&... events);
+};
+</code></pre>
+  
+  <p>
+  Here is a brief explanation for each method:
+  <ul>
+  <li><code>num_events</code> returns the number of events at the moment of call.</li>
+  <li><code>num_workers</code> returns the number of worker threads.</li>
+  <li><code>break_loop_on</code> sets a stopping criteria to cease the event loop.</li>
+  <li><code>break_loop</code> lifts the flag to stop the event loop.</li>
+  <li><code>threshold</code> stops the event loop when the number of events is below or equal to a given value.</li>
+  <li><code>insert</code> creates an event of type <code>T</code>, forwarding <code>args</code> to
+  its constructor.</li>
+  <li><code>promise</code> requests a task to execute by the reactor owner (often the master thread).</li>
+  <li><code>async</code> requests a task to execute by a worker thread, 
+  or by the master thread if no worker threads exist.</li>
+  <li><code>dispatch</code> makes the reactor enters the event loop.</li>
+  <li><code>is_owner</code> tells whether the calling thread is the reactor owner.</li>
+  <li><code>remove</code> removes a batch of events from the reactor at one time.</li>
+  <li><code>freeze</code> freezes a batch of events in the reactor at one time.</li>
+  <li><code>thaw</code> unfreezes a batch of events in the reactor at one time.</li>
+  </ul>
+  </p>
+
+  <p>The source code of the reactor is placed in <code>include/dtc/event</code> and <code>src/event</code>, respectively.</p>
+
+
+  <h3>Create a Reactor</h3>
+  <p>Before using any event operations, you need to create one or more <code>Reactor</code> objects.
+  Each reactor object holds a set of events and polls to determine which events are active.
+  When an event becomes active, the reactor dispatches it to a thread executing its callback.</p>
+
+<h5>Example: Create a Reactor with Four Threads</h5>
+<p>The example below creates a reactor with four threads, one master and three workers.</p>
+<pre><code class="prettyprint lang-cpp">dtc::Reactor reactor(4);
+</code></pre>
+  
+  <div class="info notes">
+  <p><b>Note:</b> When an event is in the context of its callback, the reactor will not poll it in the
+  subsequent loops. Polling will continue when the execution thread completes its callback.</p>
+  </div>
+
+
+
+  <h3>Request a Promise/Async</h3>
+	<p>Reactor uses a thread pool to schedule event operations on threads to maximize the performance.
+  We use <em>single-producer multiple-consumer</em> model to deliver <em>task-based</em> parallelism.
+  The producer is the owner of the reactor, often the master thread creating the reactor in your application,
+  and consumers are threads to execute event callbacks.
+  You can requests task to run on the master thread through <em>promise</em>
+  and worker threads through <em>async</em>.
+  Both methods return <code>std::future</code> objects for you to retrieve the task results.
+  Our reactor imposes strong and clear onwership between the master thread and worker threads.
+  This largely facilitates the design of an event-driven application with multiple threads.
+  
+  <h5>Example: Execute a Task on the Master Thread</h5>
+<p>The example below demonstrates how to execute a task on the master thread (reactor owner).</p>
+<pre><code class="prettyprint lang-cpp">std::future<int> future = reactor.promise([] () {
+  std::cout &lt;&lt; "This task only runs on the master thread" &lt;&lt; '\n';
+  return 1;
+});
+</code></pre>
+  
+  <h5>Example: Execute a Task on a Worker (or Master) Thread</h5>
+<p>The example below demonstrates how to execute a task on a worker thread. The master thread will
+execute the task if the reactor has only one thread.</p>
+<pre><code class="prettyprint lang-cpp">std::future<void> future = reactor.async([] () {
+  std::cout &lt;&lt; "This task runs on a worker thread" &lt;&lt; '\n';
+});
+</code></pre>
+
+  <div class="info notes">
+  <p><b>Note:</b> Requesting a promise from the reactor can be useful when tasks need to synchronize
+  at a certain point to avoid data race.</p>
+  </div>
+
+
+  <h3>Event</h3>
+  <p>Event is the basic unit of operation. Currently, there are four types of events, <code>TIMEOUT</code>, <code>PERIODIC</code>, <code>READ</code>, and <code>WRITE</code>. 
+  Each event is a unique entity and is exclusive to each other.
+  You can derive your event class inheriting one of the four event bases <code>TimeoutEvent</code>,
+  <code>PeriodicEvent</code>, <code>ReadEvent</code>, and <code>WriteEvent</code>.
+  </p>
+  
+  <pre><code class="prettyprint lang-cpp">// Base class to create a timeout event.
+// d: duration in std::chrono
+// c: callable object (callback)
+class TimeoutEvent : public Event {
+ template &lt;typename D, typename C&gt;
+ TimeoutEvent(D&& d, C&& c);
+};
+
+// Base class to create a periodic event.
+// d: duration in std::chrono
+// from_now: start from now or next cycle (now + duration)
+// c: callable object (callback)
+class PeriodicEvent : public Event {
+  template &lt;typename D, typename C&gt;
+  PeriodicEvent(D&& d, const bool from_now, C&& c);
+};
+
+// Base class to create a read event.
+// d: device pointer
+// c: callable object (callback)
+class ReadEvent : public Event {
+  template &lt;typename C&gt;
+  ReadEvent(std::shared_ptr&lt;Device&gt; d, C&& c);
+};
+
+// Base class to create a write event.
+// d: device pointer
+// c: callable object (callback)
+class WriteEvent : public Event {
+  template &lt;typename C&gt;
+  WriteEvent(std::shared_ptr&lt;Device&gt; d, C&& c);
+};
+</code></pre>
+
+<p>DtCraft represents every event in <code>std::shared_ptr</code> to ensure multiple threads
+can perform event operations correctly. It is completely safe to, for example, ask a thread to 
+remove an event from the reactor while another thread is running the event's callback and vice versa.
+The event class inherits <code>std::enable_shared_from_this</code> and allows an event holder
+to safely generate additional <code>std::shared_ptr</code> instances that share ownership of the event.
+</p>
+
+<p>The bottom-most event callback is of the form
+<code>std::function&lt;dtc::Event::Signal(dtc::Event&)&gt;</code>.
+The callback takes an event argument by which you can
+access the underlying handle or create another shared ownership of the event.
+The return value is a handy feature to signal reactor an action after the callback is finished.
+</p>
+
+<h5>Example: Define an Event Callback</h5>
+<p>The example below shows how to define an event callback and use the return value to interact 
+with the reactor.</p>
+<pre><code class="prettyprint lang-cpp">auto callback = [a=rand()%2] (dtc::Event& event) {
+  auto another_owner = event.shared_from_this(); 
+  assert(another_owner.count() &gt;= 2);
+  return a == 1 ? dtc::Event::REMOVE : dtc::Event::DEFAULT;
+};
+</code></pre>
+  
+<div class="info notes">
+<p><b>Note:</b> The thread in the context of an event callback holds a shared ownership of that event.</p>
+</div>
+
+<h5>Example: Derive a Timeout Event</h5>
+<p>The example below declares a timeout class that prints a pre-defined message
+after one second.</p>
+<pre><code class="prettyprint lang-cpp">struct MyTimeoutEvent : public dtc::TimeoutEvent {
+  const std::string message {"hello"};
+  MyTimeoutEvent() : TimeoutEvent(std::chrono::seconds(1), [this](dtc::Event& e){
+    std::cout &lt;&lt; message &lt;&lt; '\n';
+  }) {}
+};
+</code></pre>
+
+
+<h3>Create an Event</h3>
+<p>DtCraft reactor does not allow users to directly create an event object. 
+We use <em>factory</em> design pattern to instantiate any event types.
+To create an event, you simply need to call the method <code>Reactor::insert</code>.
+It takes an event type <code>T</code> and arguments to forward to the constructor.</p>
+
+<pre><code class="prettyprint lang-cpp">class Reactor {
+  template &lt;typename T, typename... ArgsT&gt;
+  auto insert(ArgsT&&...);
+};
+</code></pre>
+
+The return is a <code>std::future</code> object of a shared pointer to the event
+(<code>std::future&lt;std::shared_ptr&lt;T&gt;&gt;</code>).
+It is important to be aware of our reactor runs in a multi-threaded environment by default.
+A successful event creation takes two steps:
+(1) the event is allocated from the memory and
+(2) the event is inserted to the reactor backend for polling.
+Calling <code>get</code> on the future object blocks until the two steps complete.
+
+<h5>Example: Create a Periodic Event</h5>
+<p>The example below creates a periodic event that expires every two seconds.</p>
+<pre><code class="prettyprint lang-cpp">auto event = reactor.insert&lt;dtc::PeriodicEvent&gt;(
+  std::chrono::seconds(2),
+  false,
+  [] (dtc::Event& e) {
+    std::cout &lt;&lt; "timeout" &lt;&lt; '\n';
+  }
+).get();
+
+assert(event.count() == 2);  // two owners, one reactor, one user
+</code></pre>
+
+<div class="info notes">
+<p><b>Note:</b> The reactor retains shared ownership of every event it created.</p>
+</div>
+
+<h3>Remove an Event</h3>
+<p>Removing events from a reactor is accomplished through the method <code>Reactor::remove</code>. 
+Similary, this method returns a <code>std::future</code> object of a <code>std::tuple</code> of bools.
+Each bool in the tuple indicates whether or not the corresponding event is removed from the reactor.
+</p>
+
+<pre><code class="prettyprint lang-cpp">class Reactor {
+  auto remove(auto&&... events);
+};
+</code></pre>
+
+<p>Calling <code>get</code> on the returned <code>future</code> object guarantees the event is removed from
+the reactor and will no longer enter the subsequent event loops.</p>
+
+<h5>Example: Remove Events from the Reactor</h5>
+<p>The example below removes two events from the reactor.</p>
+<pre><code class="prettyprint lang-cpp">auto [b1, b2] = reactor.remove(event1, event2).get();
+if(b1) std::cout &lt;&lt; "event b1 is removed" &lt;&lt; '\n';
+if(b2) std::cout &lt;&lt; "event b2 is removed" &lt;&lt; '\n';
+</code></pre>
+
+<div class="info notes">
+<p><b>Note:</b> The reference count of the event decreases by one when it is removed from the reactor.</p>
+</div>
+  
+  
+  <h3>Run an Event Loop</h3>
+  <p>Once you have a reactor with events registered, the next step is to start the event loop and let 
+  the reactor to dispatch events to the associated handlers.</p>
+
+<pre><code class="prettyprint lang-cpp">class Reactor {
+  void dispatch();
+};
+</code></pre>
+
+  <p>By default, the method <code>Reactor::dispatch</code> enters a while loop until there are no more
+  events to poll or reaching pre-defined stopping conditions. 
+  This means your program will persist in memory where the reactor owner, often the master thread, 
+  repeatedly checks if any events has triggered. 
+  Once this happens, it marks all triggered events as <em>active</em> and 
+  dispatches them to worker threads to run the callbacks.</p>
+
+  <p>Here is a sketch for how the event loop works to help with understanding. 
+  Only the reactor owner can run the event loop.</p>
+
+<pre><tt><strong>while</strong> (1) {
+  1. Execute callable objects in the promise queue.
+  2. <strong>if</strong> (no registered events or stopping criteria reached)
+       <strong>break</strong>;
+  3. Poll I/O events (<strong>select</strong> or <strong>epoll</strong>).
+  4. Synchronize the clock with <b>std::chrono::steady_clock::now()</b>.
+  5. Poll timeout events.
+}</tt></pre>
+
+
+  <h5>Example: Start an Event Loop</h5>
+  <p>The example below starts the event loop of a reactor.</p>
+<pre><code class="prettyprint lang-cpp">reactor.dispatch();
+</code></pre>
+
+  <h3>Stop an Event Loop</h3>
+  <p>By default, the reactor stops when no events are pollable.
+  However, you can stop an active event loop at any time with any threads depending on your program flow.
+  There are three ways to stop an event loop, <code>break_loop</code>, <code>threshold</code>,
+  and <code>break_loop_on</code>. Calling <code>break_loop</code> lifts the 
+  stopping flag to <code>true</code> and will subsequently stop the reactor.
+  The function <code>threshold</code> tells the reactor to stop when the number of registered events is
+  under a given value.
+  The function <code>break_loop_on</code> stops the event loop when a given condition is reached.</p>
+
+<pre><code class="prettyprint lang-cpp">class Reactor {
+  std::future&lt;bool&gt; break_loop();
+ 
+  void threshold(size_t);
+
+  template&lt;typename C&gt;
+  void break_loop_on(C&&);
+};
+</code></pre>
+
+  <h5>Example: Stop an Event Loop on a Given Threshold</h5>
+  <p>The example below tells the reactor to stop the event loop when the number of registered events 
+  is fewer than or equal to two.</p> 
+<pre><code class="prettyprint lang-cpp">reactor.threshold(2);
+</code></pre>
+
+
+  <h5>Example: Customize Stopping Criteria for an Event Loop</h5>
+  <p>The example below stops the event loop after 1000 iterations.</p>
+<pre><code class="prettyprint lang-cpp">reactor.break_loop_on([cnt=0] (dtc::Reactor& reactor) mutable {
+  return (cnt++ &gt; 1000);
+});
+</code></pre>
+
+<div class="info notes">
+<p><b>Note:</b> Breaking the event loop might leave requested promises unfinished. 
+It is user's responsibility to ensure critical promises are processed before stopping the reactor.</p>
+</div>
+
+  <h1>I/O Device</h1>
+  <p>Another key difference of our Reactor to other libraries is the process of I/O event.
+  We do not apply <em>raw</em> file descriptor to our events as it can be dangerous and confusing in 
+  multi-threaded I/O. Instead, each I/O is wrapped in a <code>Device</code> object managed by 
+  <code>std::shared_ptr</code>. By default, a DtCraft device is <em>non-blocking</em> and 
+  <em>close-on-exec</em>, and supports a set of basic read and write operations.
+  When a device vanishes, its destructor closes the associated file descriptor.
+  The source code of device is in <code>src/device.cpp</code> and <code>include/dtc/device.hpp</code>.</p>
+
+  <h3>Create a Device</h3>
+  <p>We have provided functions to create devices for 
+  <a href="http://man7.org/linux/man-pages/man2/socket.2.html">socket</a>, 
+  <a href="http://man7.org/linux/man-pages/man2/pipe.2.html">pipe</a>, and 
+  <a href="http://man7.org/linux/man-pages/man2/eventfd.2.html">notifier</a>.
+  Upon successful creation, you get a shared pointer to the device 
+  (<code>std::shared_ptr&lt;Device&gt;</code>) that manages a file descriptor.
+  Built-in device support can be found in <code>include/dtc/ipc/</code>.</p>
+
+  <h5>Example: Create a Pipe Device</h5>
+  <p>The example below creates a device pair for pipe, one read and one write.</p>
+<pre><code class="prettyprint lang-cpp">auto [rend, wend] = dtc::make_pipe();
+</code></pre>
+  
+  <h5>Example: Create a Domain Socket Pair</h5>
+  <p>The example below creates a device pair for domain socket, capable of read/write at both ends.</p>
+<pre><code class="prettyprint lang-cpp">auto [rend, wend] = dtc::make_socket_pair();
+</code></pre>
+  
+  <h5>Example: Create a Socket Server</h5>
+  <p>The example below creates a socket device binding to a given port <code>"9990"</code>.</p>
+<pre><code class="prettyprint lang-cpp">auto socket = dtc::make_socket_server("9990");
+</code></pre>
+  
+  <h5>Example: Create a Socket Client</h5>
+  <p>The example below creates a socket device connecting to the remote server at 
+  <code>"server-host-name"</code> through port <code>"9990"</code>.</p>
+<pre><code class="prettyprint lang-cpp">auto socket = dtc::make_socket_client("server-host-name", "9990");
+</code></pre>
+  
+  <h5>Example: Get the File Descriptor Associated with a Device</h5>
+  <p>The example below acquires the raw file descriptor managed by a device.</p>
+<pre><code class="prettyprint lang-cpp">auto fd = device-&gt;fd();
+</code></pre>
+
+
+  <h3>Read/Write through a Device</h3>
+
+  <p>Each DtCraft device provides <code>read</code> and <code>write</code> methods to read and write data
+  through a device.
+  These two methods are nothing but safe wrappers of POSIX 
+  <a href="http://man7.org/linux/man-pages/man2/read.2.html">read</a> and 
+  <a href="http://man7.org/linux/man-pages/man2/write.2.html">write</a> to 
+  perform one-time synchronization between user-space data and the underlying file descriptors.
+  </p>
+
+<pre><code class="prettyprint lang-cpp">class Device {
+  std::streamsize read(void*, std::streamsize) const;
+  std::streamsize write(const void*, std::streamsize) const;
+};
+</code></pre>
+  
+  <p>On success, the number of bytes read or written is returned. If the return is -1, 
+  a non-blocking condition incurs. 
+  On error, exception is thrown to indicate system error except <code>EAGAIN</code>
+  and <code>EWOULDBLOCK</code>.</p>
+
+
+  <h5>Example: Write through a Device</h5>
+  <p>The example below performs a write synchronization through a device.</p>
+<pre><code class="prettyprint lang-cpp">try {
+  std::string data {"test"};
+  if(device-&gt;write(data.c_str(), data.size()) == -1) {
+    std::cout &lt;&lt; "Device is busy. Try later.\n";
+  }
+}
+catch (const std::system_error& se) {
+  std::cout &lt;&lt; se.what() &lt;&lt; '\n';
+}
+</code></pre>
+  
+  <h5>Example: Read through a Device</h5>
+  <p>The example below performs a read synchronization through a device.</p>
+<pre><code class="prettyprint lang-cpp">try {
+  char data[1024];
+  if(device-&gt;read(data, 1024) == -1) {
+    std::cout &lt;&lt; "Device is busy. Try later.\n";
+  }
+}
+catch (const std::system_error& se) {
+  std::cout &lt;&lt; se.what() &lt;&lt; '\n';
+}
+</code></pre>
+
+  <div class="info notes">
+  <p><b>Note:</b> DtCraft does not treat the non-blocking condition as an error. 
+  It is users' responsibility to check
+  the return value to see if the synchronization requires another try.</p>
+  </div>
+
+  
+  <h3>Create a Read Event from a Device</h3>
+  <p>A read event becomes active when the associated device is ready to read. 
+  The reactor dispatches an active read event to a worker executing its callback.
+  In DtCraft, read events are <em>level-triggered</em>. 
+  The reactor continues to dispatch a read event until its kernel buffer is emptied out.</p>
+
+  <h5>Example: Create a Read Event on a Given Device</h5>
+  <p>The example below creates a read event on a given device and reads a character from the device.
+  On error, the callback returns a removal signal to remove this event from the reactor.</p>
+<pre><code class="prettyprint lang-cpp">reactor.insert&lt;dtc::ReadEvent&gt;(
+  std::move(device),
+  [] (dtc::Event& e) {
+    std::cout &lt;&lt; "Read event on fd=" &lt;&lt; e.device()-&gt;fd() &lt;&lt; '\n';
+    char c;
+    try {
+      e.device()-&gt;read(&c, sizeof(c));
+    }
+    catch(...) {
+      std::cout &lt;&lt; "Error occurs on read\n" &lt;&lt;
+      return dtc::Event::REMOVE;
+    }
+    return dtc::Event::DEFAULT;
+  }
+);
+</code></pre>
+
+<div class="info notes">
+<p><b>Note:</b> A read device can only be managed by one read event at one time.
+Creating two or more read events on a read device results in undefined behavior.</p>
+</div>
+  
+  <h3>Create a Write Event from a Device</h3>
+  <p>A write event becomes active when the associated device is ready to write.
+  However, unlike read events, write events are not autonomously triggered by the reactor
+  because it is decided by users when to write.
+  By default, write events are <em>frozen</em> and users must explicitly call <code>Reactor::thaw</code> 
+  to unfreeze write events. A write event will enter the I/O polling only when thawed.
+  We delegate this control to users to ensure write events are triggered when needed,
+  for example, user-space buffer has data to write, rather than proactively invoking the callback.</p>
+  
+  <h5>Example: Create a Write Event on a Given Device</h5>
+  <p>The example below creates a write event on a given device and freezes it for polling to write
+   a character.</p>
+<pre><code class="prettyprint lang-cpp">auto event = reactor.insert&lt;dtc::WriteEvent&gt;(
+  std::move(device),
+  [] (dtc::Event& e) {
+    std::cout &lt;&lt; "Write event on fd=" &lt;&lt; e.device()-&gt;fd() &lt;&lt; '\n';
+    char c {'a'};
+    e.device()-&gt;write(&c, sizeof(c));
+  }
+).get();
+
+reactor.thaw(event);
+</code></pre>
+
+
+<div class="info notes">
+<p><b>Note 1:</b> A write device can only be managed by one write event at one time. 
+Creating two or more write events on a write device results in undefined behavior.</p>
+<p><b>Note 2:</b> When a worker thread leaves the callback of a write event, 
+it freezes the write event again.
+It is users' responsibility to check if another thaw is required to flush all necessary data.</p>
+</div>
+  
+  
+  <h1>Where to Go from Here?</h1>
+	
+  <p>Congratulations on learning event-driven programming using DtCraft reactor!
+  In the next chapter, we will cover more DtCraft features and functionalities to process data in an
+  event-driven environment. You will get in-depth overview of:</p>
+   
+  <ul>
+  <li>Input stream and output stream event interface to enable asynchronous I/O.</li>
+  <li>Archiver interface for data serialization and de-serialization.</li>
+  </ul>
+
+  </div>  <!-- end of content -->
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+</div>
+
+</body>
+
+
+</html>
+
+

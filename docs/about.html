@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+     DtCraft - High-performance Cluster Computing Engine
+  </title>
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+
+  <script src='https://www.google.com/recaptcha/api.js' async defer></script>
+  <script src="js/dtcraft-captcha.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+
+  <h1>Sponsors</h1>
+
+	<div class="row" style="margin-bottom: 30px; margin-top: 30px">
+
+    <div class="col-md-3 col-sm-3">
+      <div class="sponsor">
+        <img src="images/nsf.png" alt="nsf" class="img-responsive">
+      </div>
+    </div>
+
+    <div class="col-md-3 col-sm-3">
+      <div class="sponsor">
+        <img src="images/darpa.jpg" alt="darpa" class="img-responsive">
+      </div>
+    </div>
+
+  </div>
+
+  <h1>Meet the Team</h1>
+
+	<div class="row" style="margin-bottom: 30px; margin-top: 30px">
+    <div class="col-md-3 col-sm-3">
+      <div class="profile_card">
+        <a href="http://web.engr.illinois.edu/~thuang19/">
+          <img src="images/twhuang.jpg" alt="team member" class="img-responsive">
+        </a>
+        <h4>Tsung-Wei Huang</h4>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-3">
+      <div class="profile_card">
+        <img src="images/cxlin.png" alt="team member" class="img-responsive">
+        <h4>Chun-Xun Lin</h4>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-3">
+      <div class="profile_card">
+        <img src="images/mwong.png" alt="team member" class="img-responsive">
+        <h4>Martin D F Wong</h4>
+      </div>
+    </div>
+  </div>
+	
+  <!--<h1>Meet the Team</h1>
+
+	<div class="row" style="margin-bottom: 30px; margin-top: 50px">
+    <div class="col-md-3 col-sm-3">
+      <div class="bio_photo">
+        <a href="http://web.engr.illinois.edu/~thuang19/">
+          <img src="images/twhuang.jpg" alt="team member" class="img-responsive">
+        </a>
+      </div>
+    </div>
+
+    <div class="col-md-9 col-sm-9">
+      <h3><b>Tsung-Wei Huang</b></h3>
+      <p>Dr. Huang is the primary creator of the DtCraft project.
+      He has been building software from the ground up in his entire career. He has extensive experience in parallel computing, 
+      distributed systems, programming language, and computer-aided design.
+      He received his BS and MS degrees in Computer Science and Information Engineering from Taiwan's National Cheng Kung University
+      and PhD degree in Electrical and Computer Engineering from the University of Illinois at Urbana-Champaign.</p>
+    </div>
+  </div>
+  
+ 	<div class="row" style="margin-bottom: 30px; margin-top: 50px">   
+    <div class="col-md-3 col-sm-3">
+      <div class="bio_photo">
+        <img src="images/cxlin.png" alt="team member" class="img-responsive">
+      </div>
+    </div>
+    <div class="col-md-9 col-sm-9">
+      <h3><b>Chun-Xun Lin</b></h3>
+      <p>Chun-Xun Lin is a core developer of the DtCraft project.
+     	He is a PhD student in the Electrical and Computer Engineering at the University of Illinois at Urbana-Champaign
+      with area in design automation, parallel computing, and distributed systems.
+      He received his BS degree in Electrical Engineering from Taiwan's National Cheng Kung University and 
+      MS degree in Electronic Engineering from National Taiwan University.</p>
+    </div>
+  </div>
+
+
+ 	<div class="row" style="margin-bottom: 30px; margin-top: 50px">   
+    <div class="col-md-3 col-sm-3">
+      <div class="bio_photo">
+        <img src="images/mwong.png" alt="team member" class="img-responsive">
+      </div>
+    </div>
+    <div class="col-md-9 col-sm-9">
+      <h3><b>Martin D. F. Wong</b></h3>
+      <p>
+      Martin Wong is the supervisor of the DtCraft project. He is one of the foremost electronic design automation (EDA) experts in the world. He has published more than 450 technical papers and graduated 49 Ph.D. students. Dr. Wong is the Executive Associate Dean of the College of Engineering and the Edward C. Jordan Professor of Electrical and Computer Engineering in the University of Illinois at Urbana-Champaign. He is a Fellow of IEEE.</p>
+    </div>
+  </div> -->
+
+  <h1 id="contact_form">Contact Us</h1>
+	<p>Please fill out the form below or contact us directly at: &lt;dtcraft.engine@gmail.com&gt;</p>
+  
+  <div class="container" style="background-color:#EEEEEE; border-radius: 9px; padding: 10px;">
+    <form name="contact_form" method="post" onsubmit="return check_if_captcha_is_filled()" action="about.php">
+      <label for="fname">Full name <font color="red">*</font></label> 
+      <input type="contact_text" id="fname" name="fname" placeholder="Full name" required>
+  
+      <label for="email">Your email <font color="red">*</font></label>
+      <input type="email" class="input_basic_css" id="email" name="email" placeholder="Email" required>
+  
+      <label for="subject">Subject <font color="red">*</font></label>
+      <input type="contact_text" id="subject" name="subject" placeholder="Subject" required>
+  
+      <label for="message">Message <font color="red">*</font></label>
+      <textarea id="message" name="message" placeholder="Message" style="height:200px" required></textarea>
+  
+      <div class="g-recaptcha" data-callback="captcha_filled" data-sitekey="6LerYjsUAAAAAC349u6f6pzZSge7r6Qv4jTRDNNS" data-expired-callback="captcha_expired"></div>
+      <input type="submit" name="submit" value="Submit">
+    </form>
+  </div>
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+
+</div>
+
+</body>
+
+
+</html>
+
+

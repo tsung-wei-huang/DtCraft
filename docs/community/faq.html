@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>DtCraft - High-performance Cluster Computing Engine</title>
+  <base href="../">
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+  
+  <h1>DtCraft FAQ</h1>
+  This page summarizes the list of frequently asked questions.
+  
+  <h3>What is DtCraft in a nutshell?</h3>
+  <p>DtCraft is a distributed execution engine that comes with a unique stream graph programming model
+  to streamline cluster programming. Our stream graph programming API largely reduces the learning curve 
+  of building distributed and parallel applications.</p>
+
+  <h3>How can I apply DtCraft to my jobs?</h3>
+  <p>DtCraft can help scale up and scale out your workload in both effective and efficient manners.
+  Our programming model is very neat and expressive. 
+  Most users can master our API  
+  within one to two weeks to prarllelize their applications or create new types of workloads.
+  </p>
+  
+  <h3>How does DtCraft relate to existing tools?</h3>
+  <p>DtCraft aims to strike a balance among programmability, performance, and productivity in cluster computing. 
+     We offer users transparency without taking away the full control over system details to achieve the best performance.
+     Modern big data tools are good at abstraction but performance, whereas traditional HPC languages are exactly the opposite. Therefore, we are developing DtCraft to bridge the gap.</p>
+  
+  <h3>Who are the targeted users?</h3>
+  <p>We welcome any individuals and organizations who are interested in building products or extending present assets at cluster scale. 
+  Whether you are application developers or domain-specific engineers, we provide a new framework for implementing parallel and distributed applications.</p>
+
+  <h3>What cluster environment do I need?</h3>
+  <p>Currently, DtCraft works on Linux machines. 
+  Each machine node must be of 64-bit kernel 3.8 (or higher) and <a href="https://en.wikipedia.org/wiki/POSIX">POSIX</a>-compliant, and support C++17 build.
+  Although you can do all file settings by hand in a cluster, we recommend installing a shared storage to access files over a computer network from a local console.</p>
+
+  <h3>How large a cluster can DtCraft scale to?</h3>
+  <p>We have successfully applied DtCraft to solve a large-scale semiconductor design optimization problem on an Amazon EC2 cluster of 40 machines, each of 4 CPUs and 8 GB RAM. Data are shared via the NFS protocol.</p>
+
+  <h3>Where can I get more help?</h3>
+  <p>Please post any technical issues on our github <a href="https://github.com/twhuang-uiuc/DtCraft/issues">issue tracker</a>. For more information, please refer to <a href="about.html#contact_form">contact us</a>.
+</p>
+  
+  <h3>How to cite DtCraft in my work?</h3>
+  <p>Please cite our journal "<a href="https://ieeexplore.ieee.org/document/8355904/">DtCraft: A High-performance Distributed Execution Engine at Scale"</a>, IEEE Transaction on Computer-aided Design of Integrated Circuits and Systems (TCAD), 2018</a>.
+</p>
+
+  
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+</div>
+
+</body>
+
+
+</html>
+
+

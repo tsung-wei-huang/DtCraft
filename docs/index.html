@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+     DtCraft - High-performance Cluster Computing Engine
+  </title>
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+
+  <div class="content">
+
+  
+  <!--<h1>What is DtCraft?</h1>-->
+  
+  <div class="row">
+    <div class="col-md-12 col-sm-12">
+      <div class="slogan">
+        DtCraft is a programming environment to streamline cluster computing
+      </div>
+    </div>
+  </div>
+  
+  <p>DtCraft is a general-purpose programming system to 
+     make parallel and distributed computing easier to handle.
+     Our programming model allows you to focus on high-level developments without
+     worrying about difficult system details.</p>
+
+  <div class="row feature-list">
+
+    <div class="col-md-7 col-sm-7">
+      <div style="width: 100%; display: inline-block; text-align: center;">
+        <img src="images/unified_framework.png" style="width: 100%;">
+      </div>
+    </div>
+
+    <div class="col-md-5 col-sm-5">
+      <div class="news">
+        <h4>Latest News</h4>
+        <ul class="list-unstyled">
+          <li><a href="community/news.html#dtcraft_vsd_webinar18">DtCraft Webinar by VSD</a> (May 26, 2018)</li>
+          <li><a href="community/news.html#dtcraft_at_glsvlsi18">DtCraft Presented at GLSVLSI18</a> (May 24, 2018)</li>
+          <li><a href="community/news.html#dtcraft_at_tcad18">DtCraft Accepted by IEEE TCAD</a> (May 7, 2018)</li>
+          <li><a href="community/news.html#dtcraft_at_cslsc18">DtCraft Presented at CSLSC18</a> (April 19, 2018)</li>
+        </ul>
+        <p style="text-align: right;"><a href="news.html">Archive</a></p>
+      </div>
+      <div>
+        <a href="download.html" class="btn btn-success btn-lg btn-block" style="margin-bottom: 30px;">
+          Download DtCraft
+        </a>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="row feature-list">
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Productivity</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Boost your productivity in writing parallel programs.</p>
+    </div>
+
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Performance</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Leverage your time to produce promising results.</p>
+    </div>
+
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Scalability</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Scale out your applications in large clusters.</p>
+    </div>
+    
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>API</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Modernize your parallel code with our API in C++17.</p>
+    </div>
+  </div><!-- /.feature-list -->
+  
+  <div class="row feature-list">
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Stream Graph</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Parallelize your applications from sequential building blocks.</p>
+    </div>
+
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Resource</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Schedule your jobs through in-conext resource controls.</p>
+    </div>
+
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Container</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Improve your runtime reliability and security.</p>
+    </div>
+
+    <div class="col-md-3 col-sm-3 feature-item">
+      <h4 align="center"><strong>Web UI</strong></h4>
+      <hr style="height:3px;color:#333;background-color:#333;" >
+      <p align="center">Monitor your workload through built-in web interface.</p>
+    </div>
+  </div><!-- /.feature-list -->
+
+
+
+
+
+
+  <h3>Stream Graph Programming</h3> 
+  <div class="row row-padded">
+     <div class="col-md-7 col-sm-7">
+       <p>DtCraft introduces a new powerful programming model based on <em>stream graph</em>
+       that eliminates the traditional dataflow limitation and associated performance bottleneck.
+       Stream graph provides a high-level abstraction over parallel operations and resource controls on a cluster,
+       and enables computation to quickly take place whenever data is available.
+       This allows DtCraft to efficiently solve a wide range of optimization and simulation problems.</p>
+     </div>
+
+     <div class="col-md-5 col-sm-5 col-center">
+       <div style="width: 100%; display: inline-block; text-align: center;">
+         <img src="images/stream_graph.jpg" style="width: 100%;">
+       </div>
+     </div>
+  </div>
+
+
+
+  <h3>Performance and Productivity</h3> 
+  <div class="row row-padded">
+    <div class="col-md-7 col-sm-7">
+      <p>Building a DtCraft application is natural to parallel thinking. We use advanced C++17 technology to deliver the best performance
+       and programmability. Deploying a DtCraft application to a computer cluster is as simple as running a binary from a local console.
+       Compared with traditional high-performance programming libraries, our API allows you to quickly
+       build up parallel and distributed applications at scale far more productive.</p>
+    </div>
+
+    <div class="col-md-5 col-sm-5 col-center">
+      <div style="text-align: left; display: inline-block;">
+        <div class="code">
+    <pre><code class="prettyprint lang-cpp">auto L = [=] (auto& vertex, auto& istream) {
+  if(string data; istream(data) != -1) {
+    // Your program control flow.
+  } else { ... }
+};
+</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+
+</div>
+
+</body>
+
+
+</html>
+
+

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+     DtCraft - High-performance Cluster Computing Engine
+  </title>
+
+  <link rel="icon" href="images/favicon.ico">
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="css/bootstrap.min.css">
+  <link rel="stylesheet" href="css/dtcraft.css">
+  <script type="text/javascript" src="js/jquery-3.2.1.min.js"></script>
+  <script type="text/javascript" src="js/bootstrap.min.js"></script>
+  <script type="text/javascript" src="js/run_prettify.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+  <script src="js/dtcraft-navbar.js?random=<?php echo uniqid(); ?>"></script>
+
+  <div class="content">
+
+	<h1>Download DtCraft</h1>
+
+     <p>There are two ways you can get the DtCraft source. </p>
+     <p>1. Download the source from our 
+     <a href="https://github.com/twhuang-uiuc/DtCraft">GitHub repository</a>.</p>
+     <div class="tab-content">
+     <pre><code class="prettyprint lang-bash">$ wget https://github.com/twhuang-uiuc/DtCraft/archive/master.zip
+$ unzip master.zip
+</code></pre>
+     </div>
+      
+     <p>2. Clone the source from our <a href="https://github.com/twhuang-uiuc/DtCraft">GitHub repository</a>.</p> 
+     <div class="tab-content">
+     <pre><code class="prettyprint lang-bash">$ git clone https://github.com/twhuang-uiuc/DtCraft.git</code></pre>
+     </div>
+
+     <p>The instructions to build and install DtCraft can be found 
+     at the <a href="quickstart.html">QuickStart</a> page.</p>
+
+
+
+  <h1>Version Control</h1>
+  <p>We use git version control for open collaboration. Each release is identified by a version number of three parts:</p>
+
+  <center><p style="color: blue"><tt>DtCraft</tt>-<tt>[major]</tt>.<tt>[minor]</tt>.<tt>[maintenance]</tt></p></center>
+
+  <p>The first part, major version number, is used to indicate the API changes.
+  The second part, minor version number, indicates releases that bring new features and improvements without changing existing APIs. 
+  The third part, maintenance version number, indicates releases that focus on bug fixes reported by our users for the same minor version. 
+  </p>
+  
+  
+  <h1>License</h1>
+  <p>DtCraft is open under the non-viral 
+  <a href="https://github.com/twhuang-uiuc/DtCraft/blob/master/LICENSE">MIT</a> license.</p>
+
+
+  </div>  <!-- end of content -->
+
+  
+  <script src="js/dtcraft-footer.js"></script>
+
+
+</div>
+
+</body>
+
+
+</html>
+
+
