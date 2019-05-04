@@ -14,7 +14,7 @@ Whether you are application developers or domain-specific engineers, you can use
 - Network programming
 - Data stream processing
 
-To get your first DtCraft program up and running, visit <a href="https://tsung-wei-huang.github.io/DtCraft/quickstart.html">QuickStart</a> and <a href="https://tsung-wei-huang.github.io/DtCraft/write_the_first_dtcraft_program.html">Write the First DtCraft Program</a>.
+To get your first DtCraft program up and running, visit <a href="https://tsung-wei-huang.github.io/DtCraft/quickstart.html">QuickStart</a>.
 
 # Design Goals
 The goal of DtCraft is to help you write simple, easy, and effective code at cluster scale. The example below demonstrates a simple application to run two programs on two machines sending each other a message.
@@ -69,7 +69,6 @@ To install and run DtCraft, you only need the following:
 
 # Learn More
 + <a href="https://tsung-wei-huang.github.io/DtCraft/">Official website</a>
-+ <a href="https://tsung-wei-huang.github.io/DtCraft/">DtCraft TCAD18 paper</a>
 
 # Get Involved
 + Report bugs/issues by submitting a <a href="https://github.com/twhuang-uiuc/DtCraft/issues">GitHub issue</a>.
